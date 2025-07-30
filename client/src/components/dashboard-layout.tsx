@@ -136,7 +136,12 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" className="flex-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="flex-1"
+                onClick={() => window.location.href = '/settings'}
+              >
                 <Settings className="h-4 w-4" />
               </Button>
               <Button

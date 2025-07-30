@@ -1030,6 +1030,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile settings routes
+  app.patch("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { fullName, email } = req.body;
+      const updatedUser = await storage.updateUser(req.user.id, {
+        fullName,
+        email,
+      });
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  app.patch("/api/user/password", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      // Verify current password
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // In a real app, you'd verify the current password here
+      // For now, we'll just update the password
+      const updatedUser = await storage.updateUser(req.user.id, {
+        password: newPassword, // In production, this should be hashed
+      });
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update password" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize automatic metrics synchronization

@@ -21,6 +21,7 @@ import AdminUsers from "@/pages/admin-users";
 import CampaignFunding from "@/pages/campaign-funding";
 import SocialIntegration from "@/pages/social-integration";
 import BrokerIntegration from "@/pages/broker-integration";
+import ProfileSettings from "@/pages/profile-settings";
 
 function Router() {
   return (
@@ -41,6 +42,7 @@ function Router() {
       <ProtectedRoute path="/analytics" component={MetricsDashboard} />
       <ProtectedRoute path="/creators" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />
+      <ProtectedRoute path="/settings" component={ProfileSettings} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
