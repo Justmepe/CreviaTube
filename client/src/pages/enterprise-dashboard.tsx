@@ -108,7 +108,7 @@ export default function EnterpriseDashboard() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Enterprise Brand Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Enterprise Dashboard</h1>
             <p className="text-gray-600 mt-1">Manage your global creator marketing campaigns</p>
           </div>
           <div className="flex items-center gap-3">
