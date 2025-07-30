@@ -32,11 +32,11 @@ export function DashboardLayout({ children, navigation, user }: DashboardLayoutP
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-cut text-white text-sm"></i>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <span className="text-white text-lg font-bold">C</span>
                 </div>
-                <span className="text-xl font-bold text-gray-900">CreoCash</span>
+                <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">CreoCash</span>
               </div>
               <div className="hidden md:flex items-center space-x-1">
                 <span className="text-sm text-gray-500">|</span>

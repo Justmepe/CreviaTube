@@ -46,13 +46,13 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
-                <i className="fas fa-cut text-white text-lg"></i>
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-xl font-bold">C</span>
               </div>
-              <span className="text-2xl font-bold text-gray-900">CreoCash</span>
+              <span className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">CreoCash</span>
             </div>
-            <p className="text-gray-600">Connect creators with content promoters</p>
+            <p className="text-gray-600 text-lg">Empowering Kenya's Creator Economy</p>
           </div>
 
           <Tabs defaultValue="login" className="w-full">
@@ -233,13 +233,21 @@ export default function AuthPage() {
       </div>
 
       {/* Right Column - Hero Section */}
-      <div className="flex-1 bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white flex items-center justify-center">
-        <div className="max-w-md text-center">
-          <h1 className="text-4xl font-bold mb-6">
-            Grow Your Reach with CreoCash
+      <div className="flex-1 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 p-12 text-white flex items-center justify-center relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-20 h-20 border border-white rounded-full"></div>
+          <div className="absolute top-32 right-16 w-16 h-16 border border-white rounded-lg rotate-45"></div>
+          <div className="absolute bottom-24 left-20 w-12 h-12 border border-white rounded-full"></div>
+          <div className="absolute bottom-10 right-10 w-24 h-24 border border-white rounded-lg rotate-12"></div>
+        </div>
+        
+        <div className="max-w-lg text-center relative z-10">
+          <h1 className="text-5xl font-bold mb-6 leading-tight">
+            Grow Your Reach with <span className="text-accent-100">CreoCash</span>
           </h1>
-          <p className="text-xl text-primary-100 mb-8">
-            The first transparent affiliate marketing platform designed for Kenya's growing creator economy
+          <p className="text-xl text-primary-100 mb-8 leading-relaxed">
+            The transparent affiliate marketing platform designed for Kenya's thriving creator economy
           </p>
 
           <div className="space-y-6">

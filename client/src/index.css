@@ -13,33 +13,41 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(24, 70%, 52%);
-  --accent-foreground: hsl(60, 9.1%, 97.8%);
+  --primary: hsl(176, 85%, 33%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(176, 15%, 96%);
+  --secondary-foreground: hsl(176, 25%, 15%);
+  --accent: hsl(176, 50%, 50%);
+  --accent-foreground: hsl(0, 0%, 100%);
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
   --ring: hsl(20, 14.3%, 4.1%);
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
-  /* Custom theme colors for ClipperRewards */
-  --primary-50: hsl(207, 90%, 94%);
-  --primary-100: hsl(207, 90%, 84%);
-  --primary-500: hsl(207, 90%, 54%);
-  --primary-600: hsl(207, 90%, 48%);
-  --primary-700: hsl(207, 90%, 42%);
+  /* Custom theme colors for CreoCash - Teal family like CreoHub */
+  --primary-50: hsl(176, 85%, 94%);
+  --primary-100: hsl(176, 85%, 84%);
+  --primary-500: hsl(176, 85%, 33%);
+  --primary-600: hsl(176, 85%, 28%);
+  --primary-700: hsl(176, 85%, 23%);
+  --primary-800: hsl(176, 85%, 18%);
 
-  --success-50: hsl(120, 60%, 94%);
-  --success-100: hsl(120, 60%, 84%);
-  --success-500: hsl(120, 60%, 50%);
-  --success-600: hsl(120, 60%, 45%);
+  --success-50: hsl(142, 76%, 94%);
+  --success-100: hsl(142, 76%, 84%);
+  --success-500: hsl(142, 76%, 36%);
+  --success-600: hsl(142, 76%, 31%);
+  --success-700: hsl(142, 76%, 26%);
 
-  --accent-50: hsl(24, 70%, 94%);
-  --accent-100: hsl(24, 70%, 84%);
-  --accent-500: hsl(24, 70%, 52%);
-  --accent-600: hsl(24, 70%, 47%);
+  --accent-50: hsl(195, 70%, 94%);
+  --accent-100: hsl(195, 70%, 84%);
+  --accent-500: hsl(195, 70%, 50%);
+  --accent-600: hsl(195, 70%, 45%);
+  --accent-700: hsl(195, 70%, 40%);
+
+  --warning-50: hsl(43, 96%, 94%);
+  --warning-100: hsl(43, 96%, 84%);
+  --warning-500: hsl(43, 96%, 56%);
+  --warning-600: hsl(43, 96%, 51%);
 }
 
 .dark {
@@ -53,8 +61,8 @@
   --card-foreground: hsl(0, 0%, 98%);
   --border: hsl(240, 3.7%, 15.9%);
   --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
+  --primary: hsl(176, 85%, 33%);
+  --primary-foreground: hsl(0, 0%, 100%);
   --secondary: hsl(240, 3.7%, 15.9%);
   --secondary-foreground: hsl(0, 0%, 98%);
   --accent: hsl(240, 3.7%, 15.9%);
