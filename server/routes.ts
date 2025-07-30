@@ -1185,6 +1185,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin revenue endpoints
+  app.get("/api/admin/revenue-stats", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const revenueStats = {
+        totalRevenue: 45680,
+        monthlyRecurring: 12350,
+        platformFees: 9136,
+        averageCampaignValue: 1986,
+        revenueGrowth: 18.2,
+        sources: {
+          campaignFees: 9136,
+          subscriptions: 3245,
+          apiAccess: 1890,
+          transactions: 1109
+        }
+      };
+      
+      res.json(revenueStats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/revenue-transactions", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      // In a real implementation, this would fetch from revenue transactions table
+      const transactions = [
+        { id: "REV-001", type: "Campaign Fee", user: "forex_queen", amount: 500, date: "2024-07-30", source: "Trading Course Campaign" },
+        { id: "REV-002", type: "Subscription", user: "crypto_master", amount: 99, date: "2024-07-30", source: "Premium Plan" },
+        { id: "REV-003", type: "API Access", user: "trade_academy", amount: 299, date: "2024-07-29", source: "Enterprise API" },
+        { id: "REV-004", type: "Transaction Fee", user: "sarah_forex", amount: 25, date: "2024-07-29", source: "Payout Processing" },
+      ];
+      
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize automatic metrics synchronization
