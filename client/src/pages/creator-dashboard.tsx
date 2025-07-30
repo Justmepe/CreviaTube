@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import TraderCreatorDashboard from "./trader-creator-dashboard";
 import InfluencerDashboard from "./influencer-dashboard";
 import EntrepreneurDashboard from "./entrepreneur-dashboard";
+import EnterpriseDashboard from "./enterprise-dashboard";
 
 export default function CreatorDashboard() {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function CreatorDashboard() {
     case "entrepreneur":
       return <EntrepreneurDashboard />;
     case "enterprise":
-      return <EntrepreneurDashboard />; // Enterprise users use entrepreneur dashboard
+      return <EnterpriseDashboard />; // Enterprise brands get dedicated dashboard
     default:
       return <TraderCreatorDashboard />; // Default to trading dashboard
   }
