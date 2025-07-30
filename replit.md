@@ -221,3 +221,12 @@ The application is deployment-agnostic with automatic detection of Replit vs ext
 - ✅ **Social Media Integration**: Connect Instagram, TikTok, YouTube, Twitter, Facebook for automatic tracking
 - ✅ **Payment Methods**: Support for M-Pesa, Airtel Money, bank transfers, and international PayPal
 - ✅ **Environment Configuration**: Complete .env.example with all required secrets and API keys
+
+### Critical Bug Fixes - Currency & User Isolation (July 30, 2025)
+- ✅ **Currency Conversion Fixed**: $99 USD now correctly converts to ~12,870 KES (at realistic 130 KES/USD rate) instead of 99 KES
+- ✅ **Payment Timing Fixed**: Campaigns only marked as "funded" after successful PesaPal payment confirmation, not during redirect
+- ✅ **User Isolation Security**: Fixed critical bug where users could see other users' campaigns across creator types
+- ✅ **Query Cache Management**: Added proper cache clearing on login/logout to prevent cross-user data leakage
+- ✅ **Consistent USD Display**: All creator interfaces now show USD amounts with proper KES conversion messaging
+- ✅ **Payment Status Tracking**: Added "Payment Processing" status during verification period between payment initiation and confirmation
+- ✅ **Authentication Stability**: Fixed hot module replacement issues with AuthProvider context during development
