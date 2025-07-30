@@ -129,49 +129,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PesaPal payment methods endpoint
+  // Payment methods endpoint
   app.get("/api/payment-methods", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
-    if (!pesapalConfigured) {
-      return res.status(500).json({ 
-        message: "Payment system not configured",
-        availableMethods: [] 
+    try {
+      res.json({
+        availableMethods: [
+          {
+            id: "mpesa",
+            name: "M-Pesa",
+            description: "Pay with M-Pesa mobile money",
+            icon: "phone",
+            requiresPhone: true,
+          },
+          {
+            id: "airtel_money",
+            name: "Airtel Money",
+            description: "Pay with Airtel Money",
+            icon: "phone",
+            requiresPhone: true,
+          },
+          {
+            id: "card",
+            name: "Credit/Debit Card",
+            description: "Pay with Visa, MasterCard",
+            icon: "credit-card",
+            requiresPhone: false,
+          },
+          {
+            id: "bank",
+            name: "Bank Transfer",
+            description: "Direct bank transfer",
+            icon: "building",
+            requiresPhone: false,
+          }
+        ]
       });
+    } catch (error: any) {
+      console.error('Payment methods error:', error);
+      res.status(500).json({ message: "Failed to fetch payment methods", error: error.message });
     }
-
-    res.json({
-      availableMethods: [
-        {
-          id: "mpesa",
-          name: "M-Pesa",
-          description: "Pay with M-Pesa mobile money",
-          icon: "phone",
-          requiresPhone: true,
-        },
-        {
-          id: "airtel_money",
-          name: "Airtel Money",
-          description: "Pay with Airtel Money",
-          icon: "phone",
-          requiresPhone: true,
-        },
-        {
-          id: "card",
-          name: "Credit/Debit Card",
-          description: "Pay with Visa, MasterCard",
-          icon: "credit-card",
-          requiresPhone: false,
-        },
-        {
-          id: "bank",
-          name: "Bank Transfer",
-          description: "Direct bank transfer",
-          icon: "building",
-          requiresPhone: false,
-        }
-      ]
-    });
   });
 
   // PesaPal callback endpoint
