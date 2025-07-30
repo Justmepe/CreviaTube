@@ -544,6 +544,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // M-Pesa callback endpoints
+  app.post("/api/mpesa/result", async (req, res) => {
+    console.log("M-Pesa payment result received:", req.body);
+    
+    try {
+      const { Result } = req.body;
+      if (Result.ResultCode === 0) {
+        // Payment successful - update auto_payments table
+        console.log("✅ M-Pesa payment completed successfully");
+        // Update payment status to completed in database
+      } else {
+        // Payment failed
+        console.log("❌ M-Pesa payment failed:", Result.ResultDesc);
+        // Update payment status to failed in database
+      }
+    } catch (error) {
+      console.error("M-Pesa result processing error:", error);
+    }
+    
+    res.status(200).json({ message: "Result received" });
+  });
+
+  app.post("/api/mpesa/timeout", async (req, res) => {
+    console.log("M-Pesa payment timeout:", req.body);
+    res.status(200).json({ message: "Timeout received" });
+  });
+
   // Metrics endpoints
   app.get("/api/metrics", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

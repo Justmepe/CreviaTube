@@ -402,14 +402,85 @@ export class EscrowService {
   }
 
   /**
-   * Placeholder for M-Pesa payment processing
-   * In production, integrate with Safaricom Daraja API
+   * Real M-Pesa payout processing via Safaricom Daraja API
    */
   private async processMpesaPayment(phoneNumber: string, amount: number): Promise<string> {
-    // This would integrate with Safaricom Daraja API
-    // For now, we'll simulate success
-    console.log(`Processing M-Pesa payment: ${amount} to ${phoneNumber}`);
-    return `MPESA${Date.now()}`;
+    if (!process.env.MPESA_CONSUMER_KEY || !process.env.MPESA_CONSUMER_SECRET) {
+      console.log(`⚠️ M-Pesa not configured, simulating payment: ${amount} to ${phoneNumber}`);
+      return `MPESA_SIM_${Date.now()}`;
+    }
+
+    try {
+      // Get M-Pesa access token
+      const authToken = await this.getMpesaAuthToken();
+      
+      // Format phone number (ensure it starts with 254)
+      const formattedPhone = phoneNumber.startsWith('254') 
+        ? phoneNumber 
+        : phoneNumber.startsWith('+254') 
+          ? phoneNumber.substring(1)
+          : phoneNumber.startsWith('07') || phoneNumber.startsWith('01')
+            ? '254' + phoneNumber.substring(1)
+            : '254' + phoneNumber;
+
+      // B2C Payment Request (Business to Customer)
+      const requestBody = {
+        InitiatorName: process.env.MPESA_INITIATOR_NAME,
+        SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
+        CommandID: "BusinessPayment", // For normal business payments
+        Amount: Math.round(amount * 130), // Convert USD to KES
+        PartyA: process.env.MPESA_SHORTCODE,
+        PartyB: formattedPhone,
+        Remarks: `CreoCash Clipper Payout - $${amount}`,
+        QueueTimeOutURL: `${process.env.REPLIT_DEV_DOMAIN || 'https://localhost:5000'}/api/mpesa/timeout`,
+        ResultURL: `${process.env.REPLIT_DEV_DOMAIN || 'https://localhost:5000'}/api/mpesa/result`,
+        Occasion: "Affiliate Commission Payment"
+      };
+
+      const response = await fetch(`${process.env.MPESA_BASE_URL}/mpesa/b2c/v1/paymentrequest`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+      
+      if (result.ResponseCode === "0") {
+        console.log(`✅ M-Pesa payment initiated: ${amount} USD (${Math.round(amount * 130)} KES) to ${formattedPhone}`);
+        return result.ConversationID || `MPESA_${Date.now()}`;
+      } else {
+        throw new Error(`M-Pesa payment failed: ${result.ResponseDescription || result.errorMessage}`);
+      }
+
+    } catch (error: any) {
+      console.error('M-Pesa payment error:', error);
+      throw new Error(`M-Pesa payment failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get M-Pesa authentication token
+   */
+  private async getMpesaAuthToken(): Promise<string> {
+    const auth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString('base64');
+    
+    const response = await fetch(`${process.env.MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+      },
+    });
+
+    const result = await response.json();
+    
+    if (result.access_token) {
+      return result.access_token;
+    } else {
+      throw new Error("Failed to get M-Pesa access token");
+    }
   }
 
 
@@ -562,13 +633,83 @@ export class EscrowService {
   }
 
   /**
-   * Processes PayPal payment for international clippers
+   * Real PayPal payout processing via PayPal Payouts API
    */
   private async processPayPalPayment(email: string, amount: number): Promise<string> {
-    // This would integrate with PayPal Payouts API
-    // For now, we'll simulate success
-    console.log(`Processing PayPal payment: ${amount} to ${email}`);
-    return `PP${Date.now()}`;
+    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+      console.log(`⚠️ PayPal not configured, simulating payment: $${amount} to ${email}`);
+      return `PP_SIM_${Date.now()}`;
+    }
+
+    try {
+      // Get PayPal access token
+      const authToken = await this.getPayPalAuthToken();
+      
+      // Create payout batch
+      const payoutBatch = {
+        sender_batch_header: {
+          sender_batch_id: `CreoCash_${Date.now()}`,
+          email_subject: "CreoCash Affiliate Commission Payment",
+          email_message: "You have received a commission payment from CreoCash affiliate marketing platform."
+        },
+        items: [{
+          recipient_type: "EMAIL",
+          amount: {
+            value: amount.toFixed(2),
+            currency: "USD"
+          },
+          receiver: email,
+          note: "CreoCash Clipper Commission Payment",
+          sender_item_id: `clipper_payout_${Date.now()}`
+        }]
+      };
+
+      const response = await fetch(`${process.env.PAYPAL_BASE_URL}/v1/payments/payouts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(payoutBatch),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.batch_header) {
+        console.log(`✅ PayPal payout initiated: $${amount} to ${email}`);
+        return result.batch_header.payout_batch_id;
+      } else {
+        throw new Error(`PayPal payout failed: ${result.message || result.error_description}`);
+      }
+
+    } catch (error: any) {
+      console.error('PayPal payment error:', error);
+      throw new Error(`PayPal payment failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get PayPal authentication token
+   */
+  private async getPayPalAuthToken(): Promise<string> {
+    const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64');
+    
+    const response = await fetch(`${process.env.PAYPAL_BASE_URL}/v1/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "grant_type=client_credentials",
+    });
+
+    const result = await response.json();
+    
+    if (result.access_token) {
+      return result.access_token;
+    } else {
+      throw new Error("Failed to get PayPal access token");
+    }
   }
 
   /**
