@@ -25,11 +25,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user.role === "creator") {
         const campaigns = await storage.getCampaignsByCreator(req.user.id);
         res.json(campaigns);
+      } else if (req.user.role === "admin") {
+        // Admins can view all campaigns
+        const campaigns = await storage.getAllCampaigns();
+        res.json(campaigns);
+      } else if (req.user.role === "clipper") {
+        // Clippers can view available campaigns
+        const campaigns = await storage.getAvailableCampaigns();
+        res.json(campaigns);
       } else {
-        res.status(403).json({ message: "Only creators can view campaigns" });
+        res.status(403).json({ message: "Access denied" });
       }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch campaigns" });
+    } catch (error: any) {
+      console.error('Campaigns fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch campaigns", error: error.message });
     }
   });
 
@@ -313,15 +322,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payout routes
   app.get("/api/payouts", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user.role !== "clipper") {
-      return res.status(403).json({ message: "Only clippers can view payouts" });
-    }
-
+    
     try {
-      const payouts = await storage.getPayoutsByClipper(req.user.id);
-      res.json(payouts);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch payouts" });
+      if (req.user.role === "clipper") {
+        const payouts = await storage.getPayoutsByClipper(req.user.id);
+        res.json(payouts);
+      } else if (req.user.role === "creator") {
+        // Creators can view payouts for their campaigns
+        const payouts = await storage.getPayoutsByCreator(req.user.id);
+        res.json(payouts);
+      } else if (req.user.role === "admin") {
+        // Admins can view all payouts
+        const payouts = await storage.getAllPayouts();
+        res.json(payouts);
+      } else {
+        res.status(403).json({ message: "Access denied" });
+      }
+    } catch (error: any) {
+      console.error('Payouts fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch payouts", error: error.message });
     }
   });
 

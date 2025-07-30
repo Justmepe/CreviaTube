@@ -23,6 +23,8 @@ export interface IStorage {
   // Campaign operations
   getCampaign(id: string): Promise<Campaign | undefined>;
   getCampaignsByCreator(creatorId: string): Promise<Campaign[]>;
+  getAllCampaigns(): Promise<Campaign[]>;
+  getAvailableCampaigns(): Promise<Campaign[]>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
   updateCampaign(id: string, updates: Partial<Campaign>): Promise<Campaign | undefined>;
   
@@ -42,6 +44,8 @@ export interface IStorage {
   // Payout operations
   createPayout(payout: InsertPayout): Promise<Payout>;
   getPayoutsByClipper(clipperId: string): Promise<Payout[]>;
+  getPayoutsByCreator(creatorId: string): Promise<Payout[]>;
+  getAllPayouts(): Promise<Payout[]>;
   updatePayoutStatus(id: string, status: string, transactionId?: string): Promise<Payout | undefined>;
   
   // Analytics
@@ -103,6 +107,16 @@ export class DatabaseStorage implements IStorage {
 
   async getCampaignsByCreator(creatorId: string): Promise<Campaign[]> {
     return await db.select().from(campaigns).where(eq(campaigns.creatorId, creatorId));
+  }
+
+  async getAllCampaigns(): Promise<Campaign[]> {
+    return await db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
+  }
+
+  async getAvailableCampaigns(): Promise<Campaign[]> {
+    return await db.select().from(campaigns)
+      .where(eq(campaigns.status, "active"))
+      .orderBy(desc(campaigns.createdAt));
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
@@ -210,6 +224,24 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(payouts)
       .where(eq(payouts.clipperId, clipperId))
+      .orderBy(desc(payouts.createdAt));
+  }
+
+  async getPayoutsByCreator(creatorId: string): Promise<Payout[]> {
+    // Get payouts for campaigns owned by this creator
+    return await db
+      .select()
+      .from(payouts)
+      .innerJoin(clipperCampaigns, eq(payouts.clipperId, clipperCampaigns.clipperId))
+      .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+      .where(eq(campaigns.creatorId, creatorId))
+      .orderBy(desc(payouts.createdAt));
+  }
+
+  async getAllPayouts(): Promise<Payout[]> {
+    return await db
+      .select()
+      .from(payouts)
       .orderBy(desc(payouts.createdAt));
   }
 
