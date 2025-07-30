@@ -20,10 +20,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DollarSign, Target, Users, Calendar, Zap, Lock, Shield, AlertTriangle } from "lucide-react";
 
 const campaignSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
+  name: z.string().min(5, "Name must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
-  budget: z.number().min(10, "Minimum budget is $10"),
-  platformRequirements: z.array(z.string()).min(1, "Select at least one platform"),
+  budget: z.string().min(1, "Budget is required"),
+  targetPlatforms: z.array(z.string()).min(1, "Select at least one platform"),
   rewardRates: z.object({
     click: z.number().min(0.01, "Minimum click reward is $0.01"),
     signup: z.number().min(0.1, "Minimum signup reward is $0.10"),
@@ -31,13 +31,8 @@ const campaignSchema = z.object({
     trade: z.number().optional(),
     conversion: z.number().optional(),
   }),
-  requirements: z.object({
-    minFollowers: z.number().min(0).optional(),
-    geography: z.array(z.string()).optional(),
-    languages: z.array(z.string()).optional(),
-  }),
+  requirements: z.string().optional(),
   duration: z.number().min(1, "Minimum campaign duration is 1 day"),
-  isActive: z.boolean().default(false),
 });
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
@@ -72,10 +67,10 @@ export default function CampaignCreation() {
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
-      title: "",
+      name: "",
       description: "",
-      budget: 100,
-      platformRequirements: [],
+      budget: "100",
+      targetPlatforms: [],
       rewardRates: {
         click: 0.05,
         signup: 2.00,
@@ -83,26 +78,25 @@ export default function CampaignCreation() {
         trade: user?.userType === "trader_creator" ? 0.50 : undefined,
         conversion: (user?.userType === "entrepreneur" || user?.userType === "enterprise") ? 5.00 : undefined,
       },
-      requirements: {
-        minFollowers: 1000,
-        geography: [],
-        languages: [],
-      },
+      requirements: "",
       duration: 7,
-      isActive: false,
     },
   });
 
   const createCampaignMutation = useMutation({
     mutationFn: async (data: CampaignFormData) => {
       const payload = {
-        ...data,
-        platformRequirements: selectedPlatforms,
-        requirements: {
-          ...data.requirements,
+        name: data.name,
+        description: data.description,
+        budget: data.budget,
+        targetPlatforms: JSON.stringify(selectedPlatforms),
+        rewardRates: JSON.stringify(data.rewardRates),
+        requirements: JSON.stringify({
+          minFollowers: 1000,
           geography: selectedCountries,
           languages: selectedLanguages,
-        },
+        }),
+        duration: data.duration,
       };
       const res = await apiRequest("POST", "/api/campaigns", payload);
       return await res.json();
@@ -132,7 +126,7 @@ export default function CampaignCreation() {
       ? selectedPlatforms.filter(p => p !== platformId)
       : [...selectedPlatforms, platformId];
     setSelectedPlatforms(updated);
-    form.setValue("platformRequirements", updated);
+    form.setValue("targetPlatforms", updated);
   };
 
   const toggleCountry = (country: string) => {
@@ -149,8 +143,9 @@ export default function CampaignCreation() {
     setSelectedLanguages(updated);
   };
 
-  const estimatedReach = Math.min(form.watch("budget") * 20, 50000);
-  const estimatedClippers = Math.min(Math.floor(form.watch("budget") / 50), 200);
+  const budgetNumber = parseFloat(form.watch("budget") || "0");
+  const estimatedReach = Math.min(budgetNumber * 20, 50000);
+  const estimatedClippers = Math.min(Math.floor(budgetNumber / 50), 200);
 
   return (
     <DashboardLayout title="Create Campaign">
@@ -183,10 +178,10 @@ export default function CampaignCreation() {
                 <div className="grid grid-cols-1 gap-6">
                   <FormField
                     control={form.control}
-                    name="title"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Campaign Title</FormLabel>
+                        <FormLabel>Campaign Name</FormLabel>
                         <FormControl>
                           <Input placeholder="e.g., Promote My Trading Course" {...field} />
                         </FormControl>
@@ -225,7 +220,7 @@ export default function CampaignCreation() {
                               type="number" 
                               min="10"
                               {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => field.onChange(e.target.value)}
                             />
                           </FormControl>
                           <FormDescription>
@@ -282,9 +277,9 @@ export default function CampaignCreation() {
                       </Button>
                     ))}
                   </div>
-                  {form.formState.errors.platformRequirements && (
+                  {form.formState.errors.targetPlatforms && (
                     <p className="text-sm text-red-600 mt-2">
-                      {form.formState.errors.platformRequirements.message}
+                      {form.formState.errors.targetPlatforms.message}
                     </p>
                   )}
                 </div>
@@ -409,27 +404,18 @@ export default function CampaignCreation() {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Clipper Requirements</h3>
                   
-                  <FormField
-                    control={form.control}
-                    name="requirements.minFollowers"
-                    render={({ field }) => (
-                      <FormItem className="mb-4">
-                        <FormLabel>Minimum Followers</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Minimum follower count across all platforms
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="mb-4">
+                    <label className="text-sm font-medium mb-2 block">Minimum Followers</label>
+                    <Input 
+                      type="number" 
+                      min="0"
+                      defaultValue="1000"
+                      placeholder="1000"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Minimum follower count across all platforms
+                    </p>
+                  </div>
                   
                   <div className="space-y-4">
                     <div>
@@ -487,20 +473,20 @@ export default function CampaignCreation() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Total Budget</span>
-                      <span className="font-semibold text-lg">${form.watch("budget").toFixed(2)}</span>
+                      <span className="font-semibold text-lg">${budgetNumber.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Platform Fee (20%)</span>
-                      <span className="text-red-600">-${(form.watch("budget") * 0.20).toFixed(2)}</span>
+                      <span className="text-red-600">-${(budgetNumber * 0.20).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Clipper Escrow (80%)</span>
-                      <span className="text-green-600">${(form.watch("budget") * 0.80).toFixed(2)}</span>
+                      <span className="text-green-600">${(budgetNumber * 0.80).toFixed(2)}</span>
                     </div>
                     <div className="border-t pt-2">
                       <div className="flex justify-between items-center font-semibold">
                         <span>Available for Rewards</span>
-                        <span className="text-green-700">${(form.watch("budget") * 0.80).toFixed(2)}</span>
+                        <span className="text-green-700">${(budgetNumber * 0.80).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
