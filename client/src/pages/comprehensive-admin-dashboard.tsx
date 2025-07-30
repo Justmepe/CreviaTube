@@ -28,7 +28,8 @@ import {
   Globe,
   Shield,
   Zap,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 
 export default function ComprehensiveAdminDashboard() {
