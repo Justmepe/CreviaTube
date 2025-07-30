@@ -47,16 +47,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
+      console.log(`User ${req.user.username} (${req.user.role}, ${req.user.userType}) requesting campaigns`);
+      
       if (req.user.role === "creator") {
         const campaigns = await storage.getCampaignsByCreator(req.user.id);
+        console.log(`Found ${campaigns.length} campaigns for creator ${req.user.username}`);
         res.json(campaigns);
       } else if (req.user.role === "admin") {
         // Admins can view all campaigns
         const campaigns = await storage.getAllCampaigns();
+        console.log(`Found ${campaigns.length} total campaigns for admin ${req.user.username}`);
         res.json(campaigns);
       } else if (req.user.role === "clipper") {
         // Clippers can view available campaigns
         const campaigns = await storage.getAvailableCampaigns();
+        console.log(`Found ${campaigns.length} available campaigns for clipper ${req.user.username}`);
         res.json(campaigns);
       } else {
         res.status(403).json({ message: "Access denied" });

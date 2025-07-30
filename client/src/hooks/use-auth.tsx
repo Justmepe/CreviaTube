@@ -37,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
+      // Clear all cached data when logging in to prevent seeing other users' data
+      queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
@@ -54,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
+      // Clear all cached data when registering to ensure clean state
+      queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
@@ -70,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
+      // Clear all cached data when logging out to prevent data leakage
+      queryClient.clear();
       queryClient.setQueryData(["/api/user"], null);
     },
     onError: (error: Error) => {
