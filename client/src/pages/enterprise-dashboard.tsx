@@ -18,7 +18,9 @@ import {
   Crown,
   Plus,
   ArrowUpRight,
-  Activity
+  Activity,
+  CreditCard,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -27,12 +29,15 @@ import { Link } from "wouter";
 
 interface Campaign {
   id: string;
-  title: string;
+  name: string;
+  title?: string; // For backward compatibility
   description: string;
   budget: number;
   budgetUsed: number;
   status: string;
+  fundingStatus: string;
   targetPlatforms: string;
+  rewardRates: string;
   duration: number;
   createdAt: string;
   _count?: {
@@ -58,6 +63,14 @@ const navigation = [
   { name: "Multi-Channel", href: "/channels", icon: Globe },
   { name: "Enterprise Payouts", href: "/payouts", icon: Building },
 ];
+
+const formatCurrency = (amount: number | string) => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(num || 0);
+};
 
 export default function EnterpriseDashboard() {
   const { user } = useAuth();
@@ -253,7 +266,7 @@ export default function EnterpriseDashboard() {
                 <div key={campaign.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-gray-900">{campaign.title}</h3>
+                      <h3 className="font-semibold text-gray-900">{campaign.name || campaign.title}</h3>
                       <Badge className={
                         campaign.status === "active" ? "bg-green-100 text-green-800" :
                         campaign.status === "draft" ? "bg-gray-100 text-gray-800" :
@@ -277,14 +290,25 @@ export default function EnterpriseDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold text-purple-600">
-                      {formatCurrency(campaign.budgetUsed)}
-                    </div>
-                    <div className="text-sm text-gray-500">spent</div>
-                    <Progress 
-                      value={(campaign.budgetUsed / campaign.budget) * 100} 
-                      className="w-24 h-2 mt-1"
-                    />
+                    {campaign.status === "draft" && campaign.fundingStatus === "pending" ? (
+                      <Link href={`/campaigns/${campaign.id}/funding`}>
+                        <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
+                          <CreditCard className="w-3 h-3 mr-2" />
+                          Fund Now
+                        </Button>
+                      </Link>
+                    ) : (
+                      <>
+                        <div className="text-lg font-semibold text-purple-600">
+                          {formatCurrency(campaign.budgetUsed)}
+                        </div>
+                        <div className="text-sm text-gray-500">spent</div>
+                        <Progress 
+                          value={(campaign.budgetUsed / campaign.budget) * 100} 
+                          className="w-24 h-2 mt-1"
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

@@ -16,7 +16,9 @@ import {
   Pause,
   Settings,
   TrendingUp,
-  Target
+  Target,
+  CreditCard,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -24,11 +26,13 @@ import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Campaign {
   id: string;
-  title: string;
+  name: string;
+  title?: string; // For backward compatibility
   description: string;
   budget: number;
   budgetUsed: number;
   status: "draft" | "active" | "paused" | "completed";
+  fundingStatus: string;
   targetPlatforms: string;
   rewardRates: {
     click: number;
@@ -135,7 +139,7 @@ export default function CampaignsList() {
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <CardTitle className="text-lg line-clamp-1">{campaign.title}</CardTitle>
+              <CardTitle className="text-lg line-clamp-1">{campaign.name || campaign.title}</CardTitle>
               <Badge className={`mt-1 ${getStatusColor(campaign.status)}`}>
                 {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
               </Badge>
@@ -151,7 +155,7 @@ export default function CampaignsList() {
                   <Pause className="h-3 w-3" />
                 </Button>
               )}
-              {(campaign.status === "paused" || campaign.status === "draft") && (
+              {campaign.status === "paused" && campaign.fundingStatus === "funded" && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -209,25 +213,77 @@ export default function CampaignsList() {
             </div>
           </div>
           
+          {/* Funding Status and Call to Action */}
+          {campaign.status === "draft" && campaign.fundingStatus === "pending" && (
+            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800">Campaign Needs Funding</span>
+              </div>
+              <p className="text-xs text-orange-700 mb-3">
+                Fund your campaign to activate it and start attracting clippers. 
+                80% goes to escrow for clipper rewards, 20% platform fee.
+              </p>
+              <Link href={`/campaigns/${campaign.id}/funding`}>
+                <Button size="sm" className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                  <CreditCard className="h-3 w-3 mr-2" />
+                  Fund Campaign ({formatCurrency(campaign.budget)})
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Reward Rates */}
           <div className="mt-4 pt-4 border-t">
             <p className="text-xs text-muted-foreground mb-2">Rewards:</p>
             <div className="flex flex-wrap gap-1">
-              <Badge variant="secondary" className="text-xs">
-                Click: {formatCurrency(campaign.rewardRates.click)}
-              </Badge>
-              <Badge variant="secondary" className="text-xs">
-                Signup: {formatCurrency(campaign.rewardRates.signup)}
-              </Badge>
-              {campaign.rewardRates.deposit && (
-                <Badge variant="secondary" className="text-xs">
-                  Deposit: {formatCurrency(campaign.rewardRates.deposit)}
-                </Badge>
-              )}
-              {campaign.rewardRates.conversion && (
-                <Badge variant="secondary" className="text-xs">
-                  Convert: {formatCurrency(campaign.rewardRates.conversion)}
-                </Badge>
+              {typeof campaign.rewardRates === 'string' ? (
+                (() => {
+                  try {
+                    const rates = JSON.parse(campaign.rewardRates);
+                    return (
+                      <>
+                        <Badge variant="secondary" className="text-xs">
+                          Click: {formatCurrency(rates.click || 0)}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Signup: {formatCurrency(rates.signup || 0)}
+                        </Badge>
+                        {rates.deposit && (
+                          <Badge variant="secondary" className="text-xs">
+                            Deposit: {formatCurrency(rates.deposit)}
+                          </Badge>
+                        )}
+                        {rates.conversion && (
+                          <Badge variant="secondary" className="text-xs">
+                            Convert: {formatCurrency(rates.conversion)}
+                          </Badge>
+                        )}
+                      </>
+                    );
+                  } catch {
+                    return <Badge variant="secondary" className="text-xs">Invalid reward data</Badge>;
+                  }
+                })()
+              ) : (
+                <>
+                  <Badge variant="secondary" className="text-xs">
+                    Click: {formatCurrency(campaign.rewardRates.click)}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Signup: {formatCurrency(campaign.rewardRates.signup)}
+                  </Badge>
+                  {campaign.rewardRates.deposit && (
+                    <Badge variant="secondary" className="text-xs">
+                      Deposit: {formatCurrency(campaign.rewardRates.deposit)}
+                    </Badge>
+                  )}
+                  {campaign.rewardRates.conversion && (
+                    <Badge variant="secondary" className="text-xs">
+                      Convert: {formatCurrency(campaign.rewardRates.conversion)}
+                    </Badge>
+                  )}
+                </>
               )}
             </div>
           </div>
