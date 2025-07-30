@@ -63,13 +63,6 @@ export default function ClipperDashboard() {
   return (
     <DashboardLayout title="Clipper Dashboard">
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Clipper Dashboard</h1>
-            <p className="text-gray-600">Track your performance and earnings</p>
-          </div>
-        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

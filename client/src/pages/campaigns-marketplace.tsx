@@ -95,13 +95,6 @@ export default function CampaignsMarketplace() {
   return (
     <DashboardLayout title="Campaigns Marketplace">
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Campaigns Marketplace</h1>
-            <p className="text-gray-600">Discover and join campaigns to start earning</p>
-          </div>
-        </div>
 
         {/* Filters and Search */}
         <div className="flex flex-col sm:flex-row gap-4">
