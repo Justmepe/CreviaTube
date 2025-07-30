@@ -22,6 +22,7 @@ import CampaignFunding from "@/pages/campaign-funding";
 import SocialIntegration from "@/pages/social-integration";
 import BrokerIntegration from "@/pages/broker-integration";
 import ProfileSettings from "@/pages/profile-settings";
+import ComprehensiveAdminDashboard from "@/pages/comprehensive-admin-dashboard";
 
 function Router() {
   return (
@@ -43,6 +44,7 @@ function Router() {
       <ProtectedRoute path="/creators" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />
       <ProtectedRoute path="/settings" component={ProfileSettings} />
+      <ProtectedRoute path="/admin/control" component={ComprehensiveAdminDashboard} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
@@ -61,7 +63,7 @@ function DashboardRouter() {
     case "clipper":
       return <ClipperDashboard />;
     case "admin":
-      return <AdminDashboard />;
+      return <ComprehensiveAdminDashboard />;
     default:
       return <CreatorDashboard />;
   }

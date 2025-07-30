@@ -64,6 +64,8 @@ export interface IStorage {
     tradingAccounts?: any;
     businessIntegration?: any;
   }): Promise<User | undefined>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   
   // Trading account operations
   addTradingAccount(userId: string, account: {
@@ -112,6 +114,19 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   async getCampaign(id: string): Promise<Campaign | undefined> {
@@ -243,13 +258,15 @@ export class DatabaseStorage implements IStorage {
 
   async getPayoutsByCreator(creatorId: string): Promise<Payout[]> {
     // Get payouts for campaigns owned by this creator
-    return await db
-      .select()
+    const result = await db
+      .select({ payouts })
       .from(payouts)
       .innerJoin(clipperCampaigns, eq(payouts.clipperId, clipperCampaigns.clipperId))
       .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
       .where(eq(campaigns.creatorId, creatorId))
       .orderBy(desc(payouts.createdAt));
+    
+    return result.map(row => row.payouts);
   }
 
   async getAllPayouts(): Promise<Payout[]> {

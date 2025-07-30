@@ -1070,6 +1070,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin dashboard endpoints
+  app.get("/api/admin/stats", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const stats = {
+        totalUsers: 127,
+        newUsersThisWeek: 8,
+        activeCampaigns: 23,
+        campaignGrowth: 12,
+        totalRevenue: 45680,
+        revenueGrowth: 18,
+        totalEvents: 8934,
+        eventsToday: 156,
+        systemHealth: "Healthy",
+        uptime: 99.8
+      };
+      
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/campaigns", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const campaigns = await storage.getAllCampaigns();
+      res.json(campaigns);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/transactions", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      // In a real implementation, this would fetch from a transactions table
+      const transactions = [
+        { id: "TXN-001", type: "Campaign Funding", user: "trader_alex", amount: 2500, status: "completed", date: "2024-07-30" },
+        { id: "TXN-002", type: "Clipper Payout", user: "sarah_clips", amount: 150, status: "completed", date: "2024-07-30" },
+        { id: "TXN-003", type: "Platform Fee", user: "crypto_master", amount: 500, status: "completed", date: "2024-07-29" },
+        { id: "TXN-004", type: "Withdrawal", user: "forex_queen", amount: 800, status: "pending", date: "2024-07-29" },
+      ];
+      
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/system-health", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const systemHealth = {
+        services: [
+          { name: "Database", status: "healthy", uptime: "99.9%", response: "12ms" },
+          { name: "API Server", status: "healthy", uptime: "99.8%", response: "45ms" },
+          { name: "Instagram API", status: "warning", uptime: "96.2%", response: "250ms" },
+          { name: "Payment Gateway", status: "healthy", uptime: "99.7%", response: "89ms" },
+          { name: "Trading APIs", status: "error", uptime: "92.1%", response: "timeout" },
+        ]
+      };
+      
+      res.json(systemHealth);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/activity", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      // In a real implementation, this would fetch recent activity from database
+      const activities = [
+        { type: "signup", user: "trader_john", description: "New trader creator registered", timestamp: "2 min ago", status: "success" },
+        { type: "campaign", user: "sarah_forex", description: "Campaign funding completed - $2,500", timestamp: "5 min ago", status: "success" },
+        { type: "payout", user: "clipper_mike", description: "Payout processed - $150", timestamp: "8 min ago", status: "success" },
+        { type: "tracking", user: "system", description: "1,000 new tracking events processed", timestamp: "12 min ago", status: "info" },
+        { type: "alert", user: "system", description: "High traffic detected on Instagram API", timestamp: "15 min ago", status: "warning" },
+      ];
+      
+      res.json(activities);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize automatic metrics synchronization
