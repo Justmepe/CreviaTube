@@ -188,10 +188,15 @@ interface BrokerProgram {
   affiliateLink: string;
   trackingCode: string;
   isActive: boolean;
+  region: string;
+  category: string;
 }
 
 const BrokerAffiliateList = () => {
   const { toast } = useToast();
+  const [selectedRegion, setSelectedRegion] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  
   const { data: brokerPrograms, isLoading } = useQuery<BrokerProgram[]>({
     queryKey: ["/api/affiliate/brokers"],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -202,7 +207,7 @@ const BrokerAffiliateList = () => {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Available Broker Partners</h3>
         <div className="grid gap-4">
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg"></div>
           ))}
         </div>
@@ -217,55 +222,140 @@ const BrokerAffiliateList = () => {
     }).format(amount);
   };
 
+  // Get unique regions and categories for filters
+  const regions = ["All", ...Array.from(new Set(brokerPrograms?.map(b => b.region) || []))];
+  const categories = ["All", ...Array.from(new Set(brokerPrograms?.map(b => b.category) || []))];
+
+  // Filter brokers based on selected region and category
+  const filteredBrokers = brokerPrograms?.filter(broker => {
+    const regionMatch = selectedRegion === "All" || broker.region === selectedRegion;
+    const categoryMatch = selectedCategory === "All" || broker.category === selectedCategory;
+    return regionMatch && categoryMatch;
+  }) || [];
+
+  // Group brokers by region for better organization
+  const brokersByRegion = filteredBrokers.reduce((acc, broker) => {
+    if (!acc[broker.region]) acc[broker.region] = [];
+    acc[broker.region].push(broker);
+    return acc;
+  }, {} as Record<string, BrokerProgram[]>);
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Available Broker Partners</h3>
-      <div className="grid gap-4">
-        {brokerPrograms?.map((broker) => (
-          <Card key={broker.id}>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <h4 className="font-semibold">{broker.name}</h4>
-                  <p className="text-sm text-muted-foreground">{broker.description}</p>
-                  <div className="flex gap-4 text-sm">
-                    <span className="text-blue-600">Signup: {formatCurrency(broker.signupBonus)}</span>
-                    <span className="text-green-600">Deposit: {formatCurrency(broker.depositBonus)}</span>
-                    <span className="text-purple-600">Volume: {broker.volumeRate}%</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline">{broker.trackingCode}</Badge>
-                    {broker.isActive && <Badge className="bg-green-100 text-green-800">Active</Badge>}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(broker.affiliateLink);
-                      toast({
-                        title: "Affiliate link copied",
-                        description: "Share this link to start earning commissions",
-                      });
-                    }}
-                  >
-                    Copy Link
-                  </Button>
-                  <Button size="sm" asChild>
-                    <a href={broker.affiliateLink} target="_blank" rel="noopener noreferrer">
-                      Visit Broker
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
+        <h3 className="text-lg font-semibold">Available Broker Partners ({filteredBrokers.length})</h3>
+        
+        <div className="flex gap-2">
+          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Region" />
+            </SelectTrigger>
+            <SelectContent>
+              {regions.map(region => (
+                <SelectItem key={region} value={region}>{region}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>{category}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      {selectedRegion === "All" ? (
+        // Show grouped by region when "All" is selected
+        Object.entries(brokersByRegion).map(([region, brokers]) => (
+          <div key={region} className="space-y-3">
+            <h4 className="text-md font-medium text-muted-foreground border-b pb-1">
+              {region} ({brokers.length})
+            </h4>
+            <div className="grid gap-3">
+              {brokers.map((broker) => (
+                <BrokerCard key={broker.id} broker={broker} formatCurrency={formatCurrency} toast={toast} />
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        // Show flat list when specific region is selected
+        <div className="grid gap-3">
+          {filteredBrokers.map((broker) => (
+            <BrokerCard key={broker.id} broker={broker} formatCurrency={formatCurrency} toast={toast} />
+          ))}
+        </div>
+      )}
+
+      {filteredBrokers.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No brokers found for the selected filters
+        </div>
+      )}
     </div>
   );
 };
+
+const BrokerCard = ({ broker, formatCurrency, toast }: { 
+  broker: BrokerProgram; 
+  formatCurrency: (amount: number) => string;
+  toast: any;
+}) => (
+  <Card>
+    <CardContent className="p-4">
+      <div className="flex justify-between items-start">
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold">{broker.name}</h4>
+            <Badge variant="outline" className="text-xs">
+              {broker.category}
+            </Badge>
+            {broker.region === "Kenya" && broker.category === "CMA Licensed" && (
+              <Badge className="text-xs bg-green-100 text-green-800">CMA Licensed</Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">{broker.description}</p>
+          <div className="flex gap-4 text-sm">
+            <span className="text-blue-600">Signup: {formatCurrency(broker.signupBonus)}</span>
+            <span className="text-green-600">Deposit: {formatCurrency(broker.depositBonus)}</span>
+            <span className="text-purple-600">Volume: {broker.volumeRate}%</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <Badge variant="outline">{broker.trackingCode}</Badge>
+            <span className="text-muted-foreground">• {broker.region}</span>
+            {broker.isActive && <Badge className="bg-green-100 text-green-800">Active</Badge>}
+          </div>
+        </div>
+        <div className="flex gap-2 ml-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(broker.affiliateLink);
+              toast({
+                title: "Affiliate link copied",
+                description: `${broker.name} link ready to share`,
+              });
+            }}
+          >
+            Copy Link
+          </Button>
+          <Button size="sm" asChild>
+            <a href={broker.affiliateLink} target="_blank" rel="noopener noreferrer">
+              Visit {broker.name}
+            </a>
+          </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const SUPPORTED_BROKERS = [
   {
