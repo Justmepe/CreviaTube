@@ -348,6 +348,9 @@ export class EscrowService {
       // Generate authentication token
       const authToken = await this.getPesaPalAuthToken();
       
+      // First register IPN
+      const ipnId = await this.registerPesaPalIPN();
+      
       const pesapalPayment = {
         id: `campaign_${paymentData.campaignId}_${Date.now()}`,
         currency: paymentData.currency,
@@ -355,7 +358,7 @@ export class EscrowService {
         description: paymentData.description,
         callback_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://localhost:5000'}/api/pesapal/callback`,
         redirect_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://localhost:5000'}/campaigns/${paymentData.campaignId}/funding?status=success`,
-        notification_id: paymentData.campaignId,
+        notification_id: ipnId,
         billing_address: {
           email_address: paymentData.email,
           phone_number: paymentData.phoneNumber,
@@ -432,6 +435,46 @@ export class EscrowService {
       return result.token;
     } else {
       throw new Error(result.error?.message || "Failed to get PesaPal auth token");
+    }
+  }
+
+  /**
+   * Registers IPN (Instant Payment Notification) with PesaPal
+   */
+  private async registerPesaPalIPN(): Promise<string> {
+    if (!pesapalConfig) {
+      throw new Error("PesaPal not configured");
+    }
+
+    const authToken = await this.getPesaPalAuthToken();
+    const callbackUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://localhost:5000'}/api/pesapal/callback`;
+
+    const response = await fetch(`${pesapalConfig.baseUrl}/api/URLSetup/RegisterIPN`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        url: callbackUrl,
+        ipn_notification_type: "GET"
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('PesaPal IPN Registration Error:', response.status, errorText);
+      throw new Error(`PesaPal IPN registration failed: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('PesaPal IPN Response:', result);
+    
+    if (result.ipn_id) {
+      return result.ipn_id;
+    } else {
+      throw new Error(result.error?.message || "Failed to register PesaPal IPN");
     }
   }
 
