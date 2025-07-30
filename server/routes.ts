@@ -42,6 +42,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single campaign by ID
+  app.get("/api/campaigns/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      
+      // Check if user has permission to view this campaign
+      if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(campaign);
+    } catch (error: any) {
+      console.error('Campaign fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch campaign", error: error.message });
+    }
+  });
+
   app.post("/api/campaigns", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user.role !== "creator") {

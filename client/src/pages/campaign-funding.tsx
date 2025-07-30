@@ -108,8 +108,9 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
   const { toast } = useToast();
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   
-  const { data: paymentMethods = { availableMethods: [] } } = useQuery({
+  const { data: paymentMethods = { availableMethods: [] } } = useQuery<{ availableMethods: any[] }>({
     queryKey: ["/api/payment-methods"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const form = useForm<PaymentData>({
@@ -251,13 +252,13 @@ export default function CampaignFunding() {
 
   const { data: campaign, isLoading } = useQuery<Campaign>({
     queryKey: ["/api/campaigns", id],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!id,
   });
 
   const { data: escrowStatus } = useQuery<EscrowStatus>({
     queryKey: ["/api/campaigns", id, "funding-status"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!id && campaign?.fundingStatus === "funded",
   });
 
