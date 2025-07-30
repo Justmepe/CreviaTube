@@ -1328,6 +1328,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin payout statistics
+  app.get("/api/admin/payout-stats", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    try {
+      const stats = {
+        totalPaidOut: 28450,
+        pendingPayouts: 3250,
+        platformBalance: 17230,
+        activeClippers: 58,
+        payoutsThisMonth: 12,
+        averagePayoutAmount: 185
+      };
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payout statistics" });
+    }
+  });
+
+  // Admin payout history (all clippers)
+  app.get("/api/admin/payout-history", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    try {
+      const payoutHistory = [
+        {
+          id: "po-001",
+          clipper: "clipper_mike",
+          campaign: "Forex Trading Course",
+          amount: 150,
+          method: "Bank Transfer",
+          date: "2024-07-30",
+          status: "completed"
+        },
+        {
+          id: "po-002",
+          clipper: "social_sam", 
+          campaign: "Crypto Investment Guide",
+          amount: 230,
+          method: "PayPal",
+          date: "2024-07-29",
+          status: "completed"
+        },
+        {
+          id: "po-003",
+          clipper: "content_creator",
+          campaign: "Trading Signals App", 
+          amount: 180,
+          method: "M-Pesa",
+          date: "2024-07-28",
+          status: "completed"
+        }
+      ];
+      res.json(payoutHistory);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payout history" });
+    }
+  });
+
+  // Admin platform withdrawal
+  app.post("/api/admin/withdraw", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    try {
+      const { amount, method, description } = req.body;
+      
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ error: "Invalid withdrawal amount" });
+      }
+      
+      if (!method) {
+        return res.status(400).json({ error: "Withdrawal method is required" });
+      }
+
+      // Create withdrawal record
+      const withdrawal = {
+        id: `wd-${Date.now()}`,
+        amount,
+        method,
+        description,
+        date: new Date().toISOString().split('T')[0],
+        status: "processing",
+        reference: `${method.toUpperCase()}-${Date.now()}`
+      };
+
+      res.json({
+        success: true,
+        withdrawal,
+        message: "Withdrawal request initiated successfully"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to process withdrawal" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize automatic metrics synchronization

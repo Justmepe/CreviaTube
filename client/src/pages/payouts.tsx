@@ -524,7 +524,7 @@ export default function Payouts() {
                             </Badge>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {payout.paymentMethod.replace('_', ' ')} • Requested {new Date(payout.createdAt).toLocaleDateString()}
+                            {payout.paymentMethod?.replace('_', ' ') || 'Not specified'} • Requested {new Date(payout.createdAt).toLocaleDateString()}
                             {payout.processedAt && ` • Processed ${new Date(payout.processedAt).toLocaleDateString()}`}
                           </div>
                           {payout.campaign && (

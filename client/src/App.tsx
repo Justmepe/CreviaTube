@@ -24,6 +24,7 @@ import BrokerIntegration from "@/pages/broker-integration";
 import ProfileSettings from "@/pages/profile-settings";
 import ComprehensiveAdminDashboard from "@/pages/comprehensive-admin-dashboard";
 import AdminRevenue from "@/pages/admin-revenue";
+import AdminPayouts from "@/pages/admin-payouts";
 
 function Router() {
   return (
@@ -47,6 +48,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={ProfileSettings} />
       <ProtectedRoute path="/admin/control" component={ComprehensiveAdminDashboard} />
       <ProtectedRoute path="/admin/revenue" component={AdminRevenue} />
+      <ProtectedRoute path="/admin/payouts" component={AdminPayouts} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
