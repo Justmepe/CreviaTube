@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -245,7 +245,8 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
 };
 
 export default function CampaignFunding() {
-  const { id } = useParams<{ id: string }>();
+  const [match, params] = useRoute("/campaigns/:id/funding");
+  const id = params?.id;
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
