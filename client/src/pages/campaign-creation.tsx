@@ -36,7 +36,7 @@ const campaignSchema = z.object({
     geography: z.array(z.string()).optional(),
     languages: z.array(z.string()).optional(),
   }),
-  duration: z.number().min(7, "Minimum campaign duration is 7 days"),
+  duration: z.number().min(1, "Minimum campaign duration is 1 day"),
   isActive: z.boolean().default(false),
 });
 
@@ -88,7 +88,7 @@ export default function CampaignCreation() {
         geography: [],
         languages: [],
       },
-      duration: 30,
+      duration: 7,
       isActive: false,
     },
   });
@@ -245,13 +245,13 @@ export default function CampaignCreation() {
                           <FormControl>
                             <Input 
                               type="number" 
-                              min="7"
+                              min="1"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 7)}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                             />
                           </FormControl>
                           <FormDescription>
-                            How long the campaign will run
+                            Campaign duration (minimum 1 day, default 7 days)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
