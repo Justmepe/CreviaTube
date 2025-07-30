@@ -20,7 +20,7 @@ export default function AuthPage() {
     password: "",
     fullName: "",
     role: "clipper" as const,
-    userType: undefined as string | undefined,
+    userType: undefined as "trader_creator" | "influencer" | "entrepreneur" | "enterprise" | undefined,
     phoneNumber: "",
   });
 
@@ -50,7 +50,7 @@ export default function AuthPage() {
               <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
                 <i className="fas fa-cut text-white text-lg"></i>
               </div>
-              <span className="text-2xl font-bold text-gray-900">ClipperRewards</span>
+              <span className="text-2xl font-bold text-gray-900">CreoCash</span>
             </div>
             <p className="text-gray-600">Connect creators with content promoters</p>
           </div>
@@ -65,7 +65,7 @@ export default function AuthPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Welcome Back</CardTitle>
-                  <CardDescription>Sign in to your ClipperRewards account</CardDescription>
+                  <CardDescription>Sign in to your CreoCash account</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleLogin} className="space-y-4">
@@ -115,7 +115,7 @@ export default function AuthPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Create Account</CardTitle>
-                  <CardDescription>Join the ClipperRewards platform</CardDescription>
+                  <CardDescription>Join the CreoCash platform</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleRegister} className="space-y-4">
@@ -193,15 +193,15 @@ export default function AuthPage() {
                         <Label htmlFor="userType">Creator Type</Label>
                         <Select 
                           value={registerData.userType} 
-                          onValueChange={(value) => setRegisterData({ ...registerData, userType: value })}
+                          onValueChange={(value) => setRegisterData({ ...registerData, userType: value as any })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select creator type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="trader_creator">Trading Educator</SelectItem>
-                            <SelectItem value="influencer">Social Media Influencer</SelectItem>
-                            <SelectItem value="entrepreneur">Business Owner</SelectItem>
+                            <SelectItem value="trader_creator">Trading Educator - Track signups, deposits & trades</SelectItem>
+                            <SelectItem value="influencer">Social Influencer - Track followers & engagement</SelectItem>
+                            <SelectItem value="entrepreneur">Business Owner - Track clicks & conversions</SelectItem>
                             <SelectItem value="enterprise">Enterprise Brand</SelectItem>
                           </SelectContent>
                         </Select>
@@ -236,7 +236,7 @@ export default function AuthPage() {
       <div className="flex-1 bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white flex items-center justify-center">
         <div className="max-w-md text-center">
           <h1 className="text-4xl font-bold mb-6">
-            Grow Your Reach with ClipperRewards
+            Grow Your Reach with CreoCash
           </h1>
           <p className="text-xl text-primary-100 mb-8">
             The first transparent affiliate marketing platform designed for Kenya's growing creator economy

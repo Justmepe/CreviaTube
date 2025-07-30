@@ -36,7 +36,7 @@ export function DashboardLayout({ children, navigation, user }: DashboardLayoutP
                 <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
                   <i className="fas fa-cut text-white text-sm"></i>
                 </div>
-                <span className="text-xl font-bold text-gray-900">ClipperRewards</span>
+                <span className="text-xl font-bold text-gray-900">CreoCash</span>
               </div>
               <div className="hidden md:flex items-center space-x-1">
                 <span className="text-sm text-gray-500">|</span>

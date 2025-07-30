@@ -1,8 +1,12 @@
-# ClipperRewards - Affiliate Marketing Platform
+# CreoCash - Affiliate Marketing Platform
 
 ## Overview
 
-ClipperRewards is a full-stack affiliate marketing platform that connects content creators with affiliate marketers ("clippers"). The platform enables creators to launch campaigns and manage affiliate relationships while providing clippers with tools to promote products and track their earnings.
+CreoCash is a comprehensive affiliate marketing platform designed for Kenya's creator economy. It connects three distinct creator types - Trading Educators, Social Influencers, and Business Entrepreneurs - with content promoters ("clippers"). Each creator type has specialized tracking and reward systems tailored to their specific needs:
+
+**Trading Educators**: Track referral signups, deposits, and trading volume with broker integrations
+**Social Influencers**: Track follower growth, engagement metrics, and social platform performance  
+**Business Entrepreneurs**: Track website clicks, lead generation, and conversion optimization
 
 ## User Preferences
 

@@ -1,0 +1,323 @@
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/dashboard-layout";
+import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, MousePointer, ShoppingCart, Target, Globe, Zap } from "lucide-react";
+
+export default function EntrepreneurDashboard() {
+  const { user } = useAuth();
+
+  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
+    queryKey: ["/api/campaigns"],
+    enabled: !!user && user.role === "creator",
+  });
+
+  const { data: clipperCampaigns = [] } = useQuery({
+    queryKey: ["/api/clipper-campaigns"],
+    enabled: !!user && user.role === "creator",
+  });
+
+  const { data: trackingEvents = [] } = useQuery({
+    queryKey: ["/api/tracking-events"],
+    enabled: !!user && user.role === "creator",
+  });
+
+  // Calculate entrepreneur-specific stats
+  const totalClicks = (trackingEvents as any[]).filter((e: any) => e.eventType === "click").length;
+  const totalConversions = (trackingEvents as any[]).filter((e: any) => e.eventType === "conversion").length;
+  const conversionRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(1) : "0";
+  const activeClippers = (clipperCampaigns as any[]).filter((cc: any) => cc.isApproved).length;
+
+  const navigation = [
+    { name: "Dashboard", href: "/", icon: BarChart3, current: true },
+    { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+    { name: "Lead Clippers", href: "/clippers", icon: Users },
+    { name: "Conversion Analytics", href: "/analytics", icon: Target },
+    { name: "Payouts", href: "/payouts", icon: Wallet },
+  ];
+
+  // Business-specific activities
+  const recentBusinessActivities = [
+    {
+      id: 1,
+      type: "conversion",
+      clipper: "Kevin Mwangi",
+      description: "generated 3 qualified leads for your SaaS product",
+      amount: "+KES 450",
+      timestamp: "15 minutes ago",
+      icon: Target,
+      iconBg: "bg-green-50 text-green-500"
+    },
+    {
+      id: 2,
+      type: "clicks",
+      clipper: "Grace Wanjiku", 
+      description: "drove 250 clicks to your landing page",
+      amount: "+KES 125",
+      timestamp: "1 hour ago",
+      icon: MousePointer,
+      iconBg: "bg-blue-50 text-blue-500"
+    },
+    {
+      id: 3,
+      type: "sale",
+      clipper: "Brian Kimani",
+      description: "referred customer completed purchase (KES 15,000)",
+      amount: "+KES 750", 
+      timestamp: "4 hours ago",
+      icon: ShoppingCart,
+      iconBg: "bg-purple-50 text-purple-500"
+    }
+  ];
+
+  const topBusinessClippers = [
+    { 
+      name: "Kevin Mwangi", 
+      specialty: "B2B Lead Generation", 
+      clicks: 1247, 
+      conversions: 23,
+      conversionRate: "1.8%",
+      earnings: "KES 8,450" 
+    },
+    { 
+      name: "Grace Wanjiku", 
+      specialty: "E-commerce Promotion", 
+      clicks: 987, 
+      conversions: 19,
+      conversionRate: "1.9%",
+      earnings: "KES 7,120" 
+    },
+    { 
+      name: "Brian Kimani", 
+      specialty: "Service Marketing", 
+      clicks: 756, 
+      conversions: 15,
+      conversionRate: "2.0%",
+      earnings: "KES 5,890" 
+    },
+  ];
+
+  return (
+    <DashboardLayout navigation={navigation} user={user}>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Business Owner Dashboard</h1>
+            <p className="text-gray-600">Track clicks, leads, and sales conversions</p>
+          </div>
+          <Button className="bg-primary-500 hover:bg-primary-600">
+            <Plus className="w-4 h-4 mr-2" />
+            New Business Campaign
+          </Button>
+        </div>
+
+        {/* Business Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-blue-600">Total Clicks</p>
+                  <p className="text-2xl font-bold text-blue-700">{totalClicks.toLocaleString()}</p>
+                  <p className="text-sm text-blue-600 flex items-center mt-1">
+                    <MousePointer className="w-4 h-4 mr-1" />
+                    +15.3% this month
+                  </p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <MousePointer className="w-6 h-6 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-green-50 to-green-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-green-600">Conversions</p>
+                  <p className="text-2xl font-bold text-green-700">{totalConversions}</p>
+                  <p className="text-sm text-green-600 flex items-center mt-1">
+                    <Target className="w-4 h-4 mr-1" />
+                    {conversionRate}% conversion rate
+                  </p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <Target className="w-6 h-6 text-green-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-purple-600">Revenue Generated</p>
+                  <p className="text-2xl font-bold text-purple-700">KES 245K</p>
+                  <p className="text-sm text-purple-600 flex items-center mt-1">
+                    <ShoppingCart className="w-4 h-4 mr-1" />
+                    This quarter
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <ShoppingCart className="w-6 h-6 text-purple-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-orange-50 to-orange-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-orange-600">Active Clippers</p>
+                  <p className="text-2xl font-bold text-orange-700">{activeClippers}</p>
+                  <p className="text-sm text-orange-600 flex items-center mt-1">
+                    <Users className="w-4 h-4 mr-1" />
+                    Lead generators
+                  </p>
+                </div>
+                <div className="p-3 bg-orange-50 rounded-lg">
+                  <Users className="w-6 h-6 text-orange-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Conversion Funnel */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Conversion Funnel</CardTitle>
+                <select className="text-sm border border-gray-200 rounded-lg px-3 py-1">
+                  <option>Last 30 days</option>
+                  <option>Last 60 days</option>
+                  <option>Last 90 days</option>
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="font-medium text-gray-900">Website Clicks</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{totalClicks.toLocaleString()}</p>
+                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
+                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <span className="font-medium text-gray-900">Landing Page Views</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{Math.round(totalClicks * 0.75).toLocaleString()}</p>
+                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
+                      <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <span className="font-medium text-gray-900">Lead Form Submissions</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{Math.round(totalClicks * 0.15).toLocaleString()}</p>
+                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
+                      <div className="bg-orange-500 h-2 rounded-full" style={{ width: '15%' }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="font-medium text-gray-900">Sales Conversions</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{totalConversions}</p>
+                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
+                      <div className="bg-green-500 h-2 rounded-full" style={{ width: `${conversionRate}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Lead Generation Clippers */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Top Lead Generators</CardTitle>
+                <Button variant="ghost" size="sm">View All</Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {topBusinessClippers.map((clipper, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      {clipper.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{clipper.name}</p>
+                      <p className="text-sm text-gray-500">{clipper.specialty}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{clipper.earnings}</p>
+                    <p className="text-sm text-success-600">{clipper.conversions} conversions • {clipper.conversionRate} CR</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Business Activity */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Recent Business Activity</CardTitle>
+              <Button variant="ghost" size="sm">View All Activity</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recentBusinessActivities.map((activity) => {
+              const IconComponent = activity.icon;
+              return (
+                <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <div className={`p-2 ${activity.iconBg} rounded-lg mt-1`}>
+                    <IconComponent className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">{activity.clipper}</span> {activity.description}
+                    </p>
+                    <p className="text-xs text-gray-500">{activity.timestamp}</p>
+                  </div>
+                  <span className="text-sm font-medium text-success-600">{activity.amount}</span>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}

@@ -50,7 +50,7 @@ export default function ClipperDashboard() {
     return `${window.location.origin}/track/${trackingCode}`;
   };
 
-  const recentEarnings = trackingEvents.slice(0, 5).map((event: any) => ({
+  const recentEarnings = (trackingEvents as any[]).slice(0, 5).map((event: any) => ({
     id: event.id,
     date: new Date(event.createdAt).toLocaleDateString(),
     action: event.eventType === "signup" ? "New Signup" : 
@@ -79,7 +79,7 @@ export default function ClipperDashboard() {
                 <div>
                   <p className="text-sm text-primary-600">Total Earnings</p>
                   <p className="text-2xl font-bold text-primary-700">
-                    KES {earnings?.total?.toLocaleString() || "0"}
+                    KES {(earnings as any)?.total?.toLocaleString() || "0"}
                   </p>
                 </div>
                 <Wallet className="w-8 h-8 text-primary-500" />
@@ -92,7 +92,7 @@ export default function ClipperDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-success-600">Active Links</p>
-                  <p className="text-2xl font-bold text-success-700">{clipperCampaigns.length}</p>
+                  <p className="text-2xl font-bold text-success-700">{(clipperCampaigns as any[]).length}</p>
                 </div>
                 <LinkIcon className="w-8 h-8 text-success-500" />
               </div>
@@ -105,7 +105,7 @@ export default function ClipperDashboard() {
                 <div>
                   <p className="text-sm text-accent-600">Pending</p>
                   <p className="text-2xl font-bold text-accent-700">
-                    KES {earnings?.pending?.toLocaleString() || "0"}
+                    KES {(earnings as any)?.pending?.toLocaleString() || "0"}
                   </p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-accent-500" />
@@ -120,7 +120,7 @@ export default function ClipperDashboard() {
             <CardTitle>My Tracking Links</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {clipperCampaigns.map((cc: any) => (
+            {(clipperCampaigns as any[]).map((cc: any) => (
               <div key={cc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-900">Campaign: {cc.campaignId}</h4>
@@ -152,7 +152,7 @@ export default function ClipperDashboard() {
               </div>
             ))}
 
-            {clipperCampaigns.length === 0 && (
+            {(clipperCampaigns as any[]).length === 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-4">No campaigns joined yet</p>
                 <Button>Browse Available Campaigns</Button>
@@ -179,7 +179,7 @@ export default function ClipperDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {recentEarnings.map((earning) => (
+                    {recentEarnings.map((earning: any) => (
                       <tr key={earning.id}>
                         <td className="p-3 text-gray-900">{earning.date}</td>
                         <td className="p-3 text-gray-700">{earning.action}</td>
@@ -222,17 +222,17 @@ export default function ClipperDashboard() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-success-600">Available Balance</span>
                     <span className="text-lg font-semibold text-success-700">
-                      KES {earnings?.pending?.toLocaleString() || "0"}
+                      KES {(earnings as any)?.pending?.toLocaleString() || "0"}
                     </span>
                   </div>
                   <Button 
                     className="w-full bg-success-500 hover:bg-success-600"
-                    disabled={!earnings?.pending || earnings.pending < 100}
+                    disabled={!(earnings as any)?.pending || (earnings as any).pending < 100}
                   >
                     <Wallet className="w-4 h-4 mr-2" />
                     Request M-Pesa Payout
                   </Button>
-                  {(!earnings?.pending || earnings.pending < 100) && (
+                  {(!(earnings as any)?.pending || (earnings as any).pending < 100) && (
                     <p className="text-xs text-success-600 mt-2">
                       Minimum payout amount is KES 100
                     </p>
@@ -241,7 +241,7 @@ export default function ClipperDashboard() {
 
                 <div className="space-y-2">
                   <h4 className="font-medium text-gray-900">Recent Payouts</h4>
-                  {payouts.slice(0, 3).map((payout: any) => (
+                  {(payouts as any[]).slice(0, 3).map((payout: any) => (
                     <div key={payout.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
                       <div>
                         <p className="text-sm font-medium">KES {parseFloat(payout.amount).toLocaleString()}</p>
@@ -255,7 +255,7 @@ export default function ClipperDashboard() {
                     </div>
                   ))}
 
-                  {payouts.length === 0 && (
+                  {(payouts as any[]).length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-4">No payouts yet</p>
                   )}
                 </div>
