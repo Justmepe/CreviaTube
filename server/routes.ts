@@ -421,6 +421,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/payouts/summary", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "clipper") {
+      return res.status(403).json({ message: "Only clippers can view payout summary" });
+    }
+
+    try {
+      const earnings = await storage.getClipperEarnings(req.user.id);
+      const payouts = await storage.getPayoutsByClipper(req.user.id);
+      
+      const pendingPayouts = payouts
+        .filter(p => p.status === "pending" || p.status === "processing")
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      
+      const completedPayouts = payouts
+        .filter(p => p.status === "completed")
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+      const summary = {
+        totalEarnings: earnings.total || 0,
+        pendingPayouts: pendingPayouts,
+        completedPayouts: completedPayouts,
+        availableBalance: (earnings.pending || 0) - pendingPayouts,
+        minimumPayout: 10, // $10 minimum
+      };
+
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch payout summary" });
+    }
+  });
+
   app.post("/api/payouts", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user.role !== "clipper") {
@@ -428,23 +460,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const earnings = await storage.getClipperEarnings(req.user.id);
-      const requestedAmount = parseFloat(req.body.amount);
+      const { amount, paymentMethod, paymentDetails, notes } = req.body;
+      const requestedAmount = parseFloat(amount);
 
-      if (requestedAmount > earnings.pending) {
-        return res.status(400).json({ message: "Insufficient available balance" });
+      // Validate minimum payout
+      if (requestedAmount < 10) {
+        return res.status(400).json({ message: "Minimum payout amount is $10" });
       }
 
+      // Check clipper's available balance
+      const earnings = await storage.getClipperEarnings(req.user.id);
+      const existingPayouts = await storage.getPayoutsByClipper(req.user.id);
+      
+      const pendingPayouts = existingPayouts
+        .filter(p => p.status === "pending" || p.status === "processing")
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+      const availableBalance = (earnings.pending || 0) - pendingPayouts;
+
+      if (requestedAmount > availableBalance) {
+        return res.status(400).json({ 
+          message: `Insufficient available balance. Available: $${availableBalance.toFixed(2)}` 
+        });
+      }
+
+      // Create payout request
       const payout = await storage.createPayout({
         clipperId: req.user.id,
-        amount: req.body.amount,
-        mpesaNumber: req.body.mpesaNumber || req.user.mpesaNumber,
+        amount: requestedAmount.toString(),
+        mpesaNumber: paymentDetails?.phoneNumber || paymentDetails?.accountNumber || req.user.email,
         status: "pending",
       });
 
+      console.log(`✅ Payout request created: $${requestedAmount} for clipper ${req.user.username}`);
       res.status(201).json(payout);
     } catch (error) {
-      res.status(400).json({ message: "Failed to create payout request", error });
+      console.error('❌ Payout creation error:', error);
+      res.status(400).json({ message: "Failed to create payout request", error: error.message });
+    }
+  });
+
+  // Payout processing endpoints (Admin)
+  app.post("/api/payouts/:id/process", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const { escrowService } = await import("./services/escrow-service");
+      const result = await escrowService.processPayout(req.params.id);
+      res.json(result);
+    } catch (error: any) {
+      console.error('❌ Payout processing error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/payouts/:id/approve", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const payout = await storage.updatePayoutStatus(req.params.id, "processing");
+      console.log(`✅ Payout approved: ${req.params.id}`);
+      res.json(payout);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to approve payout" });
+    }
+  });
+
+  app.post("/api/payouts/:id/reject", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const payout = await storage.updatePayoutStatus(req.params.id, "failed");
+      console.log(`❌ Payout rejected: ${req.params.id}`);
+      res.json(payout);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to reject payout" });
     }
   });
 

@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { budgetEscrow, autoPayments, campaigns, trackingEvents, users } from "@shared/schema";
+import { budgetEscrow, autoPayments, campaigns, trackingEvents, users, payouts, clipperCampaigns } from "@shared/schema";
 import { eq, and, sum } from "drizzle-orm";
 interface PesaPalConfig {
   consumerKey: string;
@@ -608,6 +608,127 @@ export class EscrowService {
     // This would require admin approval and special circumstances
     // Implementation would depend on business rules
     throw new Error("Escrow refunds require special admin approval process");
+  }
+
+  /**
+   * Processes clipper payout requests by deducting from campaign escrow
+   * This handles manual payout requests from clippers
+   */
+  async processPayout(payoutId: string): Promise<any> {
+    console.log(`Processing payout: ${payoutId}`);
+    
+    try {
+      // Get the payout from the payouts table
+      const [payout] = await db
+        .select()
+        .from(payouts)
+        .where(eq(payouts.id, payoutId));
+      
+      if (!payout) {
+        throw new Error("Payout not found");
+      }
+
+      if (payout.status !== "pending") {
+        throw new Error(`Payout already processed with status: ${payout.status}`);
+      }
+
+      const payoutAmount = parseFloat(payout.amount);
+      console.log(`Processing payout of $${payoutAmount} for clipper ${payout.clipperId}`);
+
+      // Get clipper's campaign relationships to find which escrow accounts to deduct from
+      const campaignRelations = await db
+        .select()
+        .from(clipperCampaigns)
+        .where(eq(clipperCampaigns.clipperId, payout.clipperId));
+      
+      let remainingAmount = payoutAmount;
+      const deductions = [];
+
+      // Deduct from available escrow balances proportionally
+      for (const campaignRelation of campaignRelations) {
+        if (remainingAmount <= 0) break;
+
+        // Get campaign escrow
+        const [escrow] = await db
+          .select()
+          .from(budgetEscrow)
+          .where(eq(budgetEscrow.campaignId, campaignRelation.campaignId));
+          
+        if (!escrow || parseFloat(escrow.availableBalance) <= 0) continue;
+
+        // Calculate how much to deduct from this escrow
+        const availableBalance = parseFloat(escrow.availableBalance);
+        const deductionAmount = Math.min(remainingAmount, availableBalance);
+        
+        // Update escrow balance
+        await db
+          .update(budgetEscrow)
+          .set({
+            availableBalance: (availableBalance - deductionAmount).toString(),
+            lockedBalance: (parseFloat(escrow.lockedBalance) + deductionAmount).toString(),
+          })
+          .where(eq(budgetEscrow.id, escrow.id));
+
+        deductions.push({
+          campaignId: campaignRelation.campaignId,
+          amount: deductionAmount,
+        });
+
+        remainingAmount -= deductionAmount;
+        console.log(`Deducted $${deductionAmount} from campaign ${campaignRelation.campaignId} escrow`);
+      }
+
+      if (remainingAmount > 0) {
+        throw new Error(`Insufficient escrow funds. Missing $${remainingAmount.toFixed(2)}`);
+      }
+
+      // Update payout status to processing
+      await db
+        .update(payouts)
+        .set({ status: "processing" })
+        .where(eq(payouts.id, payoutId));
+
+      // Simulate payment processing completion
+      setTimeout(async () => {
+        try {
+          await db
+            .update(payouts)
+            .set({ 
+              status: "completed",
+              processedAt: new Date()
+            })
+            .where(eq(payouts.id, payoutId));
+          console.log(`✅ Payout ${payoutId} completed successfully`);
+        } catch (error) {
+          console.error(`❌ Failed to complete payout ${payoutId}:`, error);
+        }
+      }, 2000);
+
+      console.log(`✅ Payout ${payoutId} processed successfully. Deductions:`, deductions);
+      
+      return {
+        success: true,
+        payoutId,
+        amount: payoutAmount,
+        status: "processing",
+        deductions,
+        message: "Payout is being processed. Funds will be transferred within 24 hours."
+      };
+    } catch (error: any) {
+      console.error(`❌ Payout processing error for ${payoutId}:`, error);
+      
+      // Mark payout as failed
+      try {
+        await db
+          .update(payouts)
+          .set({ status: "failed" })
+          .where(eq(payouts.id, payoutId));
+      } catch (updateError) {
+        console.error('Failed to update payout status to failed:', updateError);
+      }
+      
+      throw error;
+    }
   }
 }
 

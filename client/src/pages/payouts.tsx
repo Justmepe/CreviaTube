@@ -105,7 +105,7 @@ export default function Payouts() {
 
   const requestPayoutMutation = useMutation({
     mutationFn: async (data: PayoutRequestData) => {
-      const res = await apiRequest("POST", "/api/payouts/request", data);
+      const res = await apiRequest("POST", "/api/payouts", data);
       return await res.json();
     },
     onSuccess: () => {
