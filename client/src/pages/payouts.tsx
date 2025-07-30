@@ -68,8 +68,6 @@ const payoutRequestSchema = z.object({
     "bank_transfer", 
     "paypal", 
     "crypto", 
-    "credit_card", 
-    "debit_card",
     "wise_transfer",
     "rapyd_bank",
     "rapyd_card",
@@ -129,8 +127,23 @@ export default function Payouts() {
     resolver: zodResolver(payoutRequestSchema),
     defaultValues: {
       amount: 50,
-      paymentMethod: "",
-      paymentDetails: {},
+      paymentMethod: "mobile_money" as const,
+      paymentDetails: {
+        accountNumber: "",
+        routingNumber: "",
+        swiftCode: "",
+        bankCode: "",
+        accountHolderName: "",
+        cardNumber: "",
+        cardHolderName: "",
+        phoneNumber: "",
+        email: "",
+        walletAddress: "",
+        country: "",
+        currency: "",
+        recipientName: "",
+        recipientAddress: "",
+      },
       notes: "",
     },
   });
@@ -193,8 +206,6 @@ export default function Payouts() {
       case "rapyd_bank": return <Building className="h-4 w-4" />;
       case "mobile_money": return <Smartphone className="h-4 w-4" />;
       case "paypal":
-      case "credit_card":
-      case "debit_card":
       case "rapyd_card": return <CreditCard className="h-4 w-4" />;
       case "crypto":
       case "rapyd_cash": return <DollarSign className="h-4 w-4" />;
@@ -203,12 +214,10 @@ export default function Payouts() {
   };
 
   const paymentMethods = [
-    { value: "bank_transfer", label: "Bank Transfer (Local)", icon: <Building className="h-4 w-4" /> },
-    { value: "wise_transfer", label: "International Bank Transfer (Wise)", icon: <Building className="h-4 w-4" /> },
-    { value: "credit_card", label: "Credit Card", icon: <CreditCard className="h-4 w-4" /> },
-    { value: "debit_card", label: "Debit Card", icon: <CreditCard className="h-4 w-4" /> },
-    { value: "paypal", label: "PayPal", icon: <CreditCard className="h-4 w-4" /> },
     { value: "mobile_money", label: "Mobile Money (M-Pesa, Airtel)", icon: <Smartphone className="h-4 w-4" /> },
+    { value: "bank_transfer", label: "Local Bank Transfer", icon: <Building className="h-4 w-4" /> },
+    { value: "wise_transfer", label: "International Bank Transfer (Wise)", icon: <Building className="h-4 w-4" /> },
+    { value: "paypal", label: "PayPal", icon: <CreditCard className="h-4 w-4" /> },
     { value: "rapyd_bank", label: "Global Bank Transfer (Rapyd)", icon: <Building className="h-4 w-4" /> },
     { value: "rapyd_card", label: "Global Card Transfer (Rapyd)", icon: <CreditCard className="h-4 w-4" /> },
     { value: "rapyd_cash", label: "Cash Pickup (Rapyd)", icon: <DollarSign className="h-4 w-4" /> },
@@ -374,7 +383,7 @@ export default function Payouts() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Payment Method</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select payment method" />
@@ -511,16 +520,16 @@ export default function Payouts() {
                           </>
                         )}
 
-                        {(form.watch("paymentMethod") === "credit_card" || form.watch("paymentMethod") === "debit_card") && (
+                        {form.watch("paymentMethod") === "rapyd_card" && (
                           <>
                             <FormField
                               control={form.control}
                               name="paymentDetails.cardNumber"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Card Number</FormLabel>
+                                  <FormLabel>Card Number (Last 4 digits)</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="4111 1111 1111 1111" {...field} />
+                                    <Input placeholder="1234" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>

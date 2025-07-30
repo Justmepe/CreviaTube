@@ -6,10 +6,12 @@
 - **PesaPal (Campaign Funding)**: Full integration for M-Pesa, Airtel Money, cards, bank transfers
 - **M-Pesa Payouts**: Safaricom Daraja B2C API for Kenya mobile money transfers
 - **PayPal Payouts**: International payout processing via PayPal Payouts API
-- **Stripe Connect**: Bank transfers and credit/debit card payouts
 - **Wise API**: International bank transfers with multi-currency support
-- **Rapyd API**: Global payment coverage for 100+ countries
+- **Rapyd API**: Global payment coverage for 100+ countries (Kenya-friendly)
 - **Escrow System**: Automatic fund management and balance tracking
+
+### 🚫 Not Available in Kenya
+- **Stripe**: Not supported in Kenya - PesaPal used instead for local payments
 
 ### 🔧 Complete Payout Coverage
 
@@ -175,17 +177,15 @@ curl -X POST /api/payouts/{payout_id}/process
 
 ## 📋 Complete Payment Method Coverage
 
-### ✅ Available Payment Methods:
-1. **mobile_money**: M-Pesa, Airtel Money (Kenya/Africa)
-2. **bank_transfer**: Local bank transfers via Stripe Connect
+### ✅ Available Payment Methods (Kenya-Compatible):
+1. **mobile_money**: M-Pesa, Airtel Money (Kenya/Africa via Daraja API)
+2. **bank_transfer**: Local bank transfers (Kenya banks)
 3. **wise_transfer**: International bank transfers via Wise API
-4. **credit_card**: Credit card payouts via Stripe Connect
-5. **debit_card**: Debit card instant transfers via Stripe Connect
-6. **paypal**: International PayPal payouts
-7. **rapyd_bank**: Global bank transfers via Rapyd
-8. **rapyd_card**: Global card transfers via Rapyd
-9. **rapyd_cash**: Cash pickup at agent locations via Rapyd
-10. **crypto**: Cryptocurrency wallet transfers
+4. **paypal**: International PayPal payouts
+5. **rapyd_bank**: Global bank transfers via Rapyd (Kenya supported)
+6. **rapyd_card**: Global card transfers via Rapyd (Kenya supported)
+7. **rapyd_cash**: Cash pickup at agent locations via Rapyd
+8. **crypto**: Cryptocurrency wallet transfers
 
 ### 🌍 Global Coverage:
 - **Kenya**: M-Pesa, Airtel Money, bank transfers

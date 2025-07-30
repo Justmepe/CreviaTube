@@ -290,6 +290,18 @@ export const insertPayoutSchema = createInsertSchema(payouts).omit({
   id: true,
   processedAt: true,
   createdAt: true,
+}).extend({
+  amount: z.number().min(10, "Minimum payout is $10"),
+  paymentMethod: z.enum([
+    "mobile_money", 
+    "bank_transfer", 
+    "paypal", 
+    "crypto", 
+    "wise_transfer",
+    "rapyd_bank",
+    "rapyd_card",
+    "rapyd_cash"
+  ]),
 });
 
 // Types

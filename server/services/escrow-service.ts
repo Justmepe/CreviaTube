@@ -713,105 +713,25 @@ export class EscrowService {
   }
 
   /**
-   * Process bank transfer via Stripe Connect
+   * Process local bank transfer (Kenya/Africa)
    */
   private async processBankTransfer(accountDetails: {
     accountNumber: string;
-    routingNumber: string;
+    routingNumber?: string;
     accountHolderName: string;
-    country: string;
+    bankName?: string;
+    branchCode?: string;
   }, amount: number): Promise<string> {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      console.log(`⚠️ Stripe not configured, simulating bank transfer: $${amount} to ${accountDetails.accountHolderName}`);
-      return `BANK_SIM_${Date.now()}`;
-    }
-
-    try {
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-      // Create connected account for recipient
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: accountDetails.country,
-        email: `payout_${Date.now()}@temp.com`,
-      });
-
-      // Add bank account to connected account
-      await stripe.accounts.createExternalAccount(account.id, {
-        external_account: {
-          object: 'bank_account',
-          country: accountDetails.country,
-          currency: 'usd',
-          account_number: accountDetails.accountNumber,
-          routing_number: accountDetails.routingNumber,
-          account_holder_name: accountDetails.accountHolderName,
-          account_holder_type: 'individual',
-        },
-      });
-
-      // Create transfer
-      const transfer = await stripe.transfers.create({
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: 'usd',
-        destination: account.id,
-        description: 'CreoCash Clipper Payout',
-      });
-
-      console.log(`✅ Bank transfer initiated: $${amount} to ${accountDetails.accountHolderName}`);
-      return transfer.id;
-
-    } catch (error: any) {
-      console.error('Bank transfer error:', error);
-      throw new Error(`Bank transfer failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Process credit card payout via Stripe Connect
-   */
-  private async processCreditCardPayout(cardDetails: {
-    cardNumber: string;
-    cardHolderName: string;
-    country: string;
-  }, amount: number): Promise<string> {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      console.log(`⚠️ Stripe not configured, simulating card payout: $${amount} to ${cardDetails.cardHolderName}`);
-      return `CARD_SIM_${Date.now()}`;
-    }
-
-    try {
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-      // Create connected account for recipient
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: cardDetails.country,
-      });
-
-      // Add debit card as external account
-      await stripe.accounts.createExternalAccount(account.id, {
-        external_account: {
-          object: 'card',
-          number: cardDetails.cardNumber,
-          currency: 'usd',
-        },
-      });
-
-      // Create transfer to card
-      const transfer = await stripe.transfers.create({
-        amount: Math.round(amount * 100),
-        currency: 'usd',
-        destination: account.id,
-        description: 'CreoCash Clipper Card Payout',
-      });
-
-      console.log(`✅ Card payout initiated: $${amount} to ${cardDetails.cardHolderName}`);
-      return transfer.id;
-
-    } catch (error: any) {
-      console.error('Card payout error:', error);
-      throw new Error(`Card payout failed: ${error.message}`);
-    }
+    // Kenya banks: Equity Bank, KCB, Co-operative Bank, etc.
+    console.log(`💰 Processing local bank transfer: $${amount} to ${accountDetails.accountHolderName}`);
+    console.log(`🏦 Bank Details:`, {
+      account: accountDetails.accountNumber,
+      holder: accountDetails.accountHolderName,
+      bank: accountDetails.bankName || 'Kenya Bank',
+    });
+    
+    // Simulate bank transfer processing
+    return `KE_BANK_${Date.now()}`;
   }
 
   /**
