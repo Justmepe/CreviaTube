@@ -14,6 +14,7 @@ import MetricsDashboard from "@/pages/metrics-dashboard";
 import CampaignCreation from "@/pages/campaign-creation";
 import CampaignsList from "@/pages/campaigns-list";
 import ClipperMarketplace from "@/pages/clipper-marketplace";
+import EnhancedClipperMarketplace from "@/pages/enhanced-clipper-marketplace";
 import Payouts from "@/pages/payouts";
 import AdminUsers from "@/pages/admin-users";
 import CampaignFunding from "@/pages/campaign-funding";
@@ -28,7 +29,7 @@ function Router() {
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
       <ProtectedRoute path="/social-integration" component={SocialIntegration} />
-      <ProtectedRoute path="/marketplace" component={ClipperMarketplace} />
+      <ProtectedRoute path="/marketplace" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <Route path="/auth" component={AuthPage} />

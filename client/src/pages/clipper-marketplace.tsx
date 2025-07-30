@@ -77,12 +77,12 @@ export default function ClipperMarketplace() {
 
   const { data: availableCampaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns/available"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const { data: myApplications = [], isLoading: applicationsLoading } = useQuery<ClipperCampaign[]>({
     queryKey: ["/api/clipper-campaigns"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: user?.role === "clipper",
   });
 

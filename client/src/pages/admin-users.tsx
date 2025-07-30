@@ -63,7 +63,7 @@ export default function AdminUsers() {
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const updateUserMutation = useMutation({

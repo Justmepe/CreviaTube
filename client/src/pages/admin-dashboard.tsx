@@ -15,7 +15,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <DashboardLayout navigation={navigation} user={user}>
+    <DashboardLayout title="Admin Dashboard">
       <div className="space-y-6">
         {/* Page Header */}
         <div>

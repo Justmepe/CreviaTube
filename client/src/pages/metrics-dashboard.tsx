@@ -54,7 +54,7 @@ export default function MetricsDashboard() {
 
   const { data: metrics, isLoading, error } = useQuery<MetricsData>({
     queryKey: ["/api/metrics"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const syncMutation = useMutation({

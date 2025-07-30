@@ -52,7 +52,7 @@ export default function CampaignsList() {
 
   const { data: campaigns = [], isLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const toggleCampaignMutation = useMutation({

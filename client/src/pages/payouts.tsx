@@ -85,12 +85,12 @@ export default function Payouts() {
 
   const { data: payouts = [], isLoading: payoutsLoading } = useQuery<Payout[]>({
     queryKey: ["/api/payouts"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const { data: summary } = useQuery<PayoutSummary>({
     queryKey: ["/api/payouts/summary"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const form = useForm<PayoutRequestData>({

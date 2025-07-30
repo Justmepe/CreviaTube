@@ -61,7 +61,7 @@ export default function ClipperDashboard() {
   }));
 
   return (
-    <DashboardLayout navigation={navigation} user={user}>
+    <DashboardLayout title="Clipper Dashboard">
       <div className="space-y-6">
         {/* Page Header */}
         <div className="flex justify-between items-center">
