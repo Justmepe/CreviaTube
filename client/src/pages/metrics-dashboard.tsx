@@ -132,7 +132,6 @@ export default function MetricsDashboard() {
       <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Metrics Dashboard</h1>
           <p className="text-muted-foreground">
             Track your performance across all platforms
           </p>
