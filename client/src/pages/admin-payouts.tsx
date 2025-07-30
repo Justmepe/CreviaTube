@@ -104,13 +104,13 @@ export default function AdminPayouts() {
 
           <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-800">Pending Payouts</CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-blue-800">Auto-Processing</CardTitle>
+              <Zap className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-900">$3,250</div>
               <p className="text-xs text-blue-600">
-                15 pending requests
+                3 campaigns verified, processing
               </p>
             </CardContent>
           </Card>
@@ -146,7 +146,7 @@ export default function AdminPayouts() {
         <Tabs defaultValue="history" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="history">Payout History</TabsTrigger>
-            <TabsTrigger value="pending">Pending Payouts</TabsTrigger>
+            <TabsTrigger value="pending">Automatic Processing</TabsTrigger>
             <TabsTrigger value="withdrawals">Platform Withdrawals</TabsTrigger>
           </TabsList>
 
@@ -179,12 +179,12 @@ export default function AdminPayouts() {
                   </TableHeader>
                   <TableBody>
                     {[
-                      { clipper: "clipper_mike", campaign: "Forex Trading Course", amount: 150, method: "Bank Transfer", date: "2024-07-30", status: "completed" },
-                      { clipper: "social_sam", campaign: "Crypto Investment Guide", amount: 230, method: "PayPal", date: "2024-07-29", status: "completed" },
-                      { clipper: "content_creator", campaign: "Trading Signals App", amount: 180, method: "M-Pesa", date: "2024-07-28", status: "completed" },
-                      { clipper: "video_pro", campaign: "Social Media Marketing", amount: 120, method: "Bank Transfer", date: "2024-07-27", status: "completed" },
-                      { clipper: "influencer_jane", campaign: "Business Mentorship", amount: 280, method: "PayPal", date: "2024-07-26", status: "completed" },
-                      { clipper: "trader_clips", campaign: "MetaTrader Course", amount: 200, method: "Crypto", date: "2024-07-25", status: "completed" },
+                      { clipper: "clipper_mike", campaign: "Forex Trading Course", amount: 150, method: "Bank Transfer", date: "2024-07-30", verification: "50 signups verified" },
+                      { clipper: "social_sam", campaign: "Crypto Investment Guide", amount: 230, method: "PayPal", date: "2024-07-29", verification: "100 clicks + 15 conversions verified" },
+                      { clipper: "content_creator", campaign: "Trading Signals App", amount: 180, method: "M-Pesa", date: "2024-07-28", verification: "75 app downloads verified" },
+                      { clipper: "video_pro", campaign: "Social Media Marketing", amount: 120, method: "Bank Transfer", date: "2024-07-27", verification: "200 social engagements verified" },
+                      { clipper: "influencer_jane", campaign: "Business Mentorship", amount: 280, method: "PayPal", date: "2024-07-26", verification: "30 webinar signups verified" },
+                      { clipper: "trader_clips", campaign: "MetaTrader Course", amount: 200, method: "Crypto", date: "2024-07-25", verification: "25 course purchases verified" },
                     ].map((payout, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{payout.clipper}</TableCell>
@@ -193,10 +193,13 @@ export default function AdminPayouts() {
                         <TableCell>{payout.method}</TableCell>
                         <TableCell>{payout.date}</TableCell>
                         <TableCell>
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {payout.status}
-                          </Badge>
+                          <div className="space-y-1">
+                            <Badge variant="default" className="bg-green-100 text-green-800">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Auto-Paid
+                            </Badge>
+                            <div className="text-xs text-gray-600">{payout.verification}</div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -206,47 +209,94 @@ export default function AdminPayouts() {
             </Card>
           </TabsContent>
 
-          {/* Pending Payouts Tab */}
+          {/* Automatic Payouts Tab */}
           <TabsContent value="pending" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Pending Payout Requests</CardTitle>
-                <CardDescription>Clipper payout requests awaiting approval</CardDescription>
+                <CardTitle>Automatic Payout Processing</CardTitle>
+                <CardDescription>System automatically pays clippers when campaign objectives are verified</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-900">How Automatic Payouts Work</h4>
+                  </div>
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <p>• System verifies campaign objectives are met (clicks, signups, conversions)</p>
+                    <p>• Automated payment processing triggers within 24 hours</p>
+                    <p>• Funds transfer from campaign escrow (80%) directly to clipper</p>
+                    <p>• No manual approval required - fully automated verification</p>
+                  </div>
+                </div>
+
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Clipper</TableHead>
                       <TableHead>Campaign</TableHead>
+                      <TableHead>Objective Status</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Requested</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Processing</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {[
-                      { clipper: "new_clipper", campaign: "AI Trading Bot", amount: 95, method: "Bank Transfer", date: "2024-07-30" },
-                      { clipper: "growth_hacker", campaign: "Social Growth Course", amount: 140, method: "PayPal", date: "2024-07-30" },
-                      { clipper: "tiktok_star", campaign: "Influencer Marketing", amount: 75, method: "M-Pesa", date: "2024-07-29" },
-                    ].map((request, index) => (
+                      { 
+                        clipper: "new_clipper", 
+                        campaign: "AI Trading Bot", 
+                        objective: "50 signups achieved", 
+                        amount: 95, 
+                        status: "processing",
+                        timeLeft: "18 hours" 
+                      },
+                      { 
+                        clipper: "growth_hacker", 
+                        campaign: "Social Growth Course", 
+                        objective: "100 clicks verified", 
+                        amount: 140, 
+                        status: "processing",
+                        timeLeft: "6 hours" 
+                      },
+                      { 
+                        clipper: "tiktok_star", 
+                        campaign: "Influencer Marketing", 
+                        objective: "25 conversions verified", 
+                        amount: 75, 
+                        status: "ready",
+                        timeLeft: "Processing now" 
+                      },
+                    ].map((payout, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{request.clipper}</TableCell>
-                        <TableCell>{request.campaign}</TableCell>
-                        <TableCell>${request.amount}</TableCell>
-                        <TableCell>{request.method}</TableCell>
-                        <TableCell>{request.date}</TableCell>
+                        <TableCell className="font-medium">{payout.clipper}</TableCell>
+                        <TableCell>{payout.campaign}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Approve
-                            </Button>
-                            <Button size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Reject
-                            </Button>
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            {payout.objective}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>${payout.amount}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={payout.status === "ready" ? "default" : "secondary"}
+                            className={payout.status === "ready" ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            {payout.status === "ready" ? "Ready" : "Processing"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {payout.status === "ready" ? (
+                              <div className="flex items-center gap-1 text-blue-600">
+                                <Zap className="h-3 w-3 animate-pulse" />
+                                <span className="text-sm font-medium">Processing now</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-600">{payout.timeLeft}</span>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

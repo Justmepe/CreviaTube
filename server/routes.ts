@@ -1362,7 +1362,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: 150,
           method: "Bank Transfer",
           date: "2024-07-30",
-          status: "completed"
+          status: "auto_completed",
+          verification: "50 signups verified"
         },
         {
           id: "po-002",
@@ -1371,7 +1372,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: 230,
           method: "PayPal",
           date: "2024-07-29",
-          status: "completed"
+          status: "auto_completed",
+          verification: "100 clicks + 15 conversions verified"
         },
         {
           id: "po-003",
@@ -1380,7 +1382,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: 180,
           method: "M-Pesa",
           date: "2024-07-28",
-          status: "completed"
+          status: "auto_completed",
+          verification: "75 app downloads verified"
+        },
+        {
+          id: "po-004",
+          clipper: "trader_clips",
+          campaign: "MetaTrader Course",
+          amount: 200,
+          method: "Crypto",
+          date: "2024-07-27",
+          status: "auto_completed",
+          verification: "25 course purchases verified"
         }
       ];
       res.json(payoutHistory);
