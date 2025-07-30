@@ -104,6 +104,10 @@ export const trackingEvents = pgTable("tracking_events", {
   metadata: text("metadata"), // JSON string for additional data
   userAgent: text("user_agent"),
   ipAddress: text("ip_address"),
+  // Bot detection fields
+  botScore: decimal("bot_score", { precision: 3, scale: 2 }).default("0.00"),
+  flaggedAsBot: boolean("flagged_as_bot").default(false),
+  deviceFingerprint: text("device_fingerprint"), // JSON string for device info
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

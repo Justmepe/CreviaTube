@@ -25,6 +25,7 @@ import ProfileSettings from "@/pages/profile-settings";
 import ComprehensiveAdminDashboard from "@/pages/comprehensive-admin-dashboard";
 import AdminRevenue from "@/pages/admin-revenue";
 import AdminPayouts from "@/pages/admin-payouts";
+import BotMonitoring from "@/pages/bot-monitoring";
 
 function Router() {
   return (
@@ -49,6 +50,7 @@ function Router() {
       <ProtectedRoute path="/admin/control" component={ComprehensiveAdminDashboard} />
       <ProtectedRoute path="/admin/revenue" component={AdminRevenue} />
       <ProtectedRoute path="/admin/payouts" component={AdminPayouts} />
+      <ProtectedRoute path="/admin/bot-monitoring" component={BotMonitoring} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin" component={ComprehensiveAdminDashboard} />
       <Route path="/auth" component={AuthPage} />

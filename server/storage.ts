@@ -489,6 +489,95 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // Bot detection methods
+  async getBotDetectionStats(): Promise<any> {
+    try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      const [totalResult, botResult, suspiciousResult] = await Promise.all([
+        db.select({ count: count() }).from(trackingEvents).where(gte(trackingEvents.createdAt, oneDayAgo)),
+        db.select({ count: count() }).from(trackingEvents).where(
+          and(
+            eq(trackingEvents.flaggedAsBot, true),
+            gte(trackingEvents.createdAt, oneDayAgo)
+          )
+        ),
+        db.select({ count: count() }).from(trackingEvents).where(
+          and(
+            gte(trackingEvents.botScore, "0.4"),
+            eq(trackingEvents.flaggedAsBot, false),
+            gte(trackingEvents.createdAt, oneDayAgo)
+          )
+        )
+      ]);
+
+      const total = totalResult[0]?.count || 0;
+      const bots = botResult[0]?.count || 0;
+      const suspicious = suspiciousResult[0]?.count || 0;
+
+      return {
+        totalEvents: Number(total),
+        botEvents: Number(bots),
+        suspiciousEvents: Number(suspicious),
+        blockedEvents: Number(bots),
+        botRate: total > 0 ? bots / total : 0,
+        topBotIPs: [],
+        botEventsByHour: [],
+      };
+    } catch (error) {
+      console.error('Bot stats error:', error);
+      return {
+        totalEvents: 0,
+        botEvents: 0,
+        suspiciousEvents: 0,
+        blockedEvents: 0,
+        botRate: 0,
+        topBotIPs: [],
+        botEventsByHour: [],
+      };
+    }
+  }
+
+  async getBotDetectionEvents(): Promise<any[]> {
+    try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      const events = await db
+        .select({
+          id: trackingEvents.id,
+          clipperId: trackingEvents.clipperId,
+          campaignId: trackingEvents.campaignId,
+          eventType: trackingEvents.eventType,
+          botScore: trackingEvents.botScore,
+          flaggedAsBot: trackingEvents.flaggedAsBot,
+          deviceFingerprint: trackingEvents.deviceFingerprint,
+          userAgent: trackingEvents.userAgent,
+          ipAddress: trackingEvents.ipAddress,
+          createdAt: trackingEvents.createdAt,
+        })
+        .from(trackingEvents)
+        .where(gte(trackingEvents.createdAt, oneDayAgo))
+        .orderBy(desc(trackingEvents.createdAt))
+        .limit(500);
+
+      return events.map(event => ({
+        id: event.id,
+        clipperId: event.clipperId,
+        campaignId: event.campaignId,
+        eventType: event.eventType,
+        botScore: Number(event.botScore) || 0,
+        flaggedAsBot: event.flaggedAsBot || false,
+        deviceFingerprint: event.deviceFingerprint || '{}',
+        userAgent: event.userAgent || '',
+        ipAddress: event.ipAddress || '',
+        createdAt: event.createdAt.toISOString(),
+      }));
+    } catch (error) {
+      console.error('Bot events error:', error);
+      return [];
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -6,6 +6,8 @@ import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema } from "@shared/schema";
 import { randomBytes } from "crypto";
+import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
+import type { BotDetectionRequest } from "./middleware/bot-detection";
 // PesaPal configuration for African payments
 let pesapalConfigured = false;
 
@@ -348,10 +350,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tracking-events", async (req, res) => {
+  app.post("/api/tracking-events", 
+    collectDeviceFingerprint,
+    rateLimit(60000, 30), // 30 requests per minute
+    detectBot,
+    async (req: BotDetectionRequest, res) => {
     try {
       const validatedData = insertTrackingEventSchema.parse(req.body);
-      const event = await storage.createTrackingEvent(validatedData);
+      
+      // Add bot detection data to the event
+      const eventData = {
+        ...validatedData,
+        botScore: req.botDetection?.confidence || 0,
+        flaggedAsBot: req.botDetection?.isBot || false,
+        deviceFingerprint: JSON.stringify(req.deviceFingerprint),
+        userAgent: req.deviceFingerprint?.userAgent || req.get('User-Agent'),
+        ipAddress: req.deviceFingerprint?.ip || req.ip,
+      };
+      
+      const event = await storage.createTrackingEvent(eventData);
       res.status(201).json(event);
     } catch (error) {
       res.status(400).json({ message: "Invalid tracking event data", error });
@@ -654,15 +671,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tracking/view", async (req, res) => {
+  app.post("/api/tracking/view", 
+    collectDeviceFingerprint,
+    rateLimit(60000, 60), // 60 view events per minute
+    detectBot,
+    async (req: BotDetectionRequest, res) => {
     try {
       const { clipperCampaignId, duration, platform, contentId, metadata } = req.body;
+      
+      // Add bot detection metadata
+      const enhancedMetadata = {
+        ...metadata,
+        botScore: req.botDetection?.confidence || 0,
+        flaggedAsBot: req.botDetection?.isBot || false,
+        deviceFingerprint: req.deviceFingerprint,
+      };
+      
       const result = await trackingService.recordViewEvent(
         clipperCampaignId, 
         duration, 
         platform, 
         contentId, 
-        metadata
+        enhancedMetadata
       );
       res.json(result);
     } catch (error: any) {
@@ -1188,9 +1218,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tracking callback endpoint (public)
-  app.get("/track/:trackingCode", async (req, res) => {
+  // Tracking callback endpoint (public) with bot protection
+  app.get("/track/:trackingCode", 
+    collectDeviceFingerprint,
+    rateLimit(60000, 100), // 100 clicks per minute per IP
+    detectBot,
+    async (req: BotDetectionRequest, res) => {
     try {
+      // Block obvious bots from tracking callbacks
+      if (req.botDetection?.action === 'block') {
+        console.log(`🚫 Blocked bot tracking: ${req.params.trackingCode}`);
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5000'}/blocked`);
+      }
+
       const result = await trackingService.handleTrackingCallback(req.params.trackingCode, {
         userAgent: req.headers['user-agent'],
         ipAddress: req.ip || req.connection.remoteAddress,
@@ -1198,6 +1238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         platform: req.query.platform as string,
         contentId: req.query.contentId as string,
         viewDuration: req.query.duration ? parseInt(req.query.duration as string) : undefined,
+        // Add bot detection data
+        botScore: req.botDetection?.confidence || 0,
+        flaggedAsBot: req.botDetection?.isBot || false,
+        deviceFingerprint: req.deviceFingerprint,
       });
 
       // Redirect to campaign landing page or creator content
@@ -1295,6 +1339,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(stats);
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin bot monitoring routes
+  app.get("/api/admin/bot-stats", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const stats = await storage.getBotDetectionStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error('Bot stats error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/bot-events", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const events = await storage.getBotDetectionEvents();
+      res.json(events);
+    } catch (error: any) {
+      console.error('Bot events error:', error);
       res.status(500).json({ message: error.message });
     }
   });
