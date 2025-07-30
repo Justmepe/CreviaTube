@@ -36,7 +36,7 @@ export function DashboardLayout({ children, navigation, user }: DashboardLayoutP
                 <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-sm">
                   <span className="text-white text-lg font-bold">C</span>
                 </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">CreoCash</span>
+                <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">CreoCash</span>
               </div>
               <div className="hidden md:flex items-center space-x-1">
                 <span className="text-sm text-gray-500">|</span>
