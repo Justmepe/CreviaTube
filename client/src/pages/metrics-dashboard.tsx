@@ -24,6 +24,7 @@ import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { DashboardTypeExplanation } from "@/components/dashboard-type-explanation";
 
 interface MetricsData {
   social: Record<string, {
