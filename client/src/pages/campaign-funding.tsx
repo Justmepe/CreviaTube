@@ -144,14 +144,14 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
         setTimeout(() => {
           toast({
             title: "Development Mode",
-            description: `This is sandbox mode - no real money will be charged. In production, KES ${parseFloat(campaign.budget).toFixed(2)} would be deducted from your account.`,
+            description: `This is sandbox mode - no real money will be charged. In production, $${parseFloat(campaign.budget).toFixed(2)} USD (~KES ${(parseFloat(campaign.budget) * 130).toFixed(0)}) would be deducted from your account.`,
             duration: 10000,
           });
         }, 2000);
       } else {
         toast({
           title: "Campaign funded successfully!",
-          description: `Your campaign has been funded with KES ${parseFloat(campaign.budget).toFixed(2)}. Clippers can now apply and start promoting.`,
+          description: `Your campaign has been funded with $${parseFloat(campaign.budget).toFixed(2)} USD. Clippers can now apply and start promoting.`,
         });
       }
       onSuccess();
@@ -254,7 +254,7 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
               ) : (
                 <>
                   <Lock className="h-5 w-5 mr-2" />
-                  Fund Campaign - KES {parseFloat(campaign.budget).toFixed(2)}
+                  Fund Campaign - ${parseFloat(campaign.budget).toFixed(2)} USD
                 </>
               )}
             </Button>
