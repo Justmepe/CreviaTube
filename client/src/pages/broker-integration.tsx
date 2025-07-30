@@ -56,6 +56,217 @@ interface TradingAccount {
   };
 }
 
+interface AffiliateData {
+  totalClicks: number;
+  totalSignups: number;
+  totalDeposits: number;
+  totalEarnings: number;
+  breakdown: Record<string, {
+    clicks: number;
+    signups: number;
+    deposits: number;
+    earnings: number;
+  }>;
+  recentActivity: Array<{
+    date: string;
+    type: string;
+    broker: string;
+    amount: number;
+  }>;
+}
+
+const AffiliatePerformanceWidget = () => {
+  const { data: affiliateData, isLoading } = useQuery<AffiliateData>({
+    queryKey: ["/api/affiliate/performance"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-20 bg-gray-200 animate-pulse rounded-lg"></div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!affiliateData) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No affiliate data available
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-4 gap-4">
+        <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600">{affiliateData.totalClicks}</div>
+          <div className="text-sm text-blue-700 font-medium">Referral Clicks</div>
+        </div>
+        <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+          <div className="text-2xl font-bold text-green-600">{affiliateData.totalSignups}</div>
+          <div className="text-sm text-green-700 font-medium">Signups</div>
+        </div>
+        <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+          <div className="text-2xl font-bold text-purple-600">{affiliateData.totalDeposits}</div>
+          <div className="text-sm text-purple-700 font-medium">Deposits</div>
+        </div>
+        <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+          <div className="text-2xl font-bold text-orange-600">{formatCurrency(affiliateData.totalEarnings)}</div>
+          <div className="text-sm text-orange-700 font-medium">Total Earned</div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Broker Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(affiliateData.breakdown).map(([broker, data]) => (
+                <div key={broker} className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium capitalize">{broker}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {data.clicks} clicks • {data.signups} signups • {data.deposits} deposits
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">{formatCurrency(data.earnings)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {affiliateData.recentActivity.map((activity, index) => (
+                <div key={index} className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium capitalize">{activity.type}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {activity.broker} • {new Date(activity.date).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="font-semibold text-green-600">
+                    +{formatCurrency(activity.amount)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+interface BrokerProgram {
+  id: string;
+  name: string;
+  signupBonus: number;
+  depositBonus: number;
+  volumeRate: number;
+  description: string;
+  affiliateLink: string;
+  trackingCode: string;
+  isActive: boolean;
+}
+
+const BrokerAffiliateList = () => {
+  const { toast } = useToast();
+  const { data: brokerPrograms, isLoading } = useQuery<BrokerProgram[]>({
+    queryKey: ["/api/affiliate/brokers"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Available Broker Partners</h3>
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Available Broker Partners</h3>
+      <div className="grid gap-4">
+        {brokerPrograms?.map((broker) => (
+          <Card key={broker.id}>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <h4 className="font-semibold">{broker.name}</h4>
+                  <p className="text-sm text-muted-foreground">{broker.description}</p>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-blue-600">Signup: {formatCurrency(broker.signupBonus)}</span>
+                    <span className="text-green-600">Deposit: {formatCurrency(broker.depositBonus)}</span>
+                    <span className="text-purple-600">Volume: {broker.volumeRate}%</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="outline">{broker.trackingCode}</Badge>
+                    {broker.isActive && <Badge className="bg-green-100 text-green-800">Active</Badge>}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(broker.affiliateLink);
+                      toast({
+                        title: "Affiliate link copied",
+                        description: "Share this link to start earning commissions",
+                      });
+                    }}
+                  >
+                    Copy Link
+                  </Button>
+                  <Button size="sm" asChild>
+                    <a href={broker.affiliateLink} target="_blank" rel="noopener noreferrer">
+                      Visit Broker
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const SUPPORTED_BROKERS = [
   {
     name: "MetaTrader 4",
@@ -218,6 +429,7 @@ export default function BrokerIntegration() {
         <Tabs defaultValue="connected" className="space-y-6">
           <TabsList>
             <TabsTrigger value="connected">Connected Accounts</TabsTrigger>
+            <TabsTrigger value="affiliate">Affiliate Marketing</TabsTrigger>
             <TabsTrigger value="add-new">Add New Broker</TabsTrigger>
             <TabsTrigger value="supported">Supported Brokers</TabsTrigger>
           </TabsList>
@@ -321,6 +533,69 @@ export default function BrokerIntegration() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="affiliate" className="space-y-6">
+            <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Broker Affiliate Marketing
+                  </CardTitle>
+                  <CardDescription>
+                    Promote broker platforms through affiliate links and earn commissions on referrals, signups, deposits, and trading volume
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">Referral Signups</span>
+                      </div>
+                      <p className="text-sm text-blue-700">Earn $50-200 per new broker account signup through your affiliate link</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-green-900">Deposit Bonuses</span>
+                      </div>
+                      <p className="text-sm text-green-700">Get additional $100-500 when referred users make their first deposit</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Activity className="h-4 w-4 text-purple-600" />
+                        <span className="font-medium text-purple-900">Volume Commission</span>
+                      </div>
+                      <p className="text-sm text-purple-700">Earn 0.5-2% ongoing commission on all trading volume</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <BrokerAffiliateList />
+
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>How it works:</strong> Share your affiliate links with your audience. When someone clicks your link, signs up with the broker, deposits funds, and starts trading, you earn commissions at each step. All tracking is automatic through your unique referral codes.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Affiliate Performance Dashboard</CardTitle>
+                  <CardDescription>Track your affiliate marketing results and earnings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AffiliatePerformanceWidget />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="add-new" className="space-y-6">

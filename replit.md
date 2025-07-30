@@ -171,6 +171,16 @@ The application is deployment-agnostic with automatic detection of Replit vs ext
 - ✅ **Real-time Updates**: Live campaign stats, clipper counts, and earnings tracking
 - ✅ **Multi-role Support**: Creator, clipper, and admin interfaces with appropriate permissions
 
+### Broker Affiliate Marketing System (July 30, 2025)
+- ✅ **Complete Affiliate Flow**: Creators promote brokers through personalized affiliate links and earn on referrals, signups, deposits, and trading volume
+- ✅ **Multi-Stage Commission Tracking**: $50-200 signup bonuses, $100-500 deposit bonuses, and 0.5-2% ongoing volume commissions
+- ✅ **Real-time Performance Dashboard**: Live tracking of clicks, signups, deposits, and total earnings with broker-specific breakdowns
+- ✅ **Personalized Affiliate Links**: Dynamic affiliate links with unique tracking codes for each creator (OANDA_REF_[USER_ID], etc.)
+- ✅ **Major Broker Integration**: OANDA, Alpaca Markets, and Interactive Brokers partnerships with realistic commission structures
+- ✅ **Comprehensive API Backend**: Full RESTful API for affiliate performance tracking, broker program management, and click tracking
+- ✅ **Trading Account Management**: Secure storage and management of real broker API credentials with connection testing
+- ✅ **Automated Commission Processing**: Backend systems for tracking the complete affiliate funnel from click to trading volume
+
 ### Budget Escrow System Implementation (July 30, 2025)
 - ✅ **PesaPal Integration**: African payment processing with M-Pesa, Airtel Money, card, and bank transfer support
 - ✅ **Budget Locking**: Creators must fund campaigns upfront, budget locked in escrow (cannot be withdrawn)

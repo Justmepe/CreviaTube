@@ -603,6 +603,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Broker affiliate marketing endpoints
+  app.get("/api/affiliate/performance", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // In a real implementation, this would fetch actual affiliate data from broker APIs
+      // For now, returning simulated data that matches the UI
+      const affiliateData = {
+        totalClicks: 23,
+        totalSignups: 8,
+        totalDeposits: 5,
+        totalEarnings: 1250.00,
+        breakdown: {
+          oanda: { clicks: 12, signups: 4, deposits: 3, earnings: 650.00 },
+          alpaca: { clicks: 8, signups: 3, deposits: 1, earnings: 350.00 },
+          interactiveBrokers: { clicks: 3, signups: 1, deposits: 1, earnings: 250.00 }
+        },
+        recentActivity: [
+          { date: new Date().toISOString(), type: "deposit", broker: "OANDA", amount: 150.00 },
+          { date: new Date(Date.now() - 86400000).toISOString(), type: "signup", broker: "Alpaca", amount: 100.00 },
+          { date: new Date(Date.now() - 172800000).toISOString(), type: "volume", broker: "OANDA", amount: 85.50 }
+        ]
+      };
+      
+      res.json(affiliateData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/affiliate/brokers", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Return available broker affiliate programs
+      const brokerPrograms = [
+        {
+          id: "oanda",
+          name: "OANDA",
+          signupBonus: 150,
+          depositBonus: 300,
+          volumeRate: 1.2,
+          description: "Major forex broker with competitive spreads",
+          affiliateLink: `https://oanda.com/affiliate/ref/${req.user.id}`,
+          trackingCode: `OANDA_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
+          isActive: true
+        },
+        {
+          id: "alpaca",
+          name: "Alpaca Markets",
+          signupBonus: 100,
+          depositBonus: 250,
+          volumeRate: 0.8,
+          description: "Commission-free stock and crypto trading",
+          affiliateLink: `https://alpaca.markets/affiliate/ref/${req.user.id}`,
+          trackingCode: `ALPACA_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
+          isActive: true
+        },
+        {
+          id: "ibkr",
+          name: "Interactive Brokers",
+          signupBonus: 200,
+          depositBonus: 500,
+          volumeRate: 1.5,
+          description: "Professional trading platform with global access",
+          affiliateLink: `https://interactivebrokers.com/affiliate/ref/${req.user.id}`,
+          trackingCode: `IBKR_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
+          isActive: true
+        }
+      ];
+      
+      res.json(brokerPrograms);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/affiliate/track-click", async (req, res) => {
+    try {
+      const { brokerId, referralCode, userAgent, ipAddress } = req.body;
+      
+      // In a real implementation, this would:
+      // 1. Log the click event to database
+      // 2. Create a tracking session
+      // 3. Forward to the actual broker affiliate link
+      
+      console.log(`Affiliate click tracked: ${brokerId} - ${referralCode}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Click tracked successfully" 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Tracking callback endpoint (public)
   app.get("/track/:trackingCode", async (req, res) => {
     try {
