@@ -155,7 +155,9 @@ export default function ClipperDashboard() {
             {(clipperCampaigns as any[]).length === 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-4">No campaigns joined yet</p>
-                <Button>Browse Available Campaigns</Button>
+                <Button asChild>
+                  <a href="/campaigns">Browse Available Campaigns</a>
+                </Button>
               </div>
             )}
           </CardContent>

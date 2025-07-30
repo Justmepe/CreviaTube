@@ -15,6 +15,7 @@ import CampaignCreation from "@/pages/campaign-creation";
 import CampaignsList from "@/pages/campaigns-list";
 import ClipperMarketplace from "@/pages/clipper-marketplace";
 import EnhancedClipperMarketplace from "@/pages/enhanced-clipper-marketplace";
+import CampaignsMarketplace from "@/pages/campaigns-marketplace";
 import Payouts from "@/pages/payouts";
 import AdminUsers from "@/pages/admin-users";
 import CampaignFunding from "@/pages/campaign-funding";
@@ -26,7 +27,10 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={() => <DashboardRouter />} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
-      <ProtectedRoute path="/campaigns" component={CampaignsList} />
+      <ProtectedRoute path="/campaigns" component={() => {
+        const { user } = useAuth();
+        return user?.role === "clipper" ? <CampaignsMarketplace /> : <CampaignsList />;
+      }} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
       <ProtectedRoute path="/social-integration" component={SocialIntegration} />

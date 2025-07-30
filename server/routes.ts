@@ -188,6 +188,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Available campaigns for clippers
+  app.get("/api/campaigns/available", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "clipper") {
+      return res.status(403).json({ message: "Only clippers can view available campaigns" });
+    }
+
+    try {
+      const availableCampaigns = await storage.getAvailableCampaigns();
+      // Filter out campaigns this clipper has already joined
+      const filteredCampaigns = [];
+      for (const campaign of availableCampaigns) {
+        const existing = await storage.getClipperCampaign(req.user.id, campaign.id);
+        if (!existing) {
+          filteredCampaigns.push(campaign);
+        }
+      }
+      res.json(filteredCampaigns);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch available campaigns" });
+    }
+  });
+
   // Clipper campaign routes
   app.get("/api/clipper-campaigns", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
