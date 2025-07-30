@@ -23,6 +23,7 @@ import {
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { DashboardLayout } from "@/components/dashboard-layout";
 
 interface MetricsData {
   social: Record<string, {
@@ -79,7 +80,7 @@ export default function MetricsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <DashboardLayout title="Metrics Dashboard">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -88,13 +89,13 @@ export default function MetricsDashboard() {
             ))}
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <DashboardLayout title="Metrics Dashboard">
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
             <CardTitle className="text-red-700">Failed to load metrics</CardTitle>
@@ -103,7 +104,7 @@ export default function MetricsDashboard() {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -127,7 +128,8 @@ export default function MetricsDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <DashboardLayout title="Metrics Dashboard">
+      <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Metrics Dashboard</h1>
@@ -527,6 +529,7 @@ export default function MetricsDashboard() {
           </TabsContent>
         )}
       </Tabs>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

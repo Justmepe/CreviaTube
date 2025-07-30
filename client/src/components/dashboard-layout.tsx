@@ -1,8 +1,19 @@
 import { ReactNode } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Bell, Menu, Crown } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  BarChart3,
+  Users,
+  TrendingUp,
+  DollarSign,
+  Activity,
+  Wallet,
+  LogOut,
+  User,
+  Settings
+} from "lucide-react";
 
 interface NavigationItem {
   name: string;
@@ -13,117 +24,148 @@ interface NavigationItem {
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  navigation: NavigationItem[];
-  user: any;
+  navigation?: NavigationItem[];
+  title?: string;
 }
 
-export function DashboardLayout({ children, navigation, user }: DashboardLayoutProps) {
-  const { logoutMutation } = useAuth();
+export function DashboardLayout({ children, navigation: customNavigation, title }: DashboardLayoutProps) {
+  const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
+  // Default navigation based on user type
+  const getDefaultNavigation = (): NavigationItem[] => {
+    if (user?.role === "admin") {
+      return [
+        { name: "Dashboard", href: "/", icon: BarChart3 },
+        { name: "Users", href: "/users", icon: Users },
+        { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+        { name: "Analytics", href: "/analytics", icon: Activity },
+      ];
+    }
+
+    if (user?.role === "clipper") {
+      return [
+        { name: "Dashboard", href: "/", icon: BarChart3 },
+        { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+        { name: "Earnings", href: "/earnings", icon: DollarSign },
+        { name: "Payouts", href: "/payouts", icon: Wallet },
+      ];
+    }
+
+    // Creator navigation (all creator types)
+    const baseNavigation = [
+      { name: "Dashboard", href: "/", icon: BarChart3 },
+      { name: "Metrics", href: "/metrics", icon: Activity },
+      { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+      { name: "Clippers", href: "/clippers", icon: Users },
+    ];
+
+    // Add specific items based on creator type
+    if (user?.userType === "trader_creator") {
+      baseNavigation.push({ name: "Broker Integration", href: "/broker", icon: Wallet });
+    }
+
+    baseNavigation.push({ name: "Payouts", href: "/payouts", icon: DollarSign });
+
+    return baseNavigation;
   };
+
+  const navigation = customNavigation || getDefaultNavigation();
+
+  // Mark current page
+  const navigationWithCurrent = navigation.map(item => ({
+    ...item,
+    current: location === item.href
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-sm">
-                  <span className="text-white text-lg font-bold">C</span>
-                </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">CreoCash</span>
+      {/* Sidebar */}
+      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg">
+        <div className="flex h-full flex-col">
+          {/* Logo */}
+          <div className="flex h-16 shrink-0 items-center px-6 border-b">
+            <div className="flex items-center">
+              <div className="h-8 w-8 bg-teal-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">CC</span>
               </div>
-              <div className="hidden md:flex items-center space-x-1">
-                <span className="text-sm text-gray-500">|</span>
-                <span className="text-sm font-medium text-primary-600">
-                  {user?.role === "creator" ? "Creator Dashboard" : 
-                   user?.role === "clipper" ? "Clipper Dashboard" : "Admin Dashboard"}
-                </span>
+              <span className="ml-2 text-xl font-bold text-gray-900">CreoCash</span>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex flex-1 flex-col px-4 py-4">
+            <ul className="flex flex-1 flex-col gap-y-1">
+              {navigationWithCurrent.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.name}>
+                    <Link href={item.href}>
+                      <div
+                        className={cn(
+                          item.current
+                            ? "bg-teal-50 text-teal-700 border-r-2 border-teal-500"
+                            : "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+                          "group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors cursor-pointer"
+                        )}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {item.name}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          {/* User menu */}
+          <div className="border-t p-4">
+            <div className="flex items-center gap-x-3 pb-3">
+              <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-gray-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {user?.fullName || user?.username}
+                </p>
+                <p className="text-xs text-gray-500 capitalize">
+                  {user?.userType?.replace('_', ' ') || user?.role}
+                </p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-accent-500 rounded-full"></span>
-              </button>
-              
-              {/* User Menu */}
-              <div className="flex items-center space-x-3">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {user?.fullName?.charAt(0) || user?.username?.charAt(0)}
-                </div>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" className="flex-1">
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
-      </header>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-sm border-r border-gray-200 hidden lg:block">
-          <div className="p-6">
-            <nav className="space-y-2">
-              {navigation.map((item) => {
-                const IconComponent = item.icon;
-                const isActive = location === item.href;
-                
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors ${
-                      isActive
-                        ? "text-primary-600 bg-primary-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {user?.role === "creator" && (
-              <div className="mt-8 p-4 bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Crown className="w-4 h-4 text-accent-500" />
-                  <span className="text-sm font-semibold text-gray-800">Upgrade to Pro</span>
-                </div>
-                <p className="text-xs text-gray-600 mb-3">Get advanced analytics and priority support</p>
-                <Button className="w-full text-sm py-2">
-                  Upgrade Now
-                </Button>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          {children}
-        </main>
       </div>
 
-      {/* Mobile Menu Toggle */}
-      <div className="lg:hidden fixed bottom-6 right-6">
-        <Button className="p-4 rounded-full shadow-lg">
-          <Menu className="w-5 h-5" />
-        </Button>
+      {/* Main content */}
+      <div className="pl-64">
+        <main className="py-8">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            {title && (
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                  {title}
+                </h1>
+              </div>
+            )}
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
