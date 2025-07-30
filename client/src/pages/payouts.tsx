@@ -63,14 +63,46 @@ interface PayoutSummary {
 
 const payoutRequestSchema = z.object({
   amount: z.number().min(10, "Minimum payout is $10"),
-  paymentMethod: z.string().min(1, "Payment method is required"),
+  paymentMethod: z.enum([
+    "mobile_money", 
+    "bank_transfer", 
+    "paypal", 
+    "crypto", 
+    "credit_card", 
+    "debit_card",
+    "wise_transfer",
+    "rapyd_bank",
+    "rapyd_card",
+    "rapyd_cash"
+  ]),
   paymentDetails: z.object({
+    // Bank account details
     accountNumber: z.string().optional(),
     routingNumber: z.string().optional(),
     swiftCode: z.string().optional(),
+    bankCode: z.string().optional(),
+    accountHolderName: z.string().optional(),
+    
+    // Card details
+    cardNumber: z.string().optional(),
+    cardHolderName: z.string().optional(),
+    
+    // Mobile money
     phoneNumber: z.string().optional(),
-    walletAddress: z.string().optional(),
+    
+    // PayPal & Email
     email: z.string().email().optional(),
+    
+    // Crypto
+    walletAddress: z.string().optional(),
+    
+    // Country & Currency
+    country: z.string().optional(),
+    currency: z.string().optional(),
+    
+    // Additional details
+    recipientName: z.string().optional(),
+    recipientAddress: z.string().optional(),
   }),
   notes: z.string().optional(),
 });
@@ -156,18 +188,30 @@ export default function Payouts() {
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method) {
-      case "bank_transfer": return <Building className="h-4 w-4" />;
+      case "bank_transfer":
+      case "wise_transfer": 
+      case "rapyd_bank": return <Building className="h-4 w-4" />;
       case "mobile_money": return <Smartphone className="h-4 w-4" />;
-      case "paypal": return <CreditCard className="h-4 w-4" />;
-      case "crypto": return <DollarSign className="h-4 w-4" />;
+      case "paypal":
+      case "credit_card":
+      case "debit_card":
+      case "rapyd_card": return <CreditCard className="h-4 w-4" />;
+      case "crypto":
+      case "rapyd_cash": return <DollarSign className="h-4 w-4" />;
       default: return <CreditCard className="h-4 w-4" />;
     }
   };
 
   const paymentMethods = [
-    { value: "bank_transfer", label: "Bank Transfer", icon: <Building className="h-4 w-4" /> },
+    { value: "bank_transfer", label: "Bank Transfer (Local)", icon: <Building className="h-4 w-4" /> },
+    { value: "wise_transfer", label: "International Bank Transfer (Wise)", icon: <Building className="h-4 w-4" /> },
+    { value: "credit_card", label: "Credit Card", icon: <CreditCard className="h-4 w-4" /> },
+    { value: "debit_card", label: "Debit Card", icon: <CreditCard className="h-4 w-4" /> },
     { value: "paypal", label: "PayPal", icon: <CreditCard className="h-4 w-4" /> },
-    { value: "mobile_money", label: "Mobile Money (M-Pesa, etc.)", icon: <Smartphone className="h-4 w-4" /> },
+    { value: "mobile_money", label: "Mobile Money (M-Pesa, Airtel)", icon: <Smartphone className="h-4 w-4" /> },
+    { value: "rapyd_bank", label: "Global Bank Transfer (Rapyd)", icon: <Building className="h-4 w-4" /> },
+    { value: "rapyd_card", label: "Global Card Transfer (Rapyd)", icon: <CreditCard className="h-4 w-4" /> },
+    { value: "rapyd_cash", label: "Cash Pickup (Rapyd)", icon: <DollarSign className="h-4 w-4" /> },
     { value: "crypto", label: "Cryptocurrency", icon: <DollarSign className="h-4 w-4" /> },
   ];
 
@@ -362,7 +406,7 @@ export default function Payouts() {
                                 <FormItem>
                                   <FormLabel>Account Number</FormLabel>
                                   <FormControl>
-                                    <Input {...field} />
+                                    <Input placeholder="1234567890" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -375,7 +419,134 @@ export default function Payouts() {
                                 <FormItem>
                                   <FormLabel>Routing Number</FormLabel>
                                   <FormControl>
-                                    <Input {...field} />
+                                    <Input placeholder="123456789" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.accountHolderName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Account Holder Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="John Doe" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </>
+                        )}
+
+                        {form.watch("paymentMethod") === "wise_transfer" && (
+                          <>
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.accountNumber"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Account Number</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="International account number" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.bankCode"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Bank Code / SWIFT</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="ABCDUS33XXX" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.recipientName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Recipient Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Full legal name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.country"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Country</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="US, UK, DE, etc." {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.currency"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Currency</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="USD, EUR, GBP, etc." {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </>
+                        )}
+
+                        {(form.watch("paymentMethod") === "credit_card" || form.watch("paymentMethod") === "debit_card") && (
+                          <>
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.cardNumber"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Card Number</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="4111 1111 1111 1111" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.cardHolderName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Card Holder Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Name on card" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="paymentDetails.country"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Country</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Card issuing country" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>

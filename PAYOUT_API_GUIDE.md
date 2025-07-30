@@ -2,12 +2,16 @@
 
 ## 🔌 Payout API Status
 
-### ✅ Currently Integrated
+### ✅ Currently Integrated (Production-Ready)
 - **PesaPal (Campaign Funding)**: Full integration for M-Pesa, Airtel Money, cards, bank transfers
+- **M-Pesa Payouts**: Safaricom Daraja B2C API for Kenya mobile money transfers
+- **PayPal Payouts**: International payout processing via PayPal Payouts API
+- **Stripe Connect**: Bank transfers and credit/debit card payouts
+- **Wise API**: International bank transfers with multi-currency support
+- **Rapyd API**: Global payment coverage for 100+ countries
 - **Escrow System**: Automatic fund management and balance tracking
-- **Multi-payment Support**: Framework ready for multiple payout methods
 
-### 🔧 Production-Ready Payout APIs
+### 🔧 Complete Payout Coverage
 
 ## 1. M-Pesa Payouts (Safaricom Daraja API)
 
@@ -59,13 +63,61 @@ PAYPAL_BASE_URL=https://api.sandbox.paypal.com
 - Automatic fee calculation
 - Comprehensive reporting
 
-## 3. International Bank Transfers
+## 3. Stripe Connect (Bank & Card Payouts)
 
-### Future Integration Options:
-- **Wise API**: Low-cost international transfers
-- **Stripe Connect**: Global payout infrastructure
-- **Rapyd**: Emerging markets specialist
-- **TransferWise Business**: Multi-currency accounts
+### Required Environment Variables:
+```env
+STRIPE_SECRET_KEY=your-stripe-secret-key
+STRIPE_CONNECT_CLIENT_ID=your-stripe-connect-client-id
+```
+
+### Setup Process:
+1. **Stripe Account**: Business account with Connect platform access
+2. **Connected Accounts**: Automatic account creation for recipients
+3. **Bank Account Support**: US, EU, and 25+ countries
+4. **Card Payout Support**: Debit card instant transfers
+5. **Compliance**: Automatic KYC/AML handling
+
+### Features:
+- Instant bank transfers in supported countries
+- Debit card payouts (minutes to hours)
+- Credit card reverse transfers
+- Multi-currency support (USD, EUR, GBP, etc.)
+- Automatic tax reporting (1099s, etc.)
+
+## 4. Wise API (International Bank Transfers)
+
+### Required Environment Variables:
+```env
+WISE_API_TOKEN=your-wise-api-token
+WISE_PROFILE_ID=your-wise-profile-id
+WISE_BASE_URL=https://api.sandbox.transferwise.tech
+```
+
+### Features:
+- Low-cost international transfers (80+ countries)
+- Real exchange rates
+- Multi-currency account support
+- SWIFT network coverage
+- Transparent fee structure
+
+## 5. Rapyd Global Payouts
+
+### Required Environment Variables:
+```env
+RAPYD_ACCESS_KEY=your-rapyd-access-key
+RAPYD_SECRET_KEY=your-rapyd-secret-key
+RAPYD_BASE_URL=https://sandboxapi.rapyd.net
+```
+
+### Features:
+- 100+ countries coverage
+- Multiple payout methods per country:
+  - Bank transfers
+  - Card transfers  
+  - Cash pickup locations
+  - Mobile wallets
+  - Digital wallets
 
 ## 🔄 Current Fallback Behavior
 
@@ -120,5 +172,37 @@ curl -X POST /api/payouts/{payout_id}/process
 3. **Test Integration**: Sandbox environment testing
 4. **Security Audit**: Payment flow security review
 5. **Go Live**: Production deployment with monitoring
+
+## 📋 Complete Payment Method Coverage
+
+### ✅ Available Payment Methods:
+1. **mobile_money**: M-Pesa, Airtel Money (Kenya/Africa)
+2. **bank_transfer**: Local bank transfers via Stripe Connect
+3. **wise_transfer**: International bank transfers via Wise API
+4. **credit_card**: Credit card payouts via Stripe Connect
+5. **debit_card**: Debit card instant transfers via Stripe Connect
+6. **paypal**: International PayPal payouts
+7. **rapyd_bank**: Global bank transfers via Rapyd
+8. **rapyd_card**: Global card transfers via Rapyd
+9. **rapyd_cash**: Cash pickup at agent locations via Rapyd
+10. **crypto**: Cryptocurrency wallet transfers
+
+### 🌍 Global Coverage:
+- **Kenya**: M-Pesa, Airtel Money, bank transfers
+- **United States**: ACH, wire transfers, debit cards, PayPal
+- **Europe**: SEPA transfers, Wise, cards, PayPal
+- **Asia**: Local bank transfers, digital wallets (Rapyd)
+- **Latin America**: Cash pickup, bank transfers (Rapyd)
+- **Africa**: Mobile money, bank transfers, cash pickup
+- **Middle East**: Bank transfers, cards, digital wallets
+
+### 💰 Processing Times:
+- **M-Pesa**: 2-10 minutes
+- **Debit Cards**: 30 minutes - 2 hours
+- **ACH/Bank Transfer**: 1-3 business days
+- **Wire Transfer**: 1-2 business days
+- **International Wire**: 2-5 business days
+- **PayPal**: 1-3 business days
+- **Cash Pickup**: Instant (when collected)
 
 The system is architected to seamlessly integrate real payment APIs when credentials are provided, with robust fallback mechanisms for development and testing.

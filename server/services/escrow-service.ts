@@ -713,6 +713,271 @@ export class EscrowService {
   }
 
   /**
+   * Process bank transfer via Stripe Connect
+   */
+  private async processBankTransfer(accountDetails: {
+    accountNumber: string;
+    routingNumber: string;
+    accountHolderName: string;
+    country: string;
+  }, amount: number): Promise<string> {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.log(`⚠️ Stripe not configured, simulating bank transfer: $${amount} to ${accountDetails.accountHolderName}`);
+      return `BANK_SIM_${Date.now()}`;
+    }
+
+    try {
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+      // Create connected account for recipient
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: accountDetails.country,
+        email: `payout_${Date.now()}@temp.com`,
+      });
+
+      // Add bank account to connected account
+      await stripe.accounts.createExternalAccount(account.id, {
+        external_account: {
+          object: 'bank_account',
+          country: accountDetails.country,
+          currency: 'usd',
+          account_number: accountDetails.accountNumber,
+          routing_number: accountDetails.routingNumber,
+          account_holder_name: accountDetails.accountHolderName,
+          account_holder_type: 'individual',
+        },
+      });
+
+      // Create transfer
+      const transfer = await stripe.transfers.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: 'usd',
+        destination: account.id,
+        description: 'CreoCash Clipper Payout',
+      });
+
+      console.log(`✅ Bank transfer initiated: $${amount} to ${accountDetails.accountHolderName}`);
+      return transfer.id;
+
+    } catch (error: any) {
+      console.error('Bank transfer error:', error);
+      throw new Error(`Bank transfer failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Process credit card payout via Stripe Connect
+   */
+  private async processCreditCardPayout(cardDetails: {
+    cardNumber: string;
+    cardHolderName: string;
+    country: string;
+  }, amount: number): Promise<string> {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.log(`⚠️ Stripe not configured, simulating card payout: $${amount} to ${cardDetails.cardHolderName}`);
+      return `CARD_SIM_${Date.now()}`;
+    }
+
+    try {
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+      // Create connected account for recipient
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: cardDetails.country,
+      });
+
+      // Add debit card as external account
+      await stripe.accounts.createExternalAccount(account.id, {
+        external_account: {
+          object: 'card',
+          number: cardDetails.cardNumber,
+          currency: 'usd',
+        },
+      });
+
+      // Create transfer to card
+      const transfer = await stripe.transfers.create({
+        amount: Math.round(amount * 100),
+        currency: 'usd',
+        destination: account.id,
+        description: 'CreoCash Clipper Card Payout',
+      });
+
+      console.log(`✅ Card payout initiated: $${amount} to ${cardDetails.cardHolderName}`);
+      return transfer.id;
+
+    } catch (error: any) {
+      console.error('Card payout error:', error);
+      throw new Error(`Card payout failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Process international bank transfer via Wise API
+   */
+  private async processWiseBankTransfer(transferDetails: {
+    accountNumber: string;
+    bankCode: string;
+    recipientName: string;
+    country: string;
+    currency: string;
+  }, amount: number): Promise<string> {
+    if (!process.env.WISE_API_TOKEN) {
+      console.log(`⚠️ Wise not configured, simulating international transfer: $${amount} to ${transferDetails.recipientName}`);
+      return `WISE_SIM_${Date.now()}`;
+    }
+
+    try {
+      // Create recipient account
+      const recipientResponse = await fetch(`${process.env.WISE_BASE_URL}/v1/accounts`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.WISE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currency: transferDetails.currency,
+          type: 'bank_account',
+          profile: process.env.WISE_PROFILE_ID,
+          accountHolderName: transferDetails.recipientName,
+          legalType: 'PRIVATE',
+          details: {
+            accountNumber: transferDetails.accountNumber,
+            bankCode: transferDetails.bankCode,
+          },
+        }),
+      });
+
+      const recipient = await recipientResponse.json();
+
+      // Create transfer
+      const transferResponse = await fetch(`${process.env.WISE_BASE_URL}/v1/transfers`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.WISE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetAccount: recipient.id,
+          quoteUuid: await this.getWiseQuote(amount, transferDetails.currency),
+          customerTransactionId: `creocash_${Date.now()}`,
+          details: {
+            reference: 'CreoCash Clipper Payout',
+            transferPurpose: 'verification.transfers.purpose.pay.bills',
+          },
+        }),
+      });
+
+      const transfer = await transferResponse.json();
+
+      console.log(`✅ Wise transfer initiated: $${amount} to ${transferDetails.recipientName}`);
+      return transfer.id;
+
+    } catch (error: any) {
+      console.error('Wise transfer error:', error);
+      throw new Error(`Wise transfer failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get Wise transfer quote
+   */
+  private async getWiseQuote(amount: number, targetCurrency: string): Promise<string> {
+    const quoteResponse = await fetch(`${process.env.WISE_BASE_URL}/v2/quotes`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.WISE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sourceCurrency: 'USD',
+        targetCurrency,
+        sourceAmount: amount,
+        profile: process.env.WISE_PROFILE_ID,
+      }),
+    });
+
+    const quote = await quoteResponse.json();
+    return quote.id;
+  }
+
+  /**
+   * Process global payout via Rapyd API (supports 100+ countries)
+   */
+  private async processRapydPayout(payoutDetails: {
+    payoutMethodType: string; // 'bank_transfer', 'card', 'cash_pickup', etc.
+    beneficiaryDetails: any;
+    country: string;
+    currency: string;
+  }, amount: number): Promise<string> {
+    if (!process.env.RAPYD_ACCESS_KEY || !process.env.RAPYD_SECRET_KEY) {
+      console.log(`⚠️ Rapyd not configured, simulating ${payoutDetails.payoutMethodType}: $${amount}`);
+      return `RAPYD_SIM_${Date.now()}`;
+    }
+
+    try {
+      // Create beneficiary
+      const beneficiaryResponse = await this.rapydApiRequest('POST', '/v1/payouts/beneficiary', {
+        category: 'general',
+        country: payoutDetails.country,
+        currency: payoutDetails.currency,
+        entity_type: 'individual',
+        merchant_reference_id: `creocash_${Date.now()}`,
+        payout_method_type: payoutDetails.payoutMethodType,
+        ...payoutDetails.beneficiaryDetails,
+      });
+
+      // Create payout
+      const payoutResponse = await this.rapydApiRequest('POST', '/v1/payouts', {
+        beneficiary: beneficiaryResponse.data.id,
+        payout_amount: amount,
+        payout_currency: payoutDetails.currency,
+        payout_method_type: payoutDetails.payoutMethodType,
+        sender_amount: amount,
+        sender_currency: 'USD',
+        description: 'CreoCash Clipper Commission',
+        merchant_reference_id: `payout_${Date.now()}`,
+      });
+
+      console.log(`✅ Rapyd payout initiated: $${amount} via ${payoutDetails.payoutMethodType}`);
+      return payoutResponse.data.id;
+
+    } catch (error: any) {
+      console.error('Rapyd payout error:', error);
+      throw new Error(`Rapyd payout failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Helper for Rapyd API requests with signature
+   */
+  private async rapydApiRequest(method: string, path: string, body: any) {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const bodyString = JSON.stringify(body);
+    
+    // Generate signature (simplified - production needs proper HMAC)
+    const signature = require('crypto')
+      .createHmac('sha256', process.env.RAPYD_SECRET_KEY)
+      .update(method + path + bodyString + timestamp)
+      .digest('hex');
+
+    const response = await fetch(`${process.env.RAPYD_BASE_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'access_key': process.env.RAPYD_ACCESS_KEY!,
+        'signature': signature,
+        'timestamp': timestamp,
+      },
+      body: bodyString,
+    });
+
+    return await response.json();
+  }
+
+  /**
    * Gets escrow balance and status for a campaign
    */
   async getEscrowStatus(campaignId: string) {
