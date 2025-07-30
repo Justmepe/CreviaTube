@@ -67,10 +67,14 @@ export const campaigns = pgTable("campaigns", {
   status: campaignStatusEnum("status").notNull().default("draft"),
   budget: decimal("budget", { precision: 10, scale: 2 }).notNull(),
   budgetUsed: decimal("budget_used", { precision: 10, scale: 2 }).notNull().default("0"),
-  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull().default("0.20"),
+  escrowBalance: decimal("escrow_balance", { precision: 10, scale: 2 }).notNull().default("0"), // 80% held for clippers
+  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull().default("0"), // 20% platform fee
+  fundingStatus: text("funding_status").notNull().default("pending"), // pending, funded, insufficient
+  fundedAt: timestamp("funded_at"),
   rewardRates: text("reward_rates").notNull(), // JSON string
   targetPlatforms: text("target_platforms").notNull(), // JSON array
   requirements: text("requirements"),
+  duration: integer("duration").notNull().default(30), // campaign duration in days
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -287,6 +291,43 @@ export const insertPayoutSchema = createInsertSchema(payouts).omit({
 });
 
 // Types
+// Budget escrow transactions table  
+export const budgetEscrow = pgTable("budget_escrow", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
+  creatorId: varchar("creator_id").notNull().references(() => users.id),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  escrowAmount: decimal("escrow_amount", { precision: 10, scale: 2 }).notNull(),
+  platformFeeAmount: decimal("platform_fee_amount", { precision: 10, scale: 2 }).notNull(),
+  availableBalance: decimal("available_balance", { precision: 10, scale: 2 }).notNull(),
+  lockedBalance: decimal("locked_balance", { precision: 10, scale: 2 }).default("0").notNull(),
+  status: text("status").notNull().default("active"),
+  paymentMethod: text("payment_method").notNull(),
+  transactionId: text("transaction_id"),
+  isLocked: boolean("is_locked").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Auto-payment transactions for clippers
+export const autoPayments = pgTable("auto_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  escrowId: varchar("escrow_id").notNull().references(() => budgetEscrow.id),
+  clipperId: varchar("clipper_id").notNull().references(() => users.id),  
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
+  eventId: varchar("event_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pending"),
+  paymentMethod: text("payment_method").notNull(),
+  paymentDetails: text("payment_details"),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  processedAt: timestamp("processed_at"),
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
@@ -297,3 +338,5 @@ export type TrackingEvent = typeof trackingEvents.$inferSelect;
 export type InsertTrackingEvent = z.infer<typeof insertTrackingEventSchema>;
 export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
+export type AutoPayment = typeof autoPayments.$inferSelect;

@@ -2,8 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { escrowService } from "./services/escrow-service";
+import { trackingService } from "./services/tracking-service";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema } from "@shared/schema";
 import { randomBytes } from "crypto";
+// PesaPal configuration for African payments
+let pesapalConfigured = false;
+
+if (process.env.PESAPAL_CONSUMER_KEY && process.env.PESAPAL_CONSUMER_SECRET) {
+  pesapalConfigured = true;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -35,12 +43,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCampaignSchema.parse({
         ...req.body,
         creatorId: req.user.id,
+        fundingStatus: "pending", // All campaigns start as pending funding
       });
 
       const campaign = await storage.createCampaign(validatedData);
-      res.status(201).json(campaign);
+      res.status(201).json({
+        ...campaign,
+        message: "Campaign created successfully. Please fund it to activate."
+      });
     } catch (error) {
       res.status(400).json({ message: "Invalid campaign data", error });
+    }
+  });
+
+  // Campaign funding endpoints
+  app.post("/api/campaigns/:id/fund", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Only creators can fund campaigns" });
+    }
+
+    try {
+      const { method, phoneNumber, email } = req.body;
+      if (!method) {
+        return res.status(400).json({ message: "Payment method is required" });
+      }
+
+      if (method === "mpesa" && !phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required for M-Pesa payments" });
+      }
+
+      const result = await escrowService.fundCampaign(req.params.id, {
+        method,
+        phoneNumber,
+        email: email || req.user.email,
+      });
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/campaigns/:id/funding-status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const escrowStatus = await escrowService.getEscrowStatus(req.params.id);
+      res.json(escrowStatus);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // PesaPal payment methods endpoint
+  app.get("/api/payment-methods", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    if (!pesapalConfigured) {
+      return res.status(500).json({ 
+        message: "Payment system not configured",
+        availableMethods: [] 
+      });
+    }
+
+    res.json({
+      availableMethods: [
+        {
+          id: "mpesa",
+          name: "M-Pesa",
+          description: "Pay with M-Pesa mobile money",
+          icon: "phone",
+          requiresPhone: true,
+        },
+        {
+          id: "airtel_money",
+          name: "Airtel Money",
+          description: "Pay with Airtel Money",
+          icon: "phone",
+          requiresPhone: true,
+        },
+        {
+          id: "card",
+          name: "Credit/Debit Card",
+          description: "Pay with Visa, MasterCard",
+          icon: "credit-card",
+          requiresPhone: false,
+        },
+        {
+          id: "bank",
+          name: "Bank Transfer",
+          description: "Direct bank transfer",
+          icon: "building",
+          requiresPhone: false,
+        }
+      ]
+    });
+  });
+
+  // PesaPal callback endpoint
+  app.post("/api/pesapal/callback", async (req, res) => {
+    try {
+      const { OrderTrackingId, OrderNotificationType } = req.body;
+      
+      // Update campaign funding status based on payment result
+      if (OrderNotificationType === "COMPLETED") {
+        // Find campaign by transaction ID and update status
+        console.log(`PesaPal payment completed: ${OrderTrackingId}`);
+        // Update campaign funding status to funded
+      }
+      
+      res.json({ status: "received" });
+    } catch (error: any) {
+      console.error('PesaPal callback error:', error);
+      res.status(500).json({ message: error.message });
     }
   });
 
@@ -307,6 +422,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect("https://deriv.com");
     } catch (error) {
       res.status(500).json({ message: "Tracking failed" });
+    }
+  });
+
+  // Enhanced tracking endpoints
+  app.post("/api/tracking/record", async (req, res) => {
+    try {
+      const result = await trackingService.recordTrackingEvent(req.body);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/tracking/view", async (req, res) => {
+    try {
+      const { clipperCampaignId, duration, platform, contentId, metadata } = req.body;
+      const result = await trackingService.recordViewEvent(
+        clipperCampaignId, 
+        duration, 
+        platform, 
+        contentId, 
+        metadata
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/tracking/engagement", async (req, res) => {
+    try {
+      const { clipperCampaignId, engagementType, platform, contentId, metadata } = req.body;
+      const result = await trackingService.recordEngagementEvent(
+        clipperCampaignId,
+        engagementType,
+        platform,
+        contentId,
+        metadata
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Social media integration endpoints  
+  app.post("/api/users/:id/social-integration", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    // Only allow users to update their own social accounts or admins
+    if (req.user.id !== req.params.id && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    try {
+      const result = await trackingService.updateSocialMediaIntegration(req.params.id, req.body);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Campaign management endpoints
+  app.post("/api/campaigns/:id/end", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Only creators can end campaigns" });
+    }
+
+    try {
+      const result = await trackingService.endCampaign(req.params.id, req.user.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/campaigns/:id/performance", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const performance = await trackingService.getCampaignPerformance(req.params.id);
+      res.json(performance);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Tracking callback endpoint (public)
+  app.get("/track/:trackingCode", async (req, res) => {
+    try {
+      const result = await trackingService.handleTrackingCallback(req.params.trackingCode, {
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip || req.connection.remoteAddress,
+        referrer: req.headers['referer'],
+        platform: req.query.platform as string,
+        contentId: req.query.contentId as string,
+        viewDuration: req.query.duration ? parseInt(req.query.duration as string) : undefined,
+      });
+
+      // Redirect to campaign landing page or creator content
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5000'}/tracking-success?event=${result.eventId}`);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

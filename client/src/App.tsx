@@ -16,6 +16,8 @@ import CampaignsList from "@/pages/campaigns-list";
 import ClipperMarketplace from "@/pages/clipper-marketplace";
 import Payouts from "@/pages/payouts";
 import AdminUsers from "@/pages/admin-users";
+import CampaignFunding from "@/pages/campaign-funding";
+import SocialIntegration from "@/pages/social-integration";
 
 function Router() {
   return (
@@ -24,6 +26,8 @@ function Router() {
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
       <ProtectedRoute path="/campaigns" component={CampaignsList} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
+      <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
+      <ProtectedRoute path="/social-integration" component={SocialIntegration} />
       <ProtectedRoute path="/marketplace" component={ClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />

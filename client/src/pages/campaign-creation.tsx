@@ -13,10 +13,11 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { DollarSign, Target, Users, Calendar, Zap } from "lucide-react";
+import { DollarSign, Target, Users, Calendar, Zap, Lock, Shield, AlertTriangle } from "lucide-react";
 
 const campaignSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -154,6 +155,16 @@ export default function CampaignCreation() {
   return (
     <DashboardLayout title="Create Campaign">
       <div className="max-w-4xl space-y-8">
+        {/* Budget Escrow Notice */}
+        <Alert className="border-orange-200 bg-orange-50">
+          <Shield className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            <strong>Budget Escrow System:</strong> Your campaign budget will be held in escrow to ensure fair clipper payments. 
+            The platform takes 20% as fees, and 80% is reserved for automatic clipper payments. 
+            <span className="font-semibold text-orange-900"> Once funded, the budget cannot be withdrawn</span> to protect clipper earnings.
+          </AlertDescription>
+        </Alert>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -161,7 +172,7 @@ export default function CampaignCreation() {
               Campaign Details
             </CardTitle>
             <CardDescription>
-              Create a new affiliate marketing campaign to promote your {user?.userType?.replace('_', ' ')} content
+              Create a new affiliate marketing campaign. You'll need to fund the budget before clippers can join.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -467,6 +478,43 @@ export default function CampaignCreation() {
 
                 <Separator />
 
+                {/* Budget Breakdown */}
+                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-blue-600" />
+                    Budget Breakdown
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Total Budget</span>
+                      <span className="font-semibold text-lg">${form.watch("budget").toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Platform Fee (20%)</span>
+                      <span className="text-red-600">-${(form.watch("budget") * 0.20).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Clipper Escrow (80%)</span>
+                      <span className="text-green-600">${(form.watch("budget") * 0.80).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t pt-2">
+                      <div className="flex justify-between items-center font-semibold">
+                        <span>Available for Rewards</span>
+                        <span className="text-green-700">${(form.watch("budget") * 0.80).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                      <div className="text-sm text-yellow-800">
+                        <strong>Important:</strong> Once you fund this campaign, the budget is locked in escrow 
+                        and cannot be withdrawn. This ensures clippers receive their payments automatically.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Campaign Preview */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold mb-4">Campaign Preview</h3>
@@ -495,25 +543,6 @@ export default function CampaignCreation() {
                   </div>
                 </div>
 
-                {/* Launch Options */}
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Launch Immediately</FormLabel>
-                        <FormDescription>
-                          Start accepting clipper applications right away
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
                 <div className="flex gap-4">
                   <Button 
                     type="submit" 
@@ -521,12 +550,20 @@ export default function CampaignCreation() {
                     className="bg-teal-600 hover:bg-teal-700"
                   >
                     <Zap className="h-4 w-4 mr-2" />
-                    {createCampaignMutation.isPending ? "Creating..." : "Create Campaign"}
+                    {createCampaignMutation.isPending ? "Creating..." : "Create Draft Campaign"}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => form.reset()}>
                     Reset Form
                   </Button>
                 </div>
+                
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    <strong>Next Step:</strong> After creating your campaign, you'll be prompted to fund it with your credit card or bank account. 
+                    Once funded, clippers can apply and start promoting your content immediately. All payments to clippers are processed automatically from your escrow balance.
+                  </AlertDescription>
+                </Alert>
               </form>
             </Form>
           </CardContent>
