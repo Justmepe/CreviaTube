@@ -30,6 +30,11 @@ function Router() {
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
       <ProtectedRoute path="/social-integration" component={SocialIntegration} />
       <ProtectedRoute path="/marketplace" component={EnhancedClipperMarketplace} />
+      <ProtectedRoute path="/clippers" component={EnhancedClipperMarketplace} />
+      <ProtectedRoute path="/channels" component={MetricsDashboard} />
+      <ProtectedRoute path="/broker" component={MetricsDashboard} />
+      <ProtectedRoute path="/analytics" component={MetricsDashboard} />
+      <ProtectedRoute path="/creators" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <Route path="/auth" component={AuthPage} />
