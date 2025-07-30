@@ -19,6 +19,7 @@ import Payouts from "@/pages/payouts";
 import AdminUsers from "@/pages/admin-users";
 import CampaignFunding from "@/pages/campaign-funding";
 import SocialIntegration from "@/pages/social-integration";
+import BrokerIntegration from "@/pages/broker-integration";
 
 function Router() {
   return (
@@ -32,7 +33,7 @@ function Router() {
       <ProtectedRoute path="/marketplace" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/clippers" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/channels" component={MetricsDashboard} />
-      <ProtectedRoute path="/broker" component={MetricsDashboard} />
+      <ProtectedRoute path="/broker" component={BrokerIntegration} />
       <ProtectedRoute path="/analytics" component={MetricsDashboard} />
       <ProtectedRoute path="/creators" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />

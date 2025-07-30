@@ -10,6 +10,7 @@ import { eq, and, desc, sql, sum } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { randomUUID } from "crypto";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -63,6 +64,19 @@ export interface IStorage {
     tradingAccounts?: any;
     businessIntegration?: any;
   }): Promise<User | undefined>;
+  
+  // Trading account operations
+  addTradingAccount(userId: string, account: {
+    name: string;
+    platform: string;
+    apiKey: string;
+    accountId: string;
+    serverUrl?: string;
+  }): Promise<User | undefined>;
+  
+  removeTradingAccount(userId: string, accountId: string): Promise<User | undefined>;
+  
+  getTradingAccounts(userId: string): Promise<any>;
   
   sessionStore: any;
 }
@@ -326,6 +340,71 @@ export class DatabaseStorage implements IStorage {
     });
 
     return stats;
+  }
+
+  async addTradingAccount(userId: string, account: {
+    name: string;
+    platform: string;
+    apiKey: string;
+    accountId: string;
+    serverUrl?: string;
+  }): Promise<User | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+
+    const existingAccounts = user.tradingAccounts ? 
+      (typeof user.tradingAccounts === 'string' ? JSON.parse(user.tradingAccounts) : user.tradingAccounts) : 
+      { brokers: [] };
+    const newAccount = {
+      id: randomUUID(),
+      ...account,
+      isConnected: true,
+      lastSync: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+
+    existingAccounts.brokers.push(newAccount);
+
+    const [updated] = await db
+      .update(users)
+      .set({ tradingAccounts: JSON.stringify(existingAccounts) as any })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updated || undefined;
+  }
+
+  async removeTradingAccount(userId: string, accountId: string): Promise<User | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+
+    const existingAccounts = user.tradingAccounts ? 
+      (typeof user.tradingAccounts === 'string' ? JSON.parse(user.tradingAccounts) : user.tradingAccounts) : 
+      { brokers: [] };
+    existingAccounts.brokers = existingAccounts.brokers.filter((broker: any) => broker.id !== accountId);
+
+    const [updated] = await db
+      .update(users)
+      .set({ tradingAccounts: JSON.stringify(existingAccounts) as any })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updated || undefined;
+  }
+
+  async getTradingAccounts(userId: string): Promise<any> {
+    const user = await this.getUser(userId);
+    if (!user || !user.tradingAccounts) {
+      return { brokers: [] };
+    }
+
+    try {
+      return typeof user.tradingAccounts === 'string' ? 
+        JSON.parse(user.tradingAccounts) : 
+        user.tradingAccounts;
+    } catch {
+      return { brokers: [] };
+    }
   }
 
   async updateUserIntegrations(userId: string, integrations: {

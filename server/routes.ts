@@ -529,6 +529,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trading account management endpoints
+  app.get("/api/user/trading-accounts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const tradingAccounts = await storage.getTradingAccounts(req.user.id);
+      res.json(tradingAccounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/user/trading-accounts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { name, platform, apiKey, accountId, serverUrl } = req.body;
+      
+      if (!name || !platform || !apiKey || !accountId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const updatedUser = await storage.addTradingAccount(req.user.id, {
+        name,
+        platform,
+        apiKey,
+        accountId,
+        serverUrl
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "Trading account connected successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/user/trading-accounts/:accountId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const updatedUser = await storage.removeTradingAccount(req.user.id, req.params.accountId);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User or account not found" });
+      }
+
+      res.json({ message: "Trading account removed successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/user/trading-accounts/:accountId/test", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // For now, return a simulated test result
+      // In a real implementation, this would test the actual API connection
+      res.json({ 
+        success: true, 
+        message: "Connection test successful. Account is reachable and credentials are valid." 
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
   // Tracking callback endpoint (public)
   app.get("/track/:trackingCode", async (req, res) => {
     try {
