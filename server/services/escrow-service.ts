@@ -48,7 +48,7 @@ export class EscrowService {
       const platformFeeAmount = totalAmount * 0.20; // 20% platform fee
       const escrowAmount = totalAmount * 0.80; // 80% for clippers
 
-      // Process payment with PesaPal
+      // Process payment through PesaPal
       const paymentResult = await this.processPesaPalPayment({
         amount: totalAmount,
         currency: "KES", // Kenya Shillings
@@ -329,6 +329,8 @@ export class EscrowService {
     return `MPESA${Date.now()}`;
   }
 
+
+
   /**
    * Processes PesaPal payment for campaign funding
    */
@@ -351,8 +353,8 @@ export class EscrowService {
         currency: paymentData.currency,
         amount: paymentData.amount,
         description: paymentData.description,
-        callback_url: `${process.env.FRONTEND_URL}/api/pesapal/callback`,
-        redirect_url: `${process.env.FRONTEND_URL}/campaigns/${paymentData.campaignId}/funding`,
+        callback_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://localhost:5000'}/api/pesapal/callback`,
+        redirect_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://localhost:5000'}/campaigns/${paymentData.campaignId}/funding?status=success`,
         notification_id: paymentData.campaignId,
         billing_address: {
           email_address: paymentData.email,
@@ -372,15 +374,23 @@ export class EscrowService {
         body: JSON.stringify(pesapalPayment),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('PesaPal API Error:', response.status, errorText);
+        throw new Error(`PesaPal API returned ${response.status}: ${errorText}`);
+      }
+
       const result = await response.json();
+      console.log('PesaPal API Response:', result);
       
-      if (result.status === "200" && result.order_tracking_id) {
+      if (result.order_tracking_id) {
         return {
           status: "success",
           transactionId: result.order_tracking_id,
+          redirectUrl: result.redirect_url,
         };
       } else {
-        throw new Error(result.message || "PesaPal payment failed");
+        throw new Error(result.error?.message || result.message || "PesaPal payment initialization failed");
       }
 
     } catch (error: any) {
@@ -401,6 +411,7 @@ export class EscrowService {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify({
         consumer_key: pesapalConfig.consumerKey,
@@ -408,12 +419,19 @@ export class EscrowService {
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('PesaPal Auth Error:', response.status, errorText);
+      throw new Error(`PesaPal authentication failed: ${response.status} ${errorText}`);
+    }
+
     const result = await response.json();
+    console.log('PesaPal Auth Response:', result);
     
-    if (result.status === "200" && result.token) {
+    if (result.token) {
       return result.token;
     } else {
-      throw new Error("Failed to get PesaPal auth token");
+      throw new Error(result.error?.message || "Failed to get PesaPal auth token");
     }
   }
 
