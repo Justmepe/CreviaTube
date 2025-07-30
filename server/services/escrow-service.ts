@@ -100,6 +100,7 @@ export class EscrowService {
         escrowAmount,
         platformFeeAmount,
         transactionId: paymentResult.transactionId,
+        redirectUrl: paymentResult.redirectUrl,
       };
 
     } catch (error: any) {
@@ -343,7 +344,7 @@ export class EscrowService {
     paymentMethod: string;
     phoneNumber?: string;
     email?: string;
-  }): Promise<{ status: string; transactionId: string }> {
+  }): Promise<{ status: string; transactionId: string; redirectUrl?: string }> {
     try {
       // Generate authentication token
       const authToken = await this.getPesaPalAuthToken();

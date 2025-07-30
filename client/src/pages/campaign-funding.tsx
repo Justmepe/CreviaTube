@@ -129,10 +129,30 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-      toast({
-        title: "Campaign funded successfully!",
-        description: `Your campaign has been funded with KES ${parseFloat(campaign.budget).toFixed(2)}. Clippers can now apply and start promoting.`,
-      });
+      
+      // Check if we have a redirect URL from PesaPal
+      if (data.redirectUrl) {
+        toast({
+          title: "Redirecting to payment...",
+          description: "You will be redirected to complete your payment securely.",
+        });
+        
+        // Redirect to PesaPal payment page
+        window.open(data.redirectUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+        
+        // Show success message after a short delay
+        setTimeout(() => {
+          toast({
+            title: "Payment initiated!",
+            description: `Complete your payment of KES ${parseFloat(campaign.budget).toFixed(2)} to fund your campaign.`,
+          });
+        }, 1000);
+      } else {
+        toast({
+          title: "Campaign funded successfully!",
+          description: `Your campaign has been funded with KES ${parseFloat(campaign.budget).toFixed(2)}. Clippers can now apply and start promoting.`,
+        });
+      }
       onSuccess();
     },
     onError: (error: Error) => {
