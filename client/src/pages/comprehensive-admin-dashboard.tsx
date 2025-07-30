@@ -160,98 +160,187 @@ export default function ComprehensiveAdminDashboard() {
           {/* Live Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Real-Time Activity Feed */}
+              {/* Monthly Revenue Analytics */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5" />
-                    Live Activity Feed
-                    <Button variant="ghost" size="sm">
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
+                    <BarChart3 className="h-5 w-5" />
+                    Monthly Revenue Trends
                   </CardTitle>
-                  <CardDescription>Real-time platform events and activities</CardDescription>
+                  <CardDescription>Platform revenue growth over the last 12 months</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4 max-h-80 overflow-y-auto">
+                  <div className="space-y-4">
                     {[
-                      { type: "signup", user: "trader_john", desc: "New trader creator registered", time: "2 min ago", status: "success" },
-                      { type: "campaign", user: "sarah_forex", desc: "Campaign funding completed - $2,500", time: "5 min ago", status: "success" },
-                      { type: "payout", user: "clipper_mike", desc: "Payout processed - $150", time: "8 min ago", status: "success" },
-                      { type: "tracking", user: "system", desc: "1,000 new tracking events processed", time: "12 min ago", status: "info" },
-                      { type: "alert", user: "system", desc: "High traffic detected on Instagram API", time: "15 min ago", status: "warning" },
-                      { type: "campaign", user: "crypto_edu", desc: "Campaign ended - final payments processing", time: "18 min ago", status: "info" },
-                      { type: "user", user: "influencer_sam", desc: "Profile verification completed", time: "22 min ago", status: "success" },
-                      { type: "error", user: "system", desc: "Trading API connection timeout", time: "25 min ago", status: "error" },
-                    ].map((activity, index) => (
-                      <div key={index} className="flex items-center space-x-4 border-b pb-3 last:border-b-0">
-                        <div className={`w-3 h-3 rounded-full ${
-                          activity.status === 'success' ? 'bg-green-500' :
-                          activity.status === 'warning' ? 'bg-yellow-500' :
-                          activity.status === 'error' ? 'bg-red-500' : 'bg-blue-500'
-                        }`}></div>
+                      { month: "Jul 2024", revenue: 45680, users: 127, growth: 18.2, userGrowth: 12 },
+                      { month: "Jun 2024", revenue: 38690, users: 113, growth: 15.3, userGrowth: 8 },
+                      { month: "May 2024", revenue: 33540, users: 105, growth: 12.8, userGrowth: 15 },
+                      { month: "Apr 2024", revenue: 29720, users: 91, growth: 9.4, userGrowth: 6 },
+                      { month: "Mar 2024", revenue: 27150, users: 86, growth: 11.2, userGrowth: 11 },
+                      { month: "Feb 2024", revenue: 24420, users: 77, growth: 8.9, userGrowth: 9 },
+                    ].map((month, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{activity.desc}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.user} • {activity.time}
-                          </p>
+                          <div className="font-medium">{month.month}</div>
+                          <div className="text-sm text-gray-500">{month.users} total users</div>
                         </div>
-                        <Badge variant="outline" className="capitalize">{activity.type}</Badge>
+                        <div className="text-right">
+                          <div className="font-semibold">${month.revenue.toLocaleString()}</div>
+                          <div className="text-xs flex gap-2">
+                            <span className={`${month.growth > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {month.growth > 0 ? '+' : ''}{month.growth}% rev
+                            </span>
+                            <span className={`${month.userGrowth > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                              +{month.userGrowth} users
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Platform Performance Analytics */}
+              {/* User Acquisition Analytics */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Platform Performance
+                    <Users className="h-5 w-5" />
+                    User Growth Analytics
                   </CardTitle>
-                  <CardDescription>Key performance indicators and metrics</CardDescription>
+                  <CardDescription>User acquisition and retention patterns</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Campaign Success Rate</span>
-                      <span className="text-sm font-semibold text-green-600">87.3%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '87.3%' }}></div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Average Campaign ROI</span>
-                      <span className="text-sm font-semibold text-blue-600">312%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-900">127</div>
+                        <div className="text-xs text-blue-600">Total Users</div>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-900">+12</div>
+                        <div className="text-xs text-green-600">This Month</div>
+                      </div>
                     </div>
 
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Clipper Retention Rate</span>
-                      <span className="text-sm font-semibold text-purple-600">93.1%</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Creator Signups</span>
+                        <span className="text-sm font-semibold text-purple-600">68 (54%)</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-purple-500 h-2 rounded-full" style={{ width: '54%' }}></div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Clipper Signups</span>
+                        <span className="text-sm font-semibold text-teal-600">58 (46%)</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-teal-500 h-2 rounded-full" style={{ width: '46%' }}></div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">30-Day Retention</span>
+                        <span className="text-sm font-semibold text-green-600">84.2%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '84.2%' }}></div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Avg. User LTV</span>
+                        <span className="text-sm font-semibold text-orange-600">$2,340</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{ width: '78%' }}></div>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: '93.1%' }}></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Revenue & User Growth Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue vs User Growth Correlation</CardTitle>
+                  <CardDescription>Monthly revenue and user acquisition trends</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm font-medium text-gray-600 mb-2">
+                      <span>Month</span>
+                      <span>Revenue</span>
+                      <span>New Users</span>
+                      <span>Rev/User</span>
+                    </div>
+                    {[
+                      { month: "Jul", revenue: 45680, newUsers: 12, revPerUser: 3807 },
+                      { month: "Jun", revenue: 38690, newUsers: 8, revPerUser: 4836 },
+                      { month: "May", revenue: 33540, newUsers: 15, revPerUser: 2236 },
+                      { month: "Apr", revenue: 29720, newUsers: 6, revPerUser: 4953 },
+                      { month: "Mar", revenue: 27150, newUsers: 11, revPerUser: 2468 },
+                    ].map((data, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                        <span className="text-sm font-medium w-12">{data.month}</span>
+                        <span className="text-sm text-green-600 w-16">${(data.revenue/1000).toFixed(0)}k</span>
+                        <span className="text-sm text-blue-600 w-12">+{data.newUsers}</span>
+                        <span className="text-sm text-purple-600 w-16">${data.revPerUser.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Platform Analytics Summary</CardTitle>
+                  <CardDescription>Key performance indicators and growth metrics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 border rounded-lg">
+                        <div className="text-lg font-bold text-green-600">$360/mo</div>
+                        <div className="text-xs text-gray-500">Avg Monthly Rev/User</div>
+                      </div>
+                      <div className="text-center p-3 border rounded-lg">
+                        <div className="text-lg font-bold text-blue-600">87.3%</div>
+                        <div className="text-xs text-gray-500">Campaign Success Rate</div>
+                      </div>
                     </div>
 
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">API Sync Success</span>
-                      <span className="text-sm font-semibold text-teal-600">96.8%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-teal-500 h-2 rounded-full" style={{ width: '96.8%' }}></div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Revenue Growth</span>
-                      <span className="text-sm font-semibold text-orange-600">+18.2%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{ width: '82%' }}></div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Creator Types Distribution</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span>Trading Educators (45%)</span>
+                          <span>31 users</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: '45%' }}></div>
+                        </div>
+                        
+                        <div className="flex justify-between text-xs">
+                          <span>Social Influencers (32%)</span>
+                          <span>22 users</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div className="bg-teal-500 h-1.5 rounded-full" style={{ width: '32%' }}></div>
+                        </div>
+                        
+                        <div className="flex justify-between text-xs">
+                          <span>Entrepreneurs (23%)</span>
+                          <span>15 users</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '23%' }}></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

@@ -1083,11 +1083,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeCampaigns: 23,
         campaignGrowth: 12,
         totalRevenue: 45680,
-        revenueGrowth: 18,
+        revenueGrowth: 18.2,
         totalEvents: 8934,
         eventsToday: 156,
         systemHealth: "Healthy",
-        uptime: 99.8
+        uptime: 99.8,
+        // Enhanced analytics data
+        monthlyStats: [
+          { month: "Jul 2024", revenue: 45680, users: 127, newUsers: 12, revenueGrowth: 18.2, userGrowth: 12 },
+          { month: "Jun 2024", revenue: 38690, users: 113, newUsers: 8, revenueGrowth: 15.3, userGrowth: 8 },
+          { month: "May 2024", revenue: 33540, users: 105, newUsers: 15, revenueGrowth: 12.8, userGrowth: 15 },
+          { month: "Apr 2024", revenue: 29720, users: 91, newUsers: 6, revenueGrowth: 9.4, userGrowth: 6 },
+          { month: "Mar 2024", revenue: 27150, users: 86, newUsers: 11, revenueGrowth: 11.2, userGrowth: 11 },
+          { month: "Feb 2024", revenue: 24420, users: 77, newUsers: 9, revenueGrowth: 8.9, userGrowth: 9 }
+        ],
+        userDistribution: {
+          creators: 68,
+          clippers: 58,
+          admin: 1,
+          creatorTypes: {
+            trader_creator: 31,
+            influencer: 22,
+            entrepreneur: 15
+          }
+        },
+        retentionMetrics: {
+          thirtyDay: 84.2,
+          sixtyDay: 78.5,
+          ninetyDay: 72.1
+        },
+        averageLifetimeValue: 2340,
+        averageMonthlyRevenuePerUser: 360
       };
       
       res.json(stats);
@@ -1227,6 +1253,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Enhanced admin analytics endpoints
+  app.get("/api/admin/analytics/monthly", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const monthlyAnalytics = {
+        revenueByMonth: [
+          { month: "2024-07", revenue: 45680, users: 127, campaigns: 23, avgRevenuePerUser: 360 },
+          { month: "2024-06", revenue: 38690, users: 113, campaigns: 19, avgRevenuePerUser: 342 },
+          { month: "2024-05", revenue: 33540, users: 105, campaigns: 16, avgRevenuePerUser: 319 },
+          { month: "2024-04", revenue: 29720, users: 91, campaigns: 14, avgRevenuePerUser: 327 },
+          { month: "2024-03", revenue: 27150, users: 86, campaigns: 12, avgRevenuePerUser: 316 },
+          { month: "2024-02", revenue: 24420, users: 77, campaigns: 11, avgRevenuePerUser: 317 }
+        ],
+        userGrowthByMonth: [
+          { month: "2024-07", newCreators: 7, newClippers: 5, totalNew: 12, retention: 84.2 },
+          { month: "2024-06", newCreators: 5, newClippers: 3, totalNew: 8, retention: 82.1 },
+          { month: "2024-05", newCreators: 9, newClippers: 6, totalNew: 15, retention: 79.8 },
+          { month: "2024-04", newCreators: 4, newClippers: 2, totalNew: 6, retention: 81.5 },
+          { month: "2024-03", newCreators: 7, newClippers: 4, totalNew: 11, retention: 83.2 },
+          { month: "2024-02", newCreators: 6, newClippers: 3, totalNew: 9, retention: 80.7 }
+        ],
+        campaignMetrics: {
+          totalCampaigns: 85,
+          activeCampaigns: 23,
+          averageCampaignValue: 1986,
+          successRate: 87.3,
+          topPerformingTypes: [
+            { type: "Trading Education", count: 12, avgValue: 2450 },
+            { type: "Crypto Investment", count: 8, avgValue: 1890 },
+            { type: "Social Media Marketing", count: 6, avgValue: 1320 }
+          ]
+        }
+      };
+      
+      res.json(monthlyAnalytics);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/analytics/cohort", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const cohortAnalytics = {
+        cohortRetention: [
+          { cohort: "2024-07", month0: 100, month1: 84, month2: null, month3: null },
+          { cohort: "2024-06", month0: 100, month1: 82, month2: 76, month3: null },
+          { cohort: "2024-05", month0: 100, month1: 80, month2: 74, month3: 69 },
+          { cohort: "2024-04", month0: 100, month1: 82, month2: 78, month3: 73 },
+          { cohort: "2024-03", month0: 100, month1: 83, month2: 79, month3: 75 }
+        ],
+        revenueByUserType: [
+          { userType: "trader_creator", totalRevenue: 18720, avgRevenue: 604, count: 31 },
+          { userType: "influencer", totalRevenue: 15840, avgRevenue: 720, count: 22 },
+          { userType: "entrepreneur", totalRevenue: 11120, avgRevenue: 741, count: 15 }
+        ]
+      };
+      
+      res.json(cohortAnalytics);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
