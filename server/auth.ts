@@ -29,11 +29,23 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error(
+      "SESSION_SECRET environment variable is required for production deployment"
+    );
+  }
+  
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
+    cookie: {
+      secure: process.env.NODE_ENV === "production" && !process.env.REPL_ID, // HTTPS in production
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    },
   };
 
   app.set("trust proxy", 1);

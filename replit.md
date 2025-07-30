@@ -92,23 +92,43 @@ The database uses a multi-entity relational design supporting users (creators/cl
 
 ## Deployment Strategy
 
-### Development Environment
+### Development Environment (Replit)
 - **Dev Server**: Vite development server with Express API proxy
-- **Database**: Local PostgreSQL or Neon development database
+- **Database**: Neon PostgreSQL development database
 - **Environment**: NODE_ENV=development with hot reload
+- **Replit Features**: Cartographer integration and runtime error overlay
 
-### Production Build
-- **Frontend**: Vite build to static assets in dist/public
-- **Backend**: ESBuild bundle to dist/index.js with external packages
-- **Database**: Production PostgreSQL with connection pooling
-- **Session Security**: Secure session configuration with trust proxy
+### External Hosting Production
+- **Build Process**: `npm run build` creates production bundles
+- **Frontend**: Vite builds React to `dist/public` (static files)
+- **Backend**: ESBuild bundles Express to `dist/index.js` (Node.js)
+- **Database**: External PostgreSQL (Neon, Supabase, Railway, etc.)
+- **Session Security**: HTTPS-ready with secure cookie settings
+
+### Supported Platforms
+- **Railway**: `railway.json` configuration (Recommended)
+- **Render**: `render.yaml` configuration with GitHub integration
+- **Vercel**: `vercel.json` configuration for serverless deployment
+- **Docker**: `Dockerfile` for containerized deployment
+- **VPS/Cloud**: PM2 process manager with `ecosystem.config.js`
 
 ### Environment Configuration
-- **Database URL**: Required PostgreSQL connection string
-- **Session Secret**: Required secure session secret for production
-- **Build Process**: Automated build pipeline with type checking
+```env
+DATABASE_URL=postgresql://...        # Required: PostgreSQL connection
+SESSION_SECRET=32-char-random       # Required: Secure session secret
+NODE_ENV=production                 # Required: Production environment
+PORT=5000                          # Optional: Server port
+HOST=0.0.0.0                       # Optional: Bind host
+```
 
-The application is designed for deployment on platforms like Replit, with specific configurations for Replit's environment including cartographer integration and runtime error overlay for development.
+### Migration Process
+1. **Export Data**: Use `pg_dump` from current database
+2. **Environment Setup**: Configure `.env` with external database
+3. **Deploy**: Use `./deploy.sh` helper script or platform-specific configs
+4. **Database Migration**: Run `npm run db:push` to create schema
+5. **Import Data**: Restore with `psql` if migrating existing data
+
+The application is deployment-agnostic with automatic detection of Replit vs external hosting environments.
 
 ## Recent Changes
 
@@ -121,3 +141,11 @@ The application is designed for deployment on platforms like Replit, with specif
 - ✅ **Global Positioning**: Updated from Kenya-focused to globally scalable creator economy platform
 - ✅ **Enterprise Dashboard**: Distinct dashboard for enterprise brands vs small business entrepreneurs
 - ✅ **CreoHub Design**: Complementary teal color scheme matching CreoHub's orange design family
+
+### External Hosting Ready (July 30, 2025)
+- ✅ **Deployment Configs**: Railway, Render, Vercel, Docker configurations
+- ✅ **Environment Detection**: Automatic Replit vs external hosting detection
+- ✅ **Production Security**: HTTPS-ready session cookies and environment validation
+- ✅ **Deploy Script**: `./deploy.sh` helper with platform selection
+- ✅ **Documentation**: Complete `DEPLOYMENT.md` with migration guide
+- ✅ **Multi-Platform**: Docker, PM2, serverless deployment options
