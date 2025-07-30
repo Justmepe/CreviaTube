@@ -44,15 +44,20 @@ export class EscrowService {
         throw new Error("Only draft campaigns can be funded");
       }
 
-      const totalAmount = parseFloat(campaign.budget);
-      const platformFeeAmount = totalAmount * 0.20; // 20% platform fee
-      const escrowAmount = totalAmount * 0.80; // 80% for clippers
+      const totalAmountUSD = parseFloat(campaign.budget);
+      
+      // Convert USD to KES (approximate rate: 1 USD = 130 KES)
+      const usdToKesRate = 130;
+      const totalAmountKES = totalAmountUSD * usdToKesRate;
+      
+      const platformFeeAmountUSD = totalAmountUSD * 0.20; // 20% platform fee
+      const escrowAmountUSD = totalAmountUSD * 0.80; // 80% for clippers
 
       // Process payment through PesaPal (sandbox mode for development)
       const paymentResult = await this.processPesaPalPayment({
-        amount: totalAmount,
+        amount: totalAmountKES, // Convert to KES for PesaPal
         currency: "KES", // Kenya Shillings
-        description: `Campaign funding: ${campaign.name}`,
+        description: `Campaign funding: ${campaign.name} ($${totalAmountUSD} USD)`,
         campaignId: campaign.id,
         creatorId: campaign.creatorId,
         paymentMethod: paymentData.method,
@@ -64,8 +69,90 @@ export class EscrowService {
         throw new Error("Payment failed. Please try again.");
       }
 
-      // Note: In sandbox mode, PesaPal will simulate payment flow
-      // In production, actual money will be deducted from your account
+      // Note: DO NOT mark campaign as funded yet - wait for payment confirmation
+      // PesaPal will call our callback endpoint when payment is confirmed
+      
+      // Store payment initiation details for tracking
+      const paymentReference = `campaign_${campaign.id}_${Date.now()}`;
+      
+      // Update campaign with payment tracking info but keep as pending
+      await db
+        .update(campaigns)
+        .set({
+          fundingStatus: "payment_initiated", // New status for tracking
+          paymentTrackingId: paymentResult.transactionId,
+          paymentReference: paymentReference,
+        })
+        .where(eq(campaigns.id, campaign.id));
+
+      return {
+        success: true,
+        totalAmountUSD: totalAmountUSD,
+        totalAmountKES: totalAmountKES,
+        escrowAmountUSD: escrowAmountUSD,
+        platformFeeAmountUSD: platformFeeAmountUSD,
+        transactionId: paymentResult.transactionId,
+        redirectUrl: paymentResult.redirectUrl,
+        paymentReference: paymentReference,
+      };
+
+    } catch (error: any) {
+      console.error('Campaign funding error:', error);
+      throw new Error(error.message || "Failed to fund campaign");
+    }
+  }
+
+  /**
+   * Verifies payment status with PesaPal API
+   */
+  async verifyPesaPalPayment(trackingId: string): Promise<string> {
+    if (!pesapalConfig) {
+      throw new Error("PesaPal not configured");
+    }
+
+    try {
+      const authToken = await this.getPesaPalAuthToken();
+      
+      const response = await fetch(`${pesapalConfig.baseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${trackingId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`PesaPal verification failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('PesaPal verification result:', result);
+      
+      return result.payment_status_description || "PENDING";
+    } catch (error: any) {
+      console.error('PesaPal verification error:', error);
+      throw new Error(error.message || "Payment verification failed");
+    }
+  }
+
+  /**
+   * Confirms campaign funding after successful payment verification
+   */
+  async confirmCampaignFunding(campaignId: string, transactionId: string): Promise<void> {
+    try {
+      // Get campaign details
+      const [campaign] = await db
+        .select()
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId));
+
+      if (!campaign) {
+        throw new Error("Campaign not found");
+      }
+
+      const totalAmountUSD = parseFloat(campaign.budget);
+      const platformFeeAmountUSD = totalAmountUSD * 0.20;
+      const escrowAmountUSD = totalAmountUSD * 0.80;
 
       // Create escrow record
       const [escrowRecord] = await db
@@ -73,42 +160,34 @@ export class EscrowService {
         .values({
           campaignId: campaign.id,
           creatorId: campaign.creatorId,
-          totalAmount: totalAmount.toString(),
-          escrowAmount: escrowAmount.toString(),
-          platformFeeAmount: platformFeeAmount.toString(),
-          availableBalance: escrowAmount.toString(),
+          totalAmount: totalAmountUSD.toString(),
+          escrowAmount: escrowAmountUSD.toString(),
+          platformFeeAmount: platformFeeAmountUSD.toString(),
+          availableBalance: escrowAmountUSD.toString(),
           lockedBalance: "0",
           status: "active",
-          paymentMethod: paymentData.method,
-          transactionId: paymentResult.transactionId,
-          isLocked: true, // Budget is locked once funded
+          paymentMethod: "pesapal",
+          transactionId: transactionId,
+          isLocked: true,
         })
         .returning();
 
-      // Update campaign funding status
+      // Update campaign to funded status
       await db
         .update(campaigns)
         .set({
+          status: "active", // Mark as active once funded
           fundingStatus: "funded",
           fundedAt: new Date(),
-          escrowBalance: escrowAmount.toString(),
-          platformFee: platformFeeAmount.toString(),
+          escrowBalance: escrowAmountUSD.toString(),
+          platformFee: platformFeeAmountUSD.toString(),
         })
         .where(eq(campaigns.id, campaign.id));
 
-      return {
-        success: true,
-        escrowId: escrowRecord.id,
-        totalAmount,
-        escrowAmount,
-        platformFeeAmount,
-        transactionId: paymentResult.transactionId,
-        redirectUrl: paymentResult.redirectUrl,
-      };
-
+      console.log(`Campaign ${campaignId} successfully funded with escrow ${escrowRecord.id}`);
     } catch (error: any) {
-      console.error('Campaign funding error:', error);
-      throw new Error(error.message || "Failed to fund campaign");
+      console.error('Campaign funding confirmation error:', error);
+      throw new Error(error.message || "Failed to confirm campaign funding");
     }
   }
 

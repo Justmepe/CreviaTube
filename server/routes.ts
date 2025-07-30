@@ -129,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PesaPal callback handler
+  // PesaPal callback handler - called when user returns from payment
   app.get("/api/pesapal/callback", async (req, res) => {
     try {
       const { OrderTrackingId, OrderMerchantReference } = req.query;
@@ -138,10 +138,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Extract campaign ID from merchant reference
         const campaignId = (OrderMerchantReference as string).split('_')[1];
         
-        // Update campaign funding status to completed
-        await storage.updateCampaignFundingStatus(campaignId, 'completed');
+        // Verify payment status with PesaPal before marking as funded
+        const paymentStatus = await escrowService.verifyPesaPalPayment(OrderTrackingId as string);
         
-        console.log(`Payment confirmed for campaign ${campaignId}, tracking ID: ${OrderTrackingId}`);
+        if (paymentStatus === "COMPLETED") {
+          // Only now mark campaign as funded and create escrow
+          await escrowService.confirmCampaignFunding(campaignId, OrderTrackingId as string);
+          console.log(`Payment confirmed for campaign ${campaignId}, tracking ID: ${OrderTrackingId}`);
+        }
       }
       
       res.status(200).json({ status: 'success', message: 'Payment notification received' });
