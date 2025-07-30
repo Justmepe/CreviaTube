@@ -2,7 +2,7 @@
 
 ## Overview
 
-CreoCash is a comprehensive affiliate marketing platform designed for Kenya's creator economy. It connects three distinct creator types - Trading Educators, Social Influencers, and Business Entrepreneurs - with content promoters ("clippers"). Each creator type has specialized tracking and reward systems tailored to their specific needs:
+CreoCash is a comprehensive affiliate marketing platform designed for the global creator economy. It connects three distinct creator types - Trading Educators, Social Influencers, and Business Entrepreneurs - with content promoters ("clippers"). Each creator type has specialized tracking and reward systems tailored to their specific needs:
 
 **Trading Educators**: Track referral signups, deposits, and trading volume with broker integrations
 **Social Influencers**: Track follower growth, engagement metrics, and social platform performance  
@@ -58,7 +58,7 @@ The database uses a multi-entity relational design supporting users (creators/cl
 
 ### Payout System
 - **Payout Management**: Automated payout calculations and status tracking
-- **Payment Methods**: M-Pesa integration support for African markets
+- **Payment Methods**: Global payment integration with mobile money support
 - **Transaction Tracking**: Complete audit trail for all financial transactions
 
 ### User Management

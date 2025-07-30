@@ -52,7 +52,7 @@ export default function AuthPage() {
               </div>
               <span className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">CreoCash</span>
             </div>
-            <p className="text-gray-600 text-lg">Empowering Kenya's Creator Economy</p>
+            <p className="text-gray-600 text-lg">Empowering Creator Economy</p>
           </div>
 
           <Tabs defaultValue="login" className="w-full">
@@ -101,7 +101,7 @@ export default function AuthPage() {
 
                     <Button 
                       type="submit" 
-                      className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 rounded-lg transition-colors duration-200"
                       disabled={loginMutation.isPending}
                     >
                       {loginMutation.isPending ? "Signing in..." : "Sign In"}
@@ -219,7 +219,7 @@ export default function AuthPage() {
 
                     <Button 
                       type="submit" 
-                      className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 rounded-lg transition-colors duration-200"
                       disabled={registerMutation.isPending}
                     >
                       {registerMutation.isPending ? "Creating account..." : "Create Account"}
@@ -247,7 +247,7 @@ export default function AuthPage() {
             Grow Your Reach with <span className="text-accent-100">CreoCash</span>
           </h1>
           <p className="text-xl text-primary-100 mb-8 leading-relaxed">
-            The transparent affiliate marketing platform designed for Kenya's thriving creator economy
+            The transparent affiliate marketing platform designed for the global creator economy
           </p>
 
           <div className="space-y-6">
@@ -276,8 +276,8 @@ export default function AuthPage() {
                 <Globe className="w-6 h-6" />
               </div>
               <div className="text-left">
-                <h3 className="font-semibold">M-Pesa Payouts</h3>
-                <p className="text-primary-200 text-sm">Fast, secure payments via mobile money</p>
+                <h3 className="font-semibold">Global Payouts</h3>
+                <p className="text-primary-200 text-sm">Fast, secure payments worldwide</p>
               </div>
             </div>
           </div>
@@ -285,10 +285,10 @@ export default function AuthPage() {
           <div className="mt-8 p-4 bg-primary-700/50 rounded-lg">
             <div className="flex items-center justify-center space-x-2 mb-2">
               <CheckCircle className="w-5 h-5 text-success-300" />
-              <span className="font-semibold">Focused on Deriv Trading</span>
+              <span className="font-semibold">Trading Education Focus</span>
             </div>
             <p className="text-sm text-primary-200">
-              Start with Kenya's fastest-growing trading education niche
+              Starting with the rapidly growing trading education sector
             </p>
           </div>
         </div>
