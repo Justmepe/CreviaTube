@@ -11,12 +11,22 @@ import CreatorDashboard from "@/pages/creator-dashboard";
 import ClipperDashboard from "@/pages/clipper-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import MetricsDashboard from "@/pages/metrics-dashboard";
+import CampaignCreation from "@/pages/campaign-creation";
+import CampaignsList from "@/pages/campaigns-list";
+import ClipperMarketplace from "@/pages/clipper-marketplace";
+import Payouts from "@/pages/payouts";
+import AdminUsers from "@/pages/admin-users";
 
 function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={() => <DashboardRouter />} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
+      <ProtectedRoute path="/campaigns" component={CampaignsList} />
+      <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
+      <ProtectedRoute path="/marketplace" component={ClipperMarketplace} />
+      <ProtectedRoute path="/payouts" component={Payouts} />
+      <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

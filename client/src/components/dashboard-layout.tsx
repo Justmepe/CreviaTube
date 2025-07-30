@@ -37,8 +37,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
     if (user?.role === "admin") {
       return [
         { name: "Dashboard", href: "/", icon: BarChart3 },
-        { name: "Users", href: "/users", icon: Users },
+        { name: "Users", href: "/admin/users", icon: Users },
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+        { name: "Payouts", href: "/payouts", icon: DollarSign },
         { name: "Analytics", href: "/analytics", icon: Activity },
       ];
     }
@@ -46,8 +47,8 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
     if (user?.role === "clipper") {
       return [
         { name: "Dashboard", href: "/", icon: BarChart3 },
-        { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
-        { name: "Earnings", href: "/earnings", icon: DollarSign },
+        { name: "Marketplace", href: "/marketplace", icon: TrendingUp },
+        { name: "My Campaigns", href: "/campaigns", icon: Users },
         { name: "Payouts", href: "/payouts", icon: Wallet },
       ];
     }
