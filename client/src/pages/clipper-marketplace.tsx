@@ -32,7 +32,7 @@ interface Campaign {
   budget: number;
   budgetUsed: number;
   status: string;
-  platformRequirements: string[];
+  targetPlatforms: string;
   rewardRates: {
     click: number;
     signup: number;
@@ -143,7 +143,7 @@ export default function ClipperMarketplace() {
       const matchesSearch = campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPlatform = platformFilter === "all" || 
-                            campaign.platformRequirements.includes(platformFilter);
+                            JSON.parse(campaign.targetPlatforms || '[]').includes(platformFilter);
       return matchesSearch && matchesPlatform;
     })
     .sort((a, b) => {
@@ -211,7 +211,7 @@ export default function ClipperMarketplace() {
           
           {/* Platforms */}
           <div className="flex flex-wrap gap-1 mb-4">
-            {campaign.platformRequirements.map((platform) => (
+            {JSON.parse(campaign.targetPlatforms || '[]').map((platform: string) => (
               <Badge key={platform} variant="outline" className="text-xs">
                 {getPlatformIcon(platform)} {platform}
               </Badge>

@@ -32,7 +32,7 @@ interface Campaign {
   budget: number;
   budgetUsed: number;
   status: string;
-  platformRequirements: string[];
+  targetPlatforms: string;
   duration: number;
   createdAt: string;
   _count?: {

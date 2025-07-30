@@ -29,7 +29,7 @@ interface Campaign {
   budget: number;
   budgetUsed: number;
   status: "draft" | "active" | "paused" | "completed";
-  platformRequirements: string[];
+  targetPlatforms: string;
   rewardRates: {
     click: number;
     signup: number;
@@ -174,7 +174,7 @@ export default function CampaignsList() {
           
           {/* Platforms */}
           <div className="flex flex-wrap gap-1 mb-4">
-            {campaign.platformRequirements.map((platform) => (
+            {(JSON.parse(campaign.targetPlatforms || '[]')).map((platform: string) => (
               <Badge key={platform} variant="outline" className="text-xs">
                 {getPlatformIcon(platform)} {platform}
               </Badge>

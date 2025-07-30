@@ -42,7 +42,7 @@ interface Campaign {
   budget: number;
   budgetUsed: number;
   status: string;
-  platformRequirements: string[];
+  targetPlatforms: string;
   rewardRates: {
     click: number;
     signup: number;
@@ -176,7 +176,7 @@ export default function EnhancedClipperMarketplace() {
           !campaign.description.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
-      if (platformFilter !== "all" && !campaign.platformRequirements.includes(platformFilter)) {
+      if (platformFilter !== "all" && !JSON.parse(campaign.targetPlatforms || '[]').includes(platformFilter)) {
         return false;
       }
       if (creatorTypeFilter !== "all" && campaign.creator.userType !== creatorTypeFilter) {
@@ -325,7 +325,7 @@ export default function EnhancedClipperMarketplace() {
                       
                       {/* Platform Requirements */}
                       <div className="flex flex-wrap gap-1">
-                        {campaign.platformRequirements.map((platform) => (
+                        {JSON.parse(campaign.targetPlatforms || '[]').map((platform: string) => (
                           <div key={platform} className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs">
                             <PlatformIcon platform={platform} />
                             <span className="capitalize">{platform}</span>
