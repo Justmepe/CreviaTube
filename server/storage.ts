@@ -37,6 +37,11 @@ export interface IStorage {
   createClipperCampaign(clipperCampaign: InsertClipperCampaign): Promise<ClipperCampaign>;
   updateClipperCampaign(id: string, updates: Partial<ClipperCampaign>): Promise<ClipperCampaign | undefined>;
   
+  // AI Content Detection & Application Workflow
+  createClipperApplication(applicationData: any): Promise<ClipperCampaign>;
+  getPendingApplicationsByCreator(creatorId: string): Promise<any[]>;
+  reviewClipperApplication(applicationId: string, action: 'approve' | 'reject', notes: string, creatorId: string): Promise<ClipperCampaign>;
+  
   // Tracking operations
   createTrackingEvent(event: InsertTrackingEvent): Promise<TrackingEvent>;
   getTrackingEventsByClipper(clipperId: string): Promise<TrackingEvent[]>;
@@ -577,6 +582,86 @@ export class DatabaseStorage implements IStorage {
       console.error('Bot events error:', error);
       return [];
     }
+  }
+
+  // AI Content Detection & Application Workflow Methods
+  async createClipperApplication(applicationData: any): Promise<ClipperCampaign> {
+    const [clipperCampaign] = await db
+      .insert(clipperCampaigns)
+      .values(applicationData)
+      .returning();
+    return clipperCampaign;
+  }
+
+  async getPendingApplicationsByCreator(creatorId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: clipperCampaigns.id,
+        clipperId: clipperCampaigns.clipperId,
+        campaignId: clipperCampaigns.campaignId,
+        clipperUsername: users.username,
+        campaignTitle: campaigns.title,
+        submittedContent: clipperCampaigns.submittedContent,
+        contentType: clipperCampaigns.contentType,
+        contentDescription: clipperCampaigns.contentDescription,
+        applicationStatus: clipperCampaigns.applicationStatus,
+        aiDetectionResult: clipperCampaigns.aiDetectionResult,
+        aiConfidence: clipperCampaigns.aiConfidence,
+        aiFlags: clipperCampaigns.aiFlags,
+        joinedAt: clipperCampaigns.joinedAt,
+        creatorReviewNotes: clipperCampaigns.creatorReviewNotes,
+        rejectionReason: clipperCampaigns.rejectionReason,
+      })
+      .from(clipperCampaigns)
+      .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+      .innerJoin(users, eq(clipperCampaigns.clipperId, users.id))
+      .where(and(
+        eq(campaigns.creatorId, creatorId),
+        sql`${clipperCampaigns.applicationStatus} IN ('creator_review', 'ai_scanning', 'approved', 'rejected', 'ai_flagged')`
+      ))
+      .orderBy(desc(clipperCampaigns.joinedAt));
+
+    return results;
+  }
+
+  async reviewClipperApplication(
+    applicationId: string, 
+    action: 'approve' | 'reject', 
+    notes: string, 
+    creatorId: string
+  ): Promise<ClipperCampaign> {
+    // Verify the application belongs to this creator's campaign
+    const applicationDetails = await db
+      .select()
+      .from(clipperCampaigns)
+      .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+      .where(and(
+        eq(clipperCampaigns.id, applicationId),
+        eq(campaigns.creatorId, creatorId)
+      ));
+
+    if (applicationDetails.length === 0) {
+      throw new Error("Application not found or access denied");
+    }
+
+    const updateData: any = {
+      applicationStatus: action === 'approve' ? 'approved' : 'rejected',
+      isApproved: action === 'approve',
+      creatorReviewNotes: notes,
+      reviewedAt: new Date(),
+    };
+
+    if (action === 'reject') {
+      updateData.rejectionReason = notes || 'Content does not meet campaign requirements';
+    }
+
+    const [updated] = await db
+      .update(clipperCampaigns)
+      .set(updateData)
+      .where(eq(clipperCampaigns.id, applicationId))
+      .returning();
+
+    return updated;
   }
 }
 

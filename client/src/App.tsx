@@ -26,6 +26,8 @@ import ComprehensiveAdminDashboard from "@/pages/comprehensive-admin-dashboard";
 import AdminRevenue from "@/pages/admin-revenue";
 import AdminPayouts from "@/pages/admin-payouts";
 import BotMonitoring from "@/pages/bot-monitoring";
+import ClipperApplication from "@/pages/clipper-application";
+import CreatorApplicationReview from "@/pages/creator-application-review";
 
 function Router() {
   return (
@@ -38,6 +40,8 @@ function Router() {
       }} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
+      <ProtectedRoute path="/campaigns/:id/apply" component={ClipperApplication} />
+      <ProtectedRoute path="/creator/applications" component={CreatorApplicationReview} />
       <ProtectedRoute path="/social-integration" component={SocialIntegration} />
       <ProtectedRoute path="/marketplace" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/clippers" component={EnhancedClipperMarketplace} />

@@ -8,6 +8,7 @@ import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventS
 import { randomBytes } from "crypto";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
+import { aiContentDetection } from "./services/ai-content-detection";
 // PesaPal configuration for African payments
 let pesapalConfigured = false;
 
@@ -291,6 +292,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clipper campaigns" });
+    }
+  });
+
+  // AI Content Detection Route
+  app.post("/api/ai-detection/analyze", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { type, content, description } = req.body;
+      
+      if (!content || !type) {
+        return res.status(400).json({ message: "Content and type are required" });
+      }
+
+      const result = await aiContentDetection.analyzeContent({
+        type,
+        content,
+        metadata: { description }
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('AI detection error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Campaign application with AI detection
+  app.post("/api/campaigns/:id/apply", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "clipper") {
+      return res.status(403).json({ message: "Only clippers can apply to campaigns" });
+    }
+
+    try {
+      const { 
+        submittedContent, 
+        contentType, 
+        contentDescription, 
+        aiDetectionResult, 
+        aiConfidence, 
+        aiFlags 
+      } = req.body;
+
+      // Verify AI detection was performed
+      if (!aiDetectionResult || aiDetectionResult.recommendation === 'reject') {
+        return res.status(400).json({ 
+          message: "Content must pass AI detection before application submission" 
+        });
+      }
+
+      // Check if clipper already applied to this campaign
+      const existing = await storage.getClipperCampaign(req.user.id, req.params.id);
+      if (existing) {
+        return res.status(400).json({ message: "Already applied to this campaign" });
+      }
+
+      const trackingCode = `${req.params.id}_${req.user.id}_${randomBytes(8).toString('hex')}`;
+      
+      // Determine application status based on AI result
+      let applicationStatus = 'content_pending';
+      if (aiDetectionResult.recommendation === 'approve') {
+        applicationStatus = 'creator_review';
+      } else if (aiDetectionResult.recommendation === 'review') {
+        applicationStatus = 'creator_review';
+      } else {
+        applicationStatus = 'ai_flagged';
+      }
+
+      const applicationData = {
+        clipperId: req.user.id,
+        campaignId: req.params.id,
+        trackingCode,
+        submittedContent,
+        contentType,
+        contentDescription,
+        aiDetectionResult,
+        aiConfidence,
+        aiFlags,
+        applicationStatus,
+        isApproved: false
+      };
+
+      const clipperCampaign = await storage.createClipperApplication(applicationData);
+      res.status(201).json(clipperCampaign);
+    } catch (error: any) {
+      console.error('Application error:', error);
+      res.status(400).json({ message: "Failed to submit application", error: error.message });
+    }
+  });
+
+  // Creator application review routes
+  app.get("/api/creator/pending-applications", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Only creators can view applications" });
+    }
+
+    try {
+      const applications = await storage.getPendingApplicationsByCreator(req.user.id);
+      res.json(applications);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch applications" });
+    }
+  });
+
+  app.post("/api/clipper-applications/:id/review", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Only creators can review applications" });
+    }
+
+    try {
+      const { action, notes } = req.body;
+      const applicationId = req.params.id;
+
+      if (action !== 'approve' && action !== 'reject') {
+        return res.status(400).json({ message: "Invalid action" });
+      }
+
+      const result = await storage.reviewClipperApplication(applicationId, action, notes, req.user.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: "Failed to review application", error: error.message });
     }
   });
 

@@ -89,6 +89,30 @@ export const clipperCampaigns = pgTable("clipper_campaigns", {
   trackingCode: text("tracking_code").notNull().unique(),
   isApproved: boolean("is_approved").notNull().default(false),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  
+  // UGC Content Submission for AI Detection
+  submittedContent: text("submitted_content"), // The actual content submitted by clipper
+  contentType: text("content_type"), // text, video, image, audio
+  contentDescription: text("content_description"), // Description of the content
+  aiDetectionResult: json("ai_detection_result").$type<{
+    isAIGenerated: boolean;
+    confidence: number;
+    flags: string[];
+    analysis: {
+      textPatterns: number;
+      repetitiveStructure: number;
+      vocabularyComplexity: number;
+      naturalFlow: number;
+      personalTone: number;
+    };
+    recommendation: 'approve' | 'review' | 'reject';
+  }>(),
+  aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }), // AI confidence score (0-1)
+  aiFlags: json("ai_flags").$type<string[]>(), // Array of AI detection flags
+  applicationStatus: text("application_status").default("content_pending"), // content_pending, ai_scanning, creator_review, approved, rejected, ai_flagged
+  creatorReviewNotes: text("creator_review_notes"), // Creator's review notes
+  rejectionReason: text("rejection_reason"), // Reason for rejection
+  reviewedAt: timestamp("reviewed_at"), // When creator reviewed the application
 });
 
 // Tracking events
