@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   BarChart3, 
   Users, 
@@ -32,6 +34,7 @@ import {
 export default function ComprehensiveAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const { toast } = useToast();
 
   // Fetch admin statistics
   const { data: stats, isLoading } = useQuery({
@@ -56,6 +59,49 @@ export default function ComprehensiveAdminDashboard() {
 
   const { data: recentActivity, isLoading: activityLoading } = useQuery({
     queryKey: ["/api/admin/activity"],
+  });
+
+  // User management mutations
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, action }: { userId: string; action: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}`, { action });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",  
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -416,13 +462,17 @@ export default function ComprehensiveAdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[
-                      { id: 1, username: "trader_alex", email: "alex@example.com", type: "trader_creator", status: "active", campaigns: 3, earnings: 2150, lastActive: "2 hours ago" },
-                      { id: 2, username: "sarah_clips", email: "sarah@example.com", type: "clipper", status: "active", campaigns: 12, earnings: 850, lastActive: "5 min ago" },
-                      { id: 3, username: "crypto_master", email: "crypto@example.com", type: "influencer", status: "active", campaigns: 2, earnings: 3200, lastActive: "1 hour ago" },
-                      { id: 4, username: "mike_trader", email: "mike@example.com", type: "entrepreneur", status: "suspended", campaigns: 1, earnings: 0, lastActive: "1 week ago" },
-                      { id: 5, username: "forex_queen", email: "forex@example.com", type: "trader_creator", status: "active", campaigns: 5, earnings: 4750, lastActive: "30 min ago" },
-                    ].map((user) => (
+                    {usersLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">Loading users...</TableCell>
+                      </TableRow>
+                    ) : users && users.length > 0 ? (
+                      users
+                        .filter((user: any) => 
+                          user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+                        )
+                        .map((user: any) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div>
@@ -432,29 +482,55 @@ export default function ComprehensiveAdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">
-                            {user.type.replace('_', ' ')}
+                            {user.userType || user.role}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.status === "active" ? "default" : "destructive"}>
-                            {user.status}
+                            {user.status || 'active'}
                           </Badge>
                         </TableCell>
-                        <TableCell>{user.campaigns}</TableCell>
-                        <TableCell>${user.earnings}</TableCell>
-                        <TableCell>{user.lastActive}</TableCell>
+                        <TableCell>{user.campaigns || 0}</TableCell>
+                        <TableCell>${user.earnings || 0}</TableCell>
+                        <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
-                              <Eye className="w-4 h-4" />
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-orange-600 border-orange-300"
+                              disabled={updateUserMutation.isPending}
+                              onClick={() => updateUserMutation.mutate({ 
+                                userId: user.id, 
+                                action: (user.status || 'active') === 'active' ? 'deactivate' : 'activate' 
+                              })}
+                            >
+                              <Shield className="h-3 w-3 mr-1" />
+                              {(user.status || 'active') === 'active' ? 'Deactivate' : 'Activate'}
                             </Button>
-                            <Button variant="ghost" size="sm">
-                              <Ban className="w-4 h-4" />
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-600 border-red-300"
+                              disabled={deleteUserMutation.isPending}
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete ${user.username}?`)) {
+                                  deleteUserMutation.mutate(user.id);
+                                }
+                              }}
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Delete
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">No users found</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

@@ -7,6 +7,7 @@ import { z } from "zod";
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["creator", "clipper", "admin"]);
 export const userTypeEnum = pgEnum("user_type", ["trader_creator", "influencer", "entrepreneur", "enterprise"]);
+export const userStatusEnum = pgEnum("user_status", ["active", "inactive", "suspended"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["active", "paused", "completed", "draft"]);
 export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "deposit", "trade", "view", "conversion"]);
 export const eventStatusEnum = pgEnum("event_status", ["pending", "verified", "paid", "rejected"]);
@@ -20,6 +21,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: userRoleEnum("role").notNull().default("clipper"),
   userType: userTypeEnum("user_type"),
+  status: userStatusEnum("status").notNull().default("active"),
   fullName: text("full_name").notNull(),
   phoneNumber: text("phone_number"),
   mpesaNumber: text("mpesa_number"),

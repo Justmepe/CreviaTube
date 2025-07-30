@@ -1135,6 +1135,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin user management endpoints
+  app.patch("/api/admin/users/:userId", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const { userId } = req.params;
+      const { action, status } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      // Get the user first
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let updatedStatus = user.status;
+
+      if (action === "deactivate" || status === "inactive") {
+        updatedStatus = "inactive";
+      } else if (action === "activate" || status === "active") {
+        updatedStatus = "active";
+      } else if (action === "suspend" || status === "suspended") {
+        updatedStatus = "suspended";
+      }
+
+      // Update user status
+      const updatedUser = await storage.updateUserStatus(userId, updatedStatus);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "Failed to update user" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `User ${action || 'updated'} successfully`,
+        user: updatedUser 
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/users/:userId", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "User not found or could not be deleted" });
+      }
+
+      res.json({ success: true, message: "User deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/admin/campaigns", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
       return res.sendStatus(403);

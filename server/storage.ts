@@ -66,6 +66,8 @@ export interface IStorage {
   }): Promise<User | undefined>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+  updateUserStatus(userId: string, status: string): Promise<User | undefined>;
+  deleteUser(userId: string): Promise<boolean>;
   
   // Trading account operations
   addTradingAccount(userId: string, account: {
@@ -448,6 +450,32 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedUser || undefined;
+  }
+
+  async updateUserStatus(userId: string, status: string): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({ status: status as "active" | "inactive" | "suspended" })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      // First delete related records
+      await db.delete(clipperCampaigns).where(eq(clipperCampaigns.clipperId, userId));
+      await db.delete(trackingEvents).where(eq(trackingEvents.clipperId, userId));
+      await db.delete(payouts).where(eq(payouts.clipperId, userId));
+      await db.delete(campaigns).where(eq(campaigns.creatorId, userId));
+      
+      // Then delete the user
+      const result = await db.delete(users).where(eq(users.id, userId));
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return false;
+    }
   }
 }
 

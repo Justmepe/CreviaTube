@@ -50,6 +50,7 @@ function Router() {
       <ProtectedRoute path="/admin/revenue" component={AdminRevenue} />
       <ProtectedRoute path="/admin/payouts" component={AdminPayouts} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
+      <ProtectedRoute path="/admin" component={ComprehensiveAdminDashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
