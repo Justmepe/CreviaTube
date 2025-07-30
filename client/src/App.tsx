@@ -10,6 +10,7 @@ import AuthPage from "@/pages/auth-page";
 import CreatorDashboard from "@/pages/creator-dashboard";
 import ClipperDashboard from "@/pages/clipper-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import MetricsDashboard from "@/pages/metrics-dashboard";
 
 function Router() {
   return (

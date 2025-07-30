@@ -32,9 +32,10 @@ export default function TraderCreatorDashboard() {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: BarChart3, current: true },
+    { name: "Metrics", href: "/metrics", icon: Activity },
     { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
     { name: "Clippers", href: "/clippers", icon: Users },
-    { name: "Broker Integration", href: "/broker", icon: Activity },
+    { name: "Broker Integration", href: "/broker", icon: Wallet },
     { name: "Payouts", href: "/payouts", icon: DollarSign },
   ];
 

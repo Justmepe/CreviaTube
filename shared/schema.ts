@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum, json } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -26,6 +26,36 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  
+  // Social Media Integration
+  socialAccounts: json("social_accounts").$type<{
+    instagram?: { username: string; accessToken?: string; businessAccount?: boolean };
+    tiktok?: { username: string; accessToken?: string };
+    youtube?: { channelId: string; accessToken?: string };
+    twitter?: { username: string; accessToken?: string };
+    facebook?: { pageId: string; accessToken?: string };
+  }>(),
+  
+  // Trading Integration  
+  tradingAccounts: json("trading_accounts").$type<{
+    brokers?: Array<{
+      name: string;
+      accountId: string;
+      apiKey?: string;
+      platform?: 'mt4' | 'mt5' | 'ctrader' | 'proprietary';
+    }>;
+  }>(),
+  
+  // Website/Business Integration
+  businessIntegration: json("business_integration").$type<{
+    website?: string;
+    googleAnalyticsId?: string;
+    conversionGoals?: Array<{
+      name: string;
+      type: 'form_submission' | 'purchase' | 'signup' | 'download';
+      value: number;
+    }>;
+  }>(),
 });
 
 // Campaigns table
@@ -84,12 +114,82 @@ export const payouts = pgTable("payouts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Social Media Metrics table
+export const socialMetrics = pgTable("social_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  platform: text("platform").notNull(), // instagram, tiktok, youtube, twitter, facebook
+  metrics: json("metrics").$type<{
+    followers?: number;
+    following?: number;
+    posts?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    views?: number;
+    engagementRate?: number;
+    // Platform-specific metrics
+    subscribers?: number; // YouTube
+    watchTime?: number; // YouTube  
+    impressions?: number; // Twitter/Instagram
+    reach?: number; // Instagram/Facebook
+    stories?: number; // Instagram
+    reels?: number; // Instagram
+  }>().notNull(),
+  lastSyncAt: timestamp("last_sync_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Trading Metrics table
+export const tradingMetrics = pgTable("trading_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  brokerId: text("broker_id").notNull(),
+  metrics: json("metrics").$type<{
+    totalDeposits?: number;
+    totalWithdrawals?: number;
+    totalTrades?: number;
+    profitLoss?: number;
+    winRate?: number;
+    activeClients?: number;
+    referredUsers?: number;
+    accountBalance?: number;
+    tradingVolume?: number;
+  }>().notNull(),
+  lastSyncAt: timestamp("last_sync_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Website Analytics table
+export const websiteMetrics = pgTable("website_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  websiteUrl: text("website_url").notNull(),
+  metrics: json("metrics").$type<{
+    pageViews?: number;
+    uniqueVisitors?: number;
+    sessions?: number;
+    bounceRate?: number;
+    avgSessionDuration?: number;
+    conversions?: number;
+    conversionRate?: number;
+    leads?: number;
+    purchases?: number;
+    revenue?: number;
+  }>().notNull(),
+  lastSyncAt: timestamp("last_sync_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   campaigns: many(campaigns),
   clipperCampaigns: many(clipperCampaigns),
   trackingEvents: many(trackingEvents),
   payouts: many(payouts),
+  socialMetrics: many(socialMetrics),
+  tradingMetrics: many(tradingMetrics),
+  websiteMetrics: many(websiteMetrics),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -131,6 +231,27 @@ export const trackingEventsRelations = relations(trackingEvents, ({ one }) => ({
 export const payoutsRelations = relations(payouts, ({ one }) => ({
   clipper: one(users, {
     fields: [payouts.clipperId],
+    references: [users.id],
+  }),
+}));
+
+export const socialMetricsRelations = relations(socialMetrics, ({ one }) => ({
+  user: one(users, {
+    fields: [socialMetrics.userId],
+    references: [users.id],
+  }),
+}));
+
+export const tradingMetricsRelations = relations(tradingMetrics, ({ one }) => ({
+  user: one(users, {
+    fields: [tradingMetrics.userId],
+    references: [users.id],
+  }),
+}));
+
+export const websiteMetricsRelations = relations(websiteMetrics, ({ one }) => ({
+  user: one(users, {
+    fields: [websiteMetrics.userId],
     references: [users.id],
   }),
 }));

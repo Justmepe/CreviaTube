@@ -1,5 +1,5 @@
 import { 
-  users, campaigns, clipperCampaigns, trackingEvents, payouts,
+  users, campaigns, clipperCampaigns, trackingEvents, payouts, socialMetrics, tradingMetrics, websiteMetrics,
   type User, type InsertUser, type Campaign, type InsertCampaign,
   type ClipperCampaign, type InsertClipperCampaign,
   type TrackingEvent, type InsertTrackingEvent,
@@ -52,6 +52,13 @@ export interface IStorage {
     totalConversions: number; 
     totalPaid: number;
   }>;
+  
+  // User integration updates
+  updateUserIntegrations(userId: string, integrations: {
+    socialAccounts?: any;
+    tradingAccounts?: any;
+    businessIntegration?: any;
+  }): Promise<User | undefined>;
   
   sessionStore: any;
 }
@@ -287,6 +294,32 @@ export class DatabaseStorage implements IStorage {
     });
 
     return stats;
+  }
+
+  async updateUserIntegrations(userId: string, integrations: {
+    socialAccounts?: any;
+    tradingAccounts?: any;
+    businessIntegration?: any;
+  }): Promise<User | undefined> {
+    const updateData: any = {};
+    
+    if (integrations.socialAccounts !== undefined) {
+      updateData.socialAccounts = integrations.socialAccounts;
+    }
+    if (integrations.tradingAccounts !== undefined) {
+      updateData.tradingAccounts = integrations.tradingAccounts;
+    }
+    if (integrations.businessIntegration !== undefined) {
+      updateData.businessIntegration = integrations.businessIntegration;
+    }
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser || undefined;
   }
 }
 

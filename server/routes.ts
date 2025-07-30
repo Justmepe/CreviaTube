@@ -237,6 +237,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Metrics endpoints
+  app.get("/api/metrics", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { metricsSyncService } = await import("./services/metrics-sync");
+      const metrics = await metricsSyncService.getUserMetrics(req.user.id);
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch metrics" });
+    }
+  });
+
+  app.post("/api/metrics/sync", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { metricsSyncService } = await import("./services/metrics-sync");
+      const result = await metricsSyncService.syncUserMetrics(req.user.id);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync metrics" });
+    }
+  });
+
+  app.post("/api/metrics/sync-all", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const { metricsSyncService } = await import("./services/metrics-sync");
+      const result = await metricsSyncService.syncAllUsersMetrics();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync all metrics" });
+    }
+  });
+
+  app.put("/api/user/integrations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { socialAccounts, tradingAccounts, businessIntegration } = req.body;
+      
+      const updatedUser = await storage.updateUserIntegrations(req.user.id, {
+        socialAccounts,
+        tradingAccounts,
+        businessIntegration,
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update integrations" });
+    }
+  });
+
   // Public tracking endpoint (for link clicks)
   app.get("/track/:trackingCode", async (req, res) => {
     try {
@@ -249,5 +311,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+
+  // Initialize automatic metrics synchronization
+  setTimeout(async () => {
+    try {
+      const { autoSyncService } = await import("./services/auto-sync");
+      await autoSyncService.initialize();
+    } catch (error) {
+      console.error("Failed to initialize auto-sync service:", error);
+    }
+  }, 5000); // 5 second delay to allow server to start
+
   return httpServer;
 }
