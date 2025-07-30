@@ -133,20 +133,21 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
       // Check if we have a redirect URL from PesaPal
       if (data.redirectUrl) {
         toast({
-          title: "Redirecting to payment...",
-          description: "You will be redirected to complete your payment securely.",
+          title: "Opening payment window...",
+          description: "Complete your payment through the secure PesaPal window.",
         });
         
         // Redirect to PesaPal payment page
-        window.open(data.redirectUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+        window.open(data.redirectUrl, '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
         
-        // Show success message after a short delay
+        // Show information about sandbox mode
         setTimeout(() => {
           toast({
-            title: "Payment initiated!",
-            description: `Complete your payment of KES ${parseFloat(campaign.budget).toFixed(2)} to fund your campaign.`,
+            title: "Development Mode",
+            description: `This is sandbox mode - no real money will be charged. In production, KES ${parseFloat(campaign.budget).toFixed(2)} would be deducted from your account.`,
+            duration: 10000,
           });
-        }, 1000);
+        }, 2000);
       } else {
         toast({
           title: "Campaign funded successfully!",

@@ -48,7 +48,7 @@ export class EscrowService {
       const platformFeeAmount = totalAmount * 0.20; // 20% platform fee
       const escrowAmount = totalAmount * 0.80; // 80% for clippers
 
-      // Process payment through PesaPal
+      // Process payment through PesaPal (sandbox mode for development)
       const paymentResult = await this.processPesaPalPayment({
         amount: totalAmount,
         currency: "KES", // Kenya Shillings
@@ -63,6 +63,9 @@ export class EscrowService {
       if (paymentResult.status !== "success") {
         throw new Error("Payment failed. Please try again.");
       }
+
+      // Note: In sandbox mode, PesaPal will simulate payment flow
+      // In production, actual money will be deducted from your account
 
       // Create escrow record
       const [escrowRecord] = await db

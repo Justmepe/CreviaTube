@@ -28,6 +28,7 @@ export interface IStorage {
   getAvailableCampaigns(): Promise<Campaign[]>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
   updateCampaign(id: string, updates: Partial<Campaign>): Promise<Campaign | undefined>;
+  updateCampaignFundingStatus(id: string, status: string): Promise<void>;
   
   // Clipper-Campaign operations
   getClipperCampaign(clipperId: string, campaignId: string): Promise<ClipperCampaign | undefined>;
@@ -165,6 +166,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(campaigns.id, id))
       .returning();
     return updatedCampaign || undefined;
+  }
+
+  async updateCampaignFundingStatus(id: string, status: string): Promise<void> {
+    await db
+      .update(campaigns)
+      .set({ 
+        fundingStatus: status,
+        status: status === 'completed' ? 'active' : 'draft',
+        updatedAt: new Date()
+      })
+      .where(eq(campaigns.id, id));
   }
 
   async getClipperCampaign(clipperId: string, campaignId: string): Promise<ClipperCampaign | undefined> {

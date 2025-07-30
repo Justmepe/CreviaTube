@@ -129,6 +129,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PesaPal callback handler
+  app.get("/api/pesapal/callback", async (req, res) => {
+    try {
+      const { OrderTrackingId, OrderMerchantReference } = req.query;
+      
+      if (OrderTrackingId && OrderMerchantReference) {
+        // Extract campaign ID from merchant reference
+        const campaignId = (OrderMerchantReference as string).split('_')[1];
+        
+        // Update campaign funding status to completed
+        await storage.updateCampaignFundingStatus(campaignId, 'completed');
+        
+        console.log(`Payment confirmed for campaign ${campaignId}, tracking ID: ${OrderTrackingId}`);
+      }
+      
+      res.status(200).json({ status: 'success', message: 'Payment notification received' });
+    } catch (error: any) {
+      console.error('PesaPal callback error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Payment methods endpoint
   app.get("/api/payment-methods", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
