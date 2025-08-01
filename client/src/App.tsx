@@ -28,6 +28,7 @@ import AdminPayouts from "@/pages/admin-payouts";
 import BotMonitoring from "@/pages/bot-monitoring";
 import ClipperApplication from "@/pages/clipper-application";
 import CreatorApplicationReview from "@/pages/creator-application-review";
+import AdminAnalytics from "@/pages/admin-analytics";
 
 function Router() {
   return (
@@ -56,7 +57,8 @@ function Router() {
       <ProtectedRoute path="/admin/payouts" component={AdminPayouts} />
       <ProtectedRoute path="/admin/bot-monitoring" component={BotMonitoring} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
-      <ProtectedRoute path="/admin" component={ComprehensiveAdminDashboard} />
+      <ProtectedRoute path="/admin/analytics" component={AdminAnalytics} />
+      <ProtectedRoute path="/admin" component={AdminAnalytics} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

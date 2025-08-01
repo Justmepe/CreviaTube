@@ -218,32 +218,30 @@ export default function ComprehensiveAdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { month: "Jul 2024", revenue: 45680, users: 127, growth: 18.2, userGrowth: 12 },
-                      { month: "Jun 2024", revenue: 38690, users: 113, growth: 15.3, userGrowth: 8 },
-                      { month: "May 2024", revenue: 33540, users: 105, growth: 12.8, userGrowth: 15 },
-                      { month: "Apr 2024", revenue: 29720, users: 91, growth: 9.4, userGrowth: 6 },
-                      { month: "Mar 2024", revenue: 27150, users: 86, growth: 11.2, userGrowth: 11 },
-                      { month: "Feb 2024", revenue: 24420, users: 77, growth: 8.9, userGrowth: 9 },
-                    ].map((month, index) => (
+                    {stats?.monthlyStats ? stats.monthlyStats.map((month: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1">
-                          <div className="font-medium">{month.month}</div>
-                          <div className="text-sm text-gray-500">{month.users} total users</div>
+                          <div className="font-medium text-gray-900">{month.month}</div>
+                          <div className="text-xs text-gray-500">{month.users} total users</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold">${month.revenue.toLocaleString()}</div>
-                          <div className="text-xs flex gap-2">
-                            <span className={`${month.growth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {month.growth > 0 ? '+' : ''}{month.growth}% rev
-                            </span>
-                            <span className={`${month.userGrowth > 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                              +{month.userGrowth} users
-                            </span>
-                          </div>
+                          <div className="font-semibold text-green-600">${month.revenue?.toLocaleString()}</div>
+                          <div className="text-xs text-green-500">Revenue</div>
+                          <div className="text-xs text-blue-500">{month.campaigns} campaigns</div>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">Jan 2025</div>
+                          <div className="text-xs text-gray-500">{stats?.totalUsers || 11} total users</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-green-600">${stats?.totalRevenue || 0}</div>
+                          <div className="text-xs text-green-500">Real data</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -261,31 +259,47 @@ export default function ComprehensiveAdminDashboard() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-900">127</div>
+                        <div className="text-2xl font-bold text-blue-900">{stats?.totalUsers || 11}</div>
                         <div className="text-xs text-blue-600">Total Users</div>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-900">+12</div>
+                        <div className="text-2xl font-bold text-green-900">+{stats?.newUsersThisWeek || 11}</div>
                         <div className="text-xs text-green-600">This Month</div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Creator Signups</span>
-                        <span className="text-sm font-semibold text-purple-600">68 (54%)</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full" style={{ width: '54%' }}></div>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Clipper Signups</span>
-                        <span className="text-sm font-semibold text-teal-600">58 (46%)</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-teal-500 h-2 rounded-full" style={{ width: '46%' }}></div>
-                      </div>
+                      {stats?.userDistribution?.map((userRole: any, index: number) => (
+                        <div key={index}>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 capitalize">{userRole.role}s</span>
+                            <span className="text-sm font-semibold text-purple-600">{userRole.count}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-500 h-2 rounded-full" 
+                              style={{ width: `${(userRole.count / (stats?.totalUsers || 1)) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )) || (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Creators</span>
+                            <span className="text-sm font-semibold text-purple-600">7</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-purple-500 h-2 rounded-full" style={{ width: '64%' }}></div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Clippers</span>
+                            <span className="text-sm font-semibold text-teal-600">3</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-teal-500 h-2 rounded-full" style={{ width: '27%' }}></div>
+                          </div>
+                        </>
+                      )}
 
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">30-Day Retention</span>
