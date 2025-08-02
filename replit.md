@@ -7,23 +7,47 @@ CreoCash is a comprehensive affiliate marketing platform designed for the global
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Project Structure: Scalable, well-organized modular architecture with separate frontend and backend folders.
 
 ## System Architecture
 
+### Project Structure (UPDATED 2025-01-02)
+```
+CreoCash/
+├── frontend/              # React frontend application
+│   ├── src/
+│   │   ├── features/     # Feature-based modules (auth, campaigns, admin, etc.)
+│   │   ├── components/   # Shared UI components
+│   │   ├── hooks/        # Custom React hooks
+│   │   ├── lib/          # Utilities and configurations
+│   │   ├── pages/        # Page components
+│   │   └── types/        # TypeScript type definitions
+│   └── README.md
+├── backend/               # Node.js backend application
+│   ├── core/             # Core infrastructure (database, middleware)
+│   ├── modules/          # Feature modules (auth, campaigns, users, admin, etc.)
+│   ├── services/         # Business logic services
+│   └── index.ts          # Server entry point
+├── shared/               # Shared schemas and types
+└── README.md
+```
+
 ### Frontend Architecture
 - **Framework**: React 18 with TypeScript
-- **Styling**: Tailwind CSS with shadcn/ui component library, using Radix UI primitives for a modern design system.
-- **Routing**: Wouter for client-side routing.
-- **State Management**: TanStack Query for server state management.
-- **Build Tool**: Vite.
-The frontend uses a component-based architecture with role-based dashboard routing (Creator, Clipper, Admin).
+- **Architecture**: Feature-based modular structure for scalability
+- **Styling**: Tailwind CSS with shadcn/ui component library, using Radix UI primitives
+- **Routing**: Wouter for client-side routing
+- **State Management**: TanStack Query for server state management
+- **Build Tool**: Vite
+Each feature (auth, campaigns, admin, etc.) is self-contained with its own components, hooks, and services.
 
 ### Backend Architecture
-- **Framework**: Express.js with TypeScript.
-- **Database**: PostgreSQL with Drizzle ORM.
-- **Authentication**: Passport.js with local strategy (session-based auth), using `connect-pg-simple` for session storage.
-- **Database Provider**: Neon serverless PostgreSQL.
-The backend follows a RESTful API design with modular route handling, centralized authentication middleware, and type-safe database operations.
+- **Framework**: Express.js with TypeScript
+- **Architecture**: Modular structure with separate modules for each feature domain
+- **Database**: PostgreSQL with Drizzle ORM
+- **Authentication**: Passport.js with local strategy (session-based auth)
+- **Database Provider**: Neon serverless PostgreSQL
+Each module follows the pattern: service.ts (business logic) → controller.ts (HTTP handling) → routes.ts (API endpoints).
 
 ### Database Architecture
 - **ORM**: Drizzle with PostgreSQL dialect.
