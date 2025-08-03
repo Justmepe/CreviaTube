@@ -100,224 +100,111 @@ export default function EntrepreneurDashboard() {
   ];
 
   return (
-    <DashboardLayout navigation={navigation} user={user}>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Business Owner Dashboard</h1>
-            <p className="text-gray-600">Track clicks, leads, and sales conversions</p>
-          </div>
-          <Button className="bg-primary-500 hover:bg-primary-600">
-            <Plus className="w-4 h-4 mr-2" />
-            New Business Campaign
-          </Button>
-        </div>
-
-        {/* Business Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600">Total Clicks</p>
-                  <p className="text-2xl font-bold text-blue-700">{totalClicks.toLocaleString()}</p>
-                  <p className="text-sm text-blue-600 flex items-center mt-1">
-                    <MousePointer className="w-4 h-4 mr-1" />
-                    +15.3% this month
-                  </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-100 relative">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0.6))] opacity-30"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-400/10 to-amber-400/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-red-400/10 to-orange-400/10 rounded-full blur-3xl"></div>
+      
+      <DashboardLayout navigation={navigation} user={user}>
+        <div className="relative z-10 space-y-8">
+          {/* Modern Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-600 via-amber-600 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <ShoppingCart className="w-5 h-5 text-white" />
                 </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <MousePointer className="w-6 h-6 text-blue-500" />
-                </div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 via-amber-600 to-red-600 bg-clip-text text-transparent">
+                  Business Growth Hub
+                </h1>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-green-50 to-green-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-600">Conversions</p>
-                  <p className="text-2xl font-bold text-green-700">{totalConversions}</p>
-                  <p className="text-sm text-green-600 flex items-center mt-1">
-                    <Target className="w-4 h-4 mr-1" />
-                    {conversionRate}% conversion rate
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <Target className="w-6 h-6 text-green-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-600">Revenue Generated</p>
-                  <p className="text-2xl font-bold text-purple-700">KES 245K</p>
-                  <p className="text-sm text-purple-600 flex items-center mt-1">
-                    <ShoppingCart className="w-4 h-4 mr-1" />
-                    This quarter
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <ShoppingCart className="w-6 h-6 text-purple-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-orange-50 to-orange-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-orange-600">Active Clippers</p>
-                  <p className="text-2xl font-bold text-orange-700">{activeClippers}</p>
-                  <p className="text-sm text-orange-600 flex items-center mt-1">
-                    <Users className="w-4 h-4 mr-1" />
-                    Lead generators
-                  </p>
-                </div>
-                <div className="p-3 bg-orange-50 rounded-lg">
-                  <Users className="w-6 h-6 text-orange-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Conversion Funnel */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Conversion Funnel</CardTitle>
-                <select className="text-sm border border-gray-200 rounded-lg px-3 py-1">
-                  <option>Last 30 days</option>
-                  <option>Last 60 days</option>
-                  <option>Last 90 days</option>
-                </select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="font-medium text-gray-900">Website Clicks</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{totalClicks.toLocaleString()}</p>
-                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '100%' }}></div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="font-medium text-gray-900">Landing Page Views</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{Math.round(totalClicks * 0.75).toLocaleString()}</p>
-                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
-                      <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '75%' }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    <span className="font-medium text-gray-900">Lead Form Submissions</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{Math.round(totalClicks * 0.15).toLocaleString()}</p>
-                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
-                      <div className="bg-orange-500 h-2 rounded-full" style={{ width: '15%' }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="font-medium text-gray-900">Sales Conversions</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{totalConversions}</p>
-                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: `${conversionRate}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Lead Generation Clippers */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Top Lead Generators</CardTitle>
-                <Button variant="ghost" size="sm">View All</Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {topBusinessClippers.map((clipper, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {clipper.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{clipper.name}</p>
-                      <p className="text-sm text-gray-500">{clipper.specialty}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{clipper.earnings}</p>
-                    <p className="text-sm text-success-600">{clipper.conversions} conversions • {clipper.conversionRate} CR</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Business Activity */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Recent Business Activity</CardTitle>
-              <Button variant="ghost" size="sm">View All Activity</Button>
+              <p className="text-slate-600 text-lg font-medium">Track clicks, leads, and sales conversions</p>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentBusinessActivities.map((activity) => {
-              const IconComponent = activity.icon;
-              return (
-                <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                  <div className={`p-2 ${activity.iconBg} rounded-lg mt-1`}>
-                    <IconComponent className="w-4 h-4" />
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 shadow-lg">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                <span className="text-slate-700 font-medium">Business Active</span>
+              </div>
+              <Button className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 shadow-lg">
+                <Plus className="w-4 h-4 mr-2" />
+                New Business Campaign
+              </Button>
+            </div>
+          </div>
+
+          {/* Modern Business Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Clicks Card */}
+            <div className="bg-gradient-to-br from-blue-100/80 to-indigo-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <MousePointer className="w-4 h-4 text-blue-600" />
+                    <p className="text-sm font-medium text-slate-600">Total Clicks</p>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">
-                      <span className="font-medium">{activity.clipper}</span> {activity.description}
-                    </p>
-                    <p className="text-xs text-gray-500">{activity.timestamp}</p>
-                  </div>
-                  <span className="text-sm font-medium text-success-600">{activity.amount}</span>
+                  <p className="text-3xl font-bold text-slate-800">{totalClicks.toLocaleString()}</p>
+                  <p className="text-sm text-blue-600 font-medium">+15.3% this month</p>
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <MousePointer className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Conversions Card */}
+            <div className="bg-gradient-to-br from-green-100/80 to-emerald-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Target className="w-4 h-4 text-green-600" />
+                    <p className="text-sm font-medium text-slate-600">Conversions</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{totalConversions}</p>
+                  <p className="text-sm text-green-600 font-medium">{conversionRate}% conversion rate</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Target className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Revenue Card */}
+            <div className="bg-gradient-to-br from-purple-100/80 to-violet-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <ShoppingCart className="w-4 h-4 text-purple-600" />
+                    <p className="text-sm font-medium text-slate-600">Revenue Generated</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">KES 245K</p>
+                  <p className="text-sm text-purple-600 font-medium">This quarter</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <ShoppingCart className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Active Clippers Card */}
+            <div className="bg-gradient-to-br from-orange-100/80 to-amber-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Users className="w-4 h-4 text-orange-600" />
+                    <p className="text-sm font-medium text-slate-600">Active Clippers</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{activeClippers}</p>
+                  <p className="text-sm text-orange-600 font-medium">Lead generators</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    </div>
   );
 }

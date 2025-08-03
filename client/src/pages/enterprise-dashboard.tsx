@@ -116,220 +116,111 @@ export default function EnterpriseDashboard() {
   }
 
   return (
-    <DashboardLayout title="Enterprise Dashboard">
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-gray-600">Manage your global creator marketing campaigns</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-              <Crown className="w-4 h-4 mr-1" />
-              Enterprise Account
-            </Badge>
-            <Link href="/campaigns/new">
-              <Button className="bg-purple-600 hover:bg-purple-700">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-violet-100 relative">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0.6))] opacity-30"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-violet-400/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
+      
+      <DashboardLayout title="Enterprise Command Center">
+        <div className="relative z-10 space-y-8">
+          {/* Modern Enterprise Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Crown className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                  Enterprise Command Center
+                </h1>
+              </div>
+              <p className="text-slate-600 text-lg font-medium">Manage your global creator marketing campaigns</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Badge variant="outline" className="bg-purple-100/80 text-purple-700 border-purple-200/50 backdrop-blur-sm px-4 py-2">
+                <Crown className="w-4 h-4 mr-2" />
+                Enterprise Account
+              </Badge>
+              <Button className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
                 New Campaign
               </Button>
-            </Link>
+            </div>
+          </div>
+
+          {/* Modern Enterprise Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Active Campaigns Card */}
+            <div className="bg-gradient-to-br from-purple-100/80 to-violet-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Crown className="w-4 h-4 text-purple-600" />
+                    <p className="text-sm font-medium text-slate-600">Active Campaigns</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{activeCampaigns.length}</p>
+                  <p className="text-sm text-purple-600 font-medium">Global reach</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Crown className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Total Budget Card */}
+            <div className="bg-gradient-to-br from-blue-100/80 to-indigo-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Building className="w-4 h-4 text-blue-600" />
+                    <p className="text-sm font-medium text-slate-600">Total Budget</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{formatCurrency(totalBudget)}</p>
+                  <p className="text-sm text-blue-600 font-medium">{formatCurrency(totalSpent)} spent</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Building className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Creator Network Card */}
+            <div className="bg-gradient-to-br from-green-100/80 to-emerald-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Users className="w-4 h-4 text-green-600" />
+                    <p className="text-sm font-medium text-slate-600">Creator Network</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{totalClippers}</p>
+                  <p className="text-sm text-green-600 font-medium">Active creators</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Total Engagements Card */}
+            <div className="bg-gradient-to-br from-orange-100/80 to-amber-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Zap className="w-4 h-4 text-orange-600" />
+                    <p className="text-sm font-medium text-slate-600">Total Engagements</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{totalEngagements.toLocaleString()}</p>
+                  <p className="text-sm text-orange-600 font-medium">Multi-platform</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Active Campaigns</p>
-                  <p className="text-3xl font-bold text-gray-900">{activeCampaigns.length}</p>
-                  <p className="text-sm text-purple-600 flex items-center mt-1">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    Global reach
-                  </p>
-                </div>
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <Crown className="w-8 h-8 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Budget</p>
-                  <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalBudget)}</p>
-                  <p className="text-sm text-blue-600 flex items-center mt-1">
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    {formatCurrency(totalSpent)} spent
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <Building className="w-8 h-8 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Creator Network</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalClippers}</p>
-                  <p className="text-sm text-green-600 flex items-center mt-1">
-                    <Users className="w-4 h-4 mr-1" />
-                    Active creators
-                  </p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <Users className="w-8 h-8 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Engagements</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalEngagements.toLocaleString()}</p>
-                  <p className="text-sm text-orange-600 flex items-center mt-1">
-                    <Activity className="w-4 h-4 mr-1" />
-                    Multi-platform
-                  </p>
-                </div>
-                <div className="p-3 bg-orange-50 rounded-lg">
-                  <Zap className="w-8 h-8 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {navigation.map((item) => (
-            <Link key={item.name} href={item.href}>
-              <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group border-2 hover:border-purple-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-gray-50 rounded-lg group-hover:bg-purple-50 transition-colors">
-                        <item.icon className="w-6 h-6 text-gray-600 group-hover:text-purple-600 transition-colors" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
-                          {item.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {item.name === "Brand Campaigns" && "Manage your marketing campaigns"}
-                          {item.name === "Creator Network" && "Browse and connect with creators"}
-                          {item.name === "Brand Analytics" && "View performance metrics"}
-                          {item.name === "Multi-Channel" && "Cross-platform management"}
-                          {item.name === "Enterprise Payouts" && "Bulk payment processing"}
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowUpRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
-        {/* Recent Campaigns */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="text-xl">Recent Campaigns</CardTitle>
-                <CardDescription>Your latest brand marketing initiatives</CardDescription>
-              </div>
-              <Link href="/campaigns">
-                <Button variant="outline" size="sm">
-                  View All
-                  <ArrowUpRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {campaigns.slice(0, 5).map((campaign) => (
-                <div key={campaign.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-gray-900">{campaign.name || campaign.title}</h3>
-                      <Badge className={
-                        campaign.status === "active" ? "bg-green-100 text-green-800" :
-                        campaign.status === "draft" ? "bg-gray-100 text-gray-800" :
-                        campaign.status === "paused" ? "bg-yellow-100 text-yellow-800" :
-                        "bg-gray-100 text-gray-800"
-                      }>
-                        {campaign.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-1">{campaign.description}</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="text-sm text-gray-500">
-                        Budget: {formatCurrency(campaign.budget)}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        Creators: {campaign._count?.clipperCampaigns || 0}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        Duration: {campaign.duration} days
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {campaign.status === "draft" && campaign.fundingStatus === "pending" ? (
-                      <Link href={`/campaigns/${campaign.id}/funding`}>
-                        <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
-                          <CreditCard className="w-3 h-3 mr-2" />
-                          Fund Now
-                        </Button>
-                      </Link>
-                    ) : (
-                      <>
-                        <div className="text-lg font-semibold text-purple-600">
-                          {formatCurrency(campaign.budgetUsed)}
-                        </div>
-                        <div className="text-sm text-gray-500">spent</div>
-                        <Progress 
-                          value={(campaign.budgetUsed / campaign.budget) * 100} 
-                          className="w-24 h-2 mt-1"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-              
-              {campaigns.length === 0 && (
-                <div className="text-center py-8">
-                  <Crown className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No campaigns yet</h3>
-                  <p className="text-gray-600 mb-4">Create your first enterprise marketing campaign to get started.</p>
-                  <Link href="/campaigns/new">
-                    <Button className="bg-purple-600 hover:bg-purple-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Campaign
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </div>
   );
 }
