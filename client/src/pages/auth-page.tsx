@@ -87,8 +87,109 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]"></div>
-      <div className="absolute top-0 right-0 -mt-4 -mr-16 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-0 left-0 -mb-4 -ml-16 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl"></div>
+      
+      {/* Professional Background Images */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-teal-500/5"></div>
+        
+        {/* Creator Economy Visualization */}
+        <div className="absolute top-20 left-10 w-32 h-32 opacity-10">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
+            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500"/>
+            <circle cx="50" cy="50" r="15" fill="currentColor" className="text-teal-500"/>
+            <circle cx="50" cy="20" r="8" fill="currentColor" className="text-blue-400"/>
+            <circle cx="80" cy="50" r="8" fill="currentColor" className="text-purple-400"/>
+            <circle cx="50" cy="80" r="8" fill="currentColor" className="text-teal-400"/>
+            <circle cx="20" cy="50" r="8" fill="currentColor" className="text-indigo-400"/>
+          </svg>
+        </div>
+        
+        {/* Global Network Pattern */}
+        <div className="absolute top-40 right-20 w-40 h-40 opacity-8">
+          <svg viewBox="0 0 120 120" className="w-full h-full">
+            <defs>
+              <linearGradient id="networkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{stopColor:'#3B82F6', stopOpacity:0.3}} />
+                <stop offset="100%" style={{stopColor:'#8B5CF6', stopOpacity:0.1}} />
+              </linearGradient>
+            </defs>
+            {/* Network nodes */}
+            <circle cx="20" cy="20" r="3" fill="url(#networkGrad)"/>
+            <circle cx="60" cy="15" r="4" fill="url(#networkGrad)"/>
+            <circle cx="100" cy="30" r="3" fill="url(#networkGrad)"/>
+            <circle cx="15" cy="60" r="3" fill="url(#networkGrad)"/>
+            <circle cx="60" cy="60" r="5" fill="url(#networkGrad)"/>
+            <circle cx="105" cy="70" r="3" fill="url(#networkGrad)"/>
+            <circle cx="30" cy="100" r="4" fill="url(#networkGrad)"/>
+            <circle cx="80" cy="105" r="3" fill="url(#networkGrad)"/>
+            {/* Connecting lines */}
+            <line x1="20" y1="20" x2="60" y2="15" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="60" y1="15" x2="100" y2="30" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="20" y1="20" x2="15" y2="60" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="60" y1="60" x2="60" y2="15" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="60" y1="60" x2="105" y2="70" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="15" y1="60" x2="30" y2="100" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="60" y1="60" x2="80" y2="105" stroke="url(#networkGrad)" strokeWidth="1"/>
+            <line x1="100" y1="30" x2="105" y2="70" stroke="url(#networkGrad)" strokeWidth="1"/>
+          </svg>
+        </div>
+        
+        {/* Analytics Charts Pattern */}
+        <div className="absolute bottom-20 left-16 w-36 h-24 opacity-10">
+          <svg viewBox="0 0 140 80" className="w-full h-full">
+            <defs>
+              <linearGradient id="chartGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style={{stopColor:'#10B981', stopOpacity:0.6}} />
+                <stop offset="100%" style={{stopColor:'#3B82F6', stopOpacity:0.2}} />
+              </linearGradient>
+            </defs>
+            {/* Bar chart */}
+            <rect x="10" y="50" width="8" height="25" fill="url(#chartGrad)"/>
+            <rect x="25" y="35" width="8" height="40" fill="url(#chartGrad)"/>
+            <rect x="40" y="20" width="8" height="55" fill="url(#chartGrad)"/>
+            <rect x="55" y="30" width="8" height="45" fill="url(#chartGrad)"/>
+            <rect x="70" y="15" width="8" height="60" fill="url(#chartGrad)"/>
+            <rect x="85" y="25" width="8" height="50" fill="url(#chartGrad)"/>
+            <rect x="100" y="10" width="8" height="65" fill="url(#chartGrad)"/>
+            <rect x="115" y="20" width="8" height="55" fill="url(#chartGrad)"/>
+          </svg>
+        </div>
+        
+        {/* Money/Currency Symbols */}
+        <div className="absolute bottom-32 right-24 w-28 h-28 opacity-8">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <defs>
+              <linearGradient id="moneyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{stopColor:'#F59E0B', stopOpacity:0.4}} />
+                <stop offset="100%" style={{stopColor:'#10B981', stopOpacity:0.2}} />
+              </linearGradient>
+            </defs>
+            {/* Dollar symbol */}
+            <text x="20" y="30" fontSize="16" fill="url(#moneyGrad)" fontWeight="bold">$</text>
+            <text x="65" y="25" fontSize="12" fill="url(#moneyGrad)" fontWeight="bold">€</text>
+            <text x="15" y="55" fontSize="14" fill="url(#moneyGrad)" fontWeight="bold">£</text>
+            <text x="55" y="65" fontSize="18" fill="url(#moneyGrad)" fontWeight="bold">¥</text>
+            <text x="75" y="80" fontSize="10" fill="url(#moneyGrad)" fontWeight="bold">₹</text>
+            <text x="30" y="85" fontSize="12" fill="url(#moneyGrad)" fontWeight="bold">₦</text>
+          </svg>
+        </div>
+        
+        {/* Social Media Icons Pattern */}
+        <div className="absolute top-60 left-8 w-24 h-32 opacity-8">
+          <div className="flex flex-col space-y-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded-lg opacity-30"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full opacity-30"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-lg opacity-30"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-teal-500 rounded-lg opacity-30"></div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Animated Gradient Orbs */}
+      <div className="absolute top-0 right-0 -mt-4 -mr-16 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-0 left-0 -mb-4 -ml-16 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+      <div className="absolute top-1/2 right-1/4 w-60 h-60 bg-gradient-to-br from-teal-400/15 to-green-400/15 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
 
       <div className="relative z-10 min-h-screen flex">
         {/* Left Column - Hero Section */}
