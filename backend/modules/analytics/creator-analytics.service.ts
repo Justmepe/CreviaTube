@@ -154,10 +154,10 @@ export class CreatorAnalyticsService {
         platform: 'Multi-Platform Creator',
         totalEarnings: `KES ${clipper.totalReward || 0}`,
         eventCount: clipper.eventCount || 0,
-        // Calculate mock metrics based on real data
-        followers: Math.floor((clipper.totalReward || 0) * 15), // Estimate followers
-        avgViews: Math.floor((clipper.eventCount || 0) * 850), // Estimate views
-        engagement: `${Math.min(12, Math.max(3, Math.floor((clipper.eventCount || 0) / 10)))}%`
+        // Get REAL metrics from stored social media data
+        followers: await this.getRealFollowerCount(clipper.clipperId),
+        avgViews: await this.getRealAverageViews(clipper.clipperId),
+        engagement: await this.getRealEngagementRate(clipper.clipperId)
       }))
     };
   }
@@ -275,31 +275,146 @@ export class CreatorAnalyticsService {
       .orderBy(desc(sum(trackingEvents.rewardAmount)))
       .limit(3);
 
-    return topClippers.map(clipper => {
+    // Use Promise.all to fetch real data for all clippers efficiently
+    const clippersWithRealData = await Promise.all(topClippers.map(async (clipper) => {
       const baseMetrics = {
         name: clipper.clipperName || 'Unknown User',
         earnings: `KES ${clipper.totalReward || 0}`
       };
 
       if (type === "trading") {
+        // Get REAL trading metrics from tracking events
+        const realSignups = await this.getRealSignupsCount(clipper.clipperId);
+        const realVolume = await this.getRealTradingVolume(clipper.clipperId);
         return {
           ...baseMetrics,
           specialty: "Trading Content Creator",
-          signups: Math.floor((clipper.eventCount || 0) * 1.2),
-          volume: `${((clipper.totalReward || 0) / 100).toFixed(1)} lots`,
+          signups: realSignups,
+          volume: `${realVolume.toFixed(1)} lots`,
         };
       } else if (type === "business") {
+        // Get REAL business metrics from tracking events
+        const realClicks = await this.getRealClicksCount(clipper.clipperId);
+        const realConversions = await this.getRealConversionsCount(clipper.clipperId);
+        const conversionRate = realClicks > 0 ? (realConversions / realClicks * 100) : 0;
         return {
           ...baseMetrics,
           specialty: "Business Lead Generator",
-          clicks: Math.floor((clipper.eventCount || 0) * 50),
-          conversions: Math.floor((clipper.eventCount || 0) * 0.8),
-          conversionRate: `${Math.min(3, Math.max(0.5, (clipper.eventCount || 0) / 10)).toFixed(1)}%`
+          clicks: realClicks,
+          conversions: realConversions,
+          conversionRate: `${conversionRate.toFixed(1)}%`
         };
       }
 
       return baseMetrics;
-    });
+    }));
+    
+    return clippersWithRealData;
+  }
+
+  // Real data fetching methods - NO MOCK DATA
+  private async getRealFollowerCount(clipperId: string): Promise<number> {
+    // Get follower count from stored social media metrics
+    const [socialData] = await db
+      .select({
+        totalFollowers: sql<number>`COALESCE(SUM((${socialMetrics.metrics}->>'followers')::int), 0)`
+      })
+      .from(socialMetrics)
+      .where(eq(socialMetrics.userId, clipperId))
+      .groupBy(socialMetrics.userId)
+      .limit(1);
+
+    return socialData?.totalFollowers || 0;
+  }
+
+  private async getRealAverageViews(clipperId: string): Promise<number> {
+    // Get average views from tracking events
+    const [viewData] = await db
+      .select({
+        avgViews: sql<number>`COALESCE(AVG((${trackingEvents.eventMetadata}->>'viewDuration')::int), 0)`
+      })
+      .from(trackingEvents)
+      .where(
+        and(
+          eq(trackingEvents.clipperId, clipperId),
+          eq(trackingEvents.eventType, "view")
+        )
+      );
+
+    return Math.round(viewData?.avgViews || 0);
+  }
+
+  private async getRealEngagementRate(clipperId: string): Promise<string> {
+    // Calculate real engagement rate from social metrics
+    const [engagementData] = await db
+      .select({
+        avgEngagement: sql<number>`COALESCE(AVG((${socialMetrics.metrics}->>'engagementRate')::float), 0)`
+      })
+      .from(socialMetrics)
+      .where(eq(socialMetrics.userId, clipperId));
+
+    const engagementRate = engagementData?.avgEngagement || 0;
+    return `${engagementRate.toFixed(1)}%`;
+  }
+
+  private async getRealSignupsCount(clipperId: string): Promise<number> {
+    const [signupData] = await db
+      .select({
+        signups: count(trackingEvents.id)
+      })
+      .from(trackingEvents)
+      .where(
+        and(
+          eq(trackingEvents.clipperId, clipperId),
+          eq(trackingEvents.eventType, "signup")
+        )
+      );
+
+    return signupData?.signups || 0;
+  }
+
+  private async getRealTradingVolume(clipperId: string): Promise<number> {
+    // Get trading volume from stored trading metrics
+    const [volumeData] = await db
+      .select({
+        totalVolume: sql<number>`COALESCE(SUM((${tradingMetrics.metrics}->>'volume')::float), 0)`
+      })
+      .from(tradingMetrics)
+      .where(eq(tradingMetrics.userId, clipperId));
+
+    return volumeData?.totalVolume || 0;
+  }
+
+  private async getRealClicksCount(clipperId: string): Promise<number> {
+    const [clickData] = await db
+      .select({
+        clicks: count(trackingEvents.id)
+      })
+      .from(trackingEvents)
+      .where(
+        and(
+          eq(trackingEvents.clipperId, clipperId),
+          eq(trackingEvents.eventType, "click")
+        )
+      );
+
+    return clickData?.clicks || 0;
+  }
+
+  private async getRealConversionsCount(clipperId: string): Promise<number> {
+    const [conversionData] = await db
+      .select({
+        conversions: count(trackingEvents.id)
+      })
+      .from(trackingEvents)
+      .where(
+        and(
+          eq(trackingEvents.clipperId, clipperId),
+          eq(trackingEvents.eventType, "conversion")
+        )
+      );
+
+    return conversionData?.conversions || 0;
   }
 
   private generateActivityDescription(eventType: string, campaignName?: string, creatorType?: string): string {
