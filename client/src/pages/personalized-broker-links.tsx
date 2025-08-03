@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Plus, 
   Edit2, 
@@ -22,7 +24,10 @@ import {
   Users,
   MousePointer,
   UserPlus,
-  PiggyBank
+  PiggyBank,
+  Search,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,6 +51,44 @@ const brokerLinkSchema = z.object({
 
 type BrokerLinkFormData = z.infer<typeof brokerLinkSchema>;
 
+// Comprehensive broker database for autocomplete
+const POPULAR_BROKERS = {
+  forex: [
+    "OANDA", "Interactive Brokers", "TD Ameritrade", "FXCM", "Pepperstone", 
+    "IC Markets", "Forex.com", "XM", "Exness", "FP Markets", "Admiral Markets",
+    "AvaTrade", "Plus500", "CMC Markets", "IG", "Saxo Bank", "HotForex",
+    "FBS", "Tickmill", "XTB", "ThinkMarkets", "Axi", "Vantage FX", "LiteForex"
+  ],
+  crypto: [
+    "Binance", "Coinbase Pro", "Kraken", "Bitfinex", "Bybit", "OKX", 
+    "KuCoin", "Huobi", "Gate.io", "Crypto.com", "FTX", "Gemini", 
+    "Bitstamp", "Bittrex", "Poloniex", "CoinEx", "Bitget", "MEXC",
+    "BitMEX", "Deribit", "PrimeXBT", "eToro", "Phemex", "WazirX"
+  ],
+  stocks: [
+    "Interactive Brokers", "TD Ameritrade", "E*TRADE", "Charles Schwab",
+    "Robinhood", "Webull", "Fidelity", "M1 Finance", "Ally Invest",
+    "Merrill Edge", "Vanguard", "Firstrade", "TradeStation", "Tastyworks",
+    "SoFi Invest", "Public", "Stash", "Acorns", "WeBull", "Moomoo"
+  ],
+  futures: [
+    "Interactive Brokers", "TD Ameritrade", "TradeStation", "NinjaTrader",
+    "AMP Futures", "Optimus Futures", "Sierra Chart", "MultiCharts",
+    "CQG", "R Trader", "Stage 5 Trading", "Advantage Futures", 
+    "Cannon Trading", "Dorman Trading", "Infinity Futures", "PFGBest"
+  ],
+  options: [
+    "Interactive Brokers", "TD Ameritrade", "Tastyworks", "E*TRADE",
+    "Charles Schwab", "Robinhood", "Webull", "OptionHouse", "TradeKing",
+    "OptionsXpress", "thinkorswim", "Power E*TRADE", "Fidelity Active Trader Pro"
+  ],
+  cfds: [
+    "Plus500", "IG", "CMC Markets", "AvaTrade", "XTB", "Admiral Markets",
+    "Pepperstone", "IC Markets", "ThinkMarkets", "FP Markets", "Axi",
+    "XM", "HotForex", "FBS", "Exness", "LiteForex", "Tickmill", "Vantage FX"
+  ]
+};
+
 interface PersonalizedBrokerLink {
   id: string;
   brokerName: string;
@@ -67,6 +110,8 @@ export default function PersonalizedBrokerLinks() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedBroker, setSelectedBroker] = useState<PersonalizedBrokerLink | null>(null);
+  const [brokerSearchOpen, setBrokerSearchOpen] = useState(false);
+  const [brokerSearchValue, setBrokerSearchValue] = useState("");
 
   const form = useForm<BrokerLinkFormData>({
     resolver: zodResolver(brokerLinkSchema),
@@ -77,6 +122,18 @@ export default function PersonalizedBrokerLinks() {
       description: "",
     },
   });
+
+  // Get filtered broker suggestions based on selected type and search input
+  const filteredBrokers = useMemo(() => {
+    const brokerType = form.watch("brokerType") as keyof typeof POPULAR_BROKERS;
+    const brokers = POPULAR_BROKERS[brokerType] || [];
+    
+    if (!brokerSearchValue) return brokers;
+    
+    return brokers.filter((broker) =>
+      broker.toLowerCase().includes(brokerSearchValue.toLowerCase())
+    );
+  }, [form.watch("brokerType"), brokerSearchValue]);
 
   const { data: brokerLinks = [], isLoading } = useQuery<PersonalizedBrokerLink[]>({
     queryKey: ["/api/broker-links/personal"],
@@ -210,9 +267,53 @@ export default function PersonalizedBrokerLinks() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Broker Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., OANDA, IG Markets, Alpaca" {...field} />
-                        </FormControl>
+                        <Popover open={brokerSearchOpen} onOpenChange={setBrokerSearchOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={brokerSearchOpen}
+                                className="w-full justify-between"
+                              >
+                                {field.value || "Search and select broker..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0">
+                            <Command>
+                              <CommandInput
+                                placeholder="Type to search brokers..."
+                                value={brokerSearchValue}
+                                onValueChange={setBrokerSearchValue}
+                              />
+                              <CommandList>
+                                <CommandEmpty>No broker found.</CommandEmpty>
+                                <CommandGroup>
+                                  {filteredBrokers.map((broker) => (
+                                    <CommandItem
+                                      key={broker}
+                                      value={broker}
+                                      onSelect={(currentValue) => {
+                                        field.onChange(currentValue);
+                                        setBrokerSearchOpen(false);
+                                        setBrokerSearchValue("");
+                                      }}
+                                    >
+                                      <Check
+                                        className={`mr-2 h-4 w-4 ${
+                                          field.value === broker ? "opacity-100" : "opacity-0"
+                                        }`}
+                                      />
+                                      {broker}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
