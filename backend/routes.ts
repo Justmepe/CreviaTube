@@ -1743,29 +1743,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin revenue endpoints
+  // Admin revenue endpoints - NOW USING REAL DATABASE DATA
   app.get("/api/admin/revenue-stats", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
       return res.sendStatus(403);
     }
 
     try {
+      // Import the revenue analytics service
+      const { revenueAnalyticsService } = await import("./modules/admin/revenue-analytics.service");
+      
+      // Get real revenue analytics correlation data
+      const revenueAnalytics = await revenueAnalyticsService.getRevenueVsUserGrowthCorrelation();
+      const trendAnalysis = await revenueAnalyticsService.getMonthlyTrendAnalysis();
+      
+      // Calculate total revenue from real campaign budgets
+      const [totalRevenueData] = await db
+        .select({
+          totalBudget: sql<number>`COALESCE(SUM(${campaigns.budget}), 0)`,
+          campaignCount: count(campaigns.id),
+          avgCampaignValue: sql<number>`COALESCE(AVG(${campaigns.budget}), 0)`
+        })
+        .from(campaigns);
+
+      const totalCampaignBudget = Number(totalRevenueData.totalBudget) || 0;
+      const totalRevenue = totalCampaignBudget * 0.2; // 20% platform fee
+      const campaignFees = totalRevenue; // All revenue comes from campaign fees
+      const avgCampaignValue = Number(totalRevenueData.avgCampaignValue) || 0;
+      
       const revenueStats = {
-        totalRevenue: 45680,
-        monthlyRecurring: 12350,
-        platformFees: 9136,
-        averageCampaignValue: 1986,
-        revenueGrowth: 18.2,
+        // REAL DATA FROM DATABASE
+        totalRevenue: Math.round(totalRevenue),
+        monthlyRecurring: Math.round(totalRevenue / 6), // Average over 6 months
+        platformFees: Math.round(totalRevenue),
+        averageCampaignValue: Math.round(avgCampaignValue),
+        revenueGrowth: trendAnalysis.revenueGrowthTrend,
+        campaignCount: totalRevenueData.campaignCount,
+        avgMonthlyRevPerUser: revenueAnalytics.platformSummary.avgMonthlyRevPerUser,
+        campaignSuccessRate: revenueAnalytics.platformSummary.campaignSuccessRate,
+        userGrowthTrend: trendAnalysis.userGrowthTrend,
+        correlation: trendAnalysis.correlation,
         sources: {
-          campaignFees: 9136,
-          subscriptions: 3245,
-          apiAccess: 1890,
-          transactions: 1109
-        }
+          campaignFees: Math.round(campaignFees),
+          subscriptions: 0, // Not implemented yet
+          apiAccess: 0, // Not implemented yet  
+          transactions: 0 // Not implemented yet
+        },
+        // Monthly correlation data for charts
+        monthlyData: revenueAnalytics.monthlyCorrelation,
+        creatorTypeDistribution: revenueAnalytics.creatorTypeDistribution
       };
       
       res.json(revenueStats);
     } catch (error: any) {
+      console.error('Revenue stats error:', error);
       res.status(500).json({ message: error.message });
     }
   });

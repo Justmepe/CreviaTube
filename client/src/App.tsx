@@ -29,6 +29,7 @@ import BotMonitoring from "@/pages/bot-monitoring";
 import ClipperApplication from "@/pages/clipper-application";
 import CreatorApplicationReview from "@/pages/creator-application-review";
 import AdminAnalytics from "@/pages/admin-analytics";
+import RealRevenueAnalytics from "@/pages/real-revenue-analytics";
 import EnhancedCampaignCreation from "@/pages/enhanced-campaign-creation";
 import CampaignsEnhanced from "@/pages/campaigns-enhanced";
 import PersonalizedBrokerLinks from "@/pages/personalized-broker-links";
@@ -64,6 +65,7 @@ function Router() {
       <ProtectedRoute path="/admin/bot-monitoring" component={BotMonitoring} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/analytics" component={AdminAnalytics} />
+      <ProtectedRoute path="/admin/real-analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/admin" component={AdminAnalytics} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

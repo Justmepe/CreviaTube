@@ -7,6 +7,8 @@ import {
 } from "../../../shared/schema";
 import { eq, count, sql } from "drizzle-orm";
 
+import { revenueAnalyticsService } from "./revenue-analytics.service.js";
+
 export class AdminService {
   async getStats() {
     const [userStats] = await db
@@ -46,6 +48,28 @@ export class AdminService {
       .from(users)
       .where(sql`${users.createdAt} >= ${weekAgo}`);
 
+    // Get real user distribution by role
+    const userDistribution = await db
+      .select({
+        role: users.role,
+        count: count(users.id)
+      })
+      .from(users)
+      .groupBy(users.role);
+
+    // Get real creator type distribution
+    const creatorTypeDistribution = await db
+      .select({
+        userType: users.userType,
+        count: count(users.id)
+      })
+      .from(users)
+      .where(eq(users.role, "creator"))
+      .groupBy(users.userType);
+
+    // Get revenue analytics correlation data
+    const revenueAnalytics = await revenueAnalyticsService.getRevenueVsUserGrowthCorrelation();
+
     return {
       totalUsers: userStats.totalUsers,
       activeCampaigns: campaignStats.activeCampaigns,
@@ -55,6 +79,11 @@ export class AdminService {
       systemHealth: "Healthy",
       uptime: 99.8,
       eventsToday: 0, // Could be calculated with date filtering
+      userDistribution,
+      creatorTypeDistribution,
+      revenueAnalytics,
+      monthlyStats: revenueAnalytics.monthlyCorrelation,
+      platformSummary: revenueAnalytics.platformSummary
     };
   }
 
