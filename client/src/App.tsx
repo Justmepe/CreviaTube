@@ -64,9 +64,9 @@ function Router() {
       <ProtectedRoute path="/admin/payouts" component={AdminPayouts} />
       <ProtectedRoute path="/admin/bot-monitoring" component={BotMonitoring} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
-      <ProtectedRoute path="/admin/analytics" component={AdminAnalytics} />
       <ProtectedRoute path="/admin/real-analytics" component={RealRevenueAnalytics} />
-      <ProtectedRoute path="/admin" component={AdminAnalytics} />
+      <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
+      <ProtectedRoute path="/admin" component={RealRevenueAnalytics} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

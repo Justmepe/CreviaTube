@@ -7,7 +7,7 @@ import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents } from "../shared/schema.js";
 import { randomBytes } from "crypto";
-import { sql, eq, gte } from "drizzle-orm";
+import { sql, eq, gte, count } from "drizzle-orm";
 import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
