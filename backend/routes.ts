@@ -7,7 +7,7 @@ import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents } from "../shared/schema.js";
 import { randomBytes } from "crypto";
-import { sql, eq, gte, count } from "drizzle-orm";
+import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
@@ -1430,10 +1430,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         platform: req.query.platform as string,
         contentId: req.query.contentId as string,
         viewDuration: req.query.duration ? parseInt(req.query.duration as string) : undefined,
-        // Add bot detection data
-        botScore: req.botDetection?.confidence || 0,
-        flaggedAsBot: req.botDetection?.isBot || false,
-        deviceFingerprint: req.deviceFingerprint,
       });
 
       // Redirect to campaign landing page or creator content
@@ -1509,7 +1505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: sql`coalesce(sum(${campaigns.budget}::numeric), 0)` 
       }).from(campaigns).where(eq(campaigns.fundingStatus, 'completed'));
       
-      const platformRevenue = Math.round((parseFloat(totalBudget.total) || 0) * 0.2);
+      const platformRevenue = Math.round((parseFloat(String(totalBudget.total)) || 0) * 0.2);
 
       const stats = {
         totalUsers: totalUsers.count,
