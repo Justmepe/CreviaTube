@@ -5,6 +5,7 @@ import { userRoutes } from "../modules/users/users.routes";
 import { adminRoutes } from "../modules/admin/admin.routes";
 import { paymentRoutes } from "../modules/payments/payments.routes";
 import { metricsRoutes } from "../modules/metrics/metrics.routes";
+import creatorAnalyticsRoutes from "../modules/analytics/creator-analytics.routes";
 
 export function setupRoutes(app: Express): void {
   // Authentication routes
@@ -21,6 +22,9 @@ export function setupRoutes(app: Express): void {
   
   // Metrics and analytics routes
   app.use("/api/metrics", metricsRoutes);
+  
+  // Creator-specific analytics routes
+  app.use("/api/analytics", creatorAnalyticsRoutes);
   
   // Admin routes
   app.use("/api/admin", adminRoutes);

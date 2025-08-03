@@ -24,9 +24,18 @@ export default function InfluencerDashboard() {
     enabled: !!user && user.role === "creator",
   });
 
-  // Calculate influencer-specific stats
-  const totalViews = (trackingEvents as any[]).filter((e: any) => e.eventType === "view").length * 1000; // Assuming per 1K views
-  const totalEngagement = (trackingEvents as any[]).filter((e: any) => e.eventType === "conversion").length;
+  // Get REAL SYSTEM-CALCULATED metrics instead of hardcoded values
+  const { data: influencerMetrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ["/api/analytics/influencer"],
+    enabled: !!user && user.role === "creator",
+  });
+
+  // Calculate influencer-specific stats from real data
+  const totalViews = influencerMetrics?.totalViews || 0;
+  const viewGrowth = influencerMetrics?.viewGrowth || 0;
+  const totalFollowers = influencerMetrics?.totalFollowers || 0;
+  const followerGrowth = influencerMetrics?.followerGrowth || 0;
+  const engagementRate = influencerMetrics?.engagementRate || 0;
   const activeClippers = (clipperCampaigns as any[]).filter((cc: any) => cc.isApproved).length;
 
   const navigation = [
@@ -37,69 +46,9 @@ export default function InfluencerDashboard() {
     { name: "Payouts", href: "/payouts", icon: Wallet },
   ];
 
-  // Social media specific activities
-  const recentSocialActivities = [
-    {
-      id: 1,
-      type: "views",
-      clipper: "Kevin Mwangi",
-      description: "reached 5,000 verified views on TikTok video",
-      amount: "+KES 250",
-      timestamp: "10 minutes ago",
-      icon: Play,
-      iconBg: "bg-pink-50 text-pink-500",
-      platform: "TikTok"
-    },
-    {
-      id: 2,
-      type: "followers",
-      clipper: "Grace Wanjiku", 
-      description: "gained 100 new followers milestone",
-      amount: "+KES 150",
-      timestamp: "45 minutes ago",
-      icon: Users,
-      iconBg: "bg-purple-50 text-purple-500",
-      platform: "Instagram"
-    },
-    {
-      id: 3,
-      type: "engagement",
-      clipper: "Brian Kimani",
-      description: "post went viral with 2K+ engagements",
-      amount: "+KES 400", 
-      timestamp: "3 hours ago",
-      icon: Heart,
-      iconBg: "bg-red-50 text-red-500",
-      platform: "YouTube"
-    }
-  ];
-
-  const topInfluencerClippers = [
-    { 
-      name: "Kevin Mwangi", 
-      platform: "TikTok Creator", 
-      followers: "45.2K", 
-      avgViews: "12.5K",
-      engagement: "8.5%",
-      earnings: "KES 8,450" 
-    },
-    { 
-      name: "Grace Wanjiku", 
-      platform: "Instagram Influencer", 
-      followers: "32.1K", 
-      avgViews: "8.9K",
-      engagement: "11.2%",
-      earnings: "KES 7,120" 
-    },
-    { 
-      name: "Brian Kimani", 
-      platform: "YouTube Creator", 
-      followers: "28.8K", 
-      avgViews: "15.2K",
-      engagement: "6.8%",
-      earnings: "KES 5,890" 
-    },
-  ];
+  // Get REAL activities and clippers from system-calculated data
+  const recentSocialActivities = influencerMetrics?.recentActivities || [];
+  const topInfluencerClippers = influencerMetrics?.topClippers || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-pink-50 to-rose-100 relative">
@@ -146,7 +95,7 @@ export default function InfluencerDashboard() {
                     <p className="text-sm font-medium text-slate-600">Total Views</p>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{(totalViews / 1000).toFixed(1)}K</p>
-                  <p className="text-sm text-pink-600 font-medium">+18.2% this week</p>
+                  <p className="text-sm text-pink-600 font-medium">{viewGrowth > 0 ? '+' : ''}{viewGrowth}% this week</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Play className="w-6 h-6 text-white" />
@@ -162,8 +111,8 @@ export default function InfluencerDashboard() {
                     <Users className="w-4 h-4 text-purple-600" />
                     <p className="text-sm font-medium text-slate-600">New Followers</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">2,458</p>
-                  <p className="text-sm text-purple-600 font-medium">This month</p>
+                  <p className="text-3xl font-bold text-slate-800">{followerGrowth.toLocaleString()}</p>
+                  <p className="text-sm text-purple-600 font-medium">New this month</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Users className="w-6 h-6 text-white" />
@@ -179,8 +128,8 @@ export default function InfluencerDashboard() {
                     <Heart className="w-4 h-4 text-red-600" />
                     <p className="text-sm font-medium text-slate-600">Engagement Rate</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">9.2%</p>
-                  <p className="text-sm text-red-600 font-medium">Above average</p>
+                  <p className="text-3xl font-bold text-slate-800">{engagementRate}%</p>
+                  <p className="text-sm text-red-600 font-medium">{engagementRate > 5 ? 'Above average' : 'Growing'}</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Heart className="w-6 h-6 text-white" />
