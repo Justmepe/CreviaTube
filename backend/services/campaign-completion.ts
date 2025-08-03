@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { campaigns, clipperCampaigns, trackingEvents } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { EscrowService } from "./escrow-service";
 
 export interface CampaignCompletionService {
   checkAndUpdateClipperCompletion(clipperCampaignId: string): Promise<boolean>;
@@ -26,6 +27,11 @@ export interface ClipperProgress {
 }
 
 class CampaignCompletionServiceImpl implements CampaignCompletionService {
+  private escrowService: EscrowService;
+
+  constructor() {
+    this.escrowService = new EscrowService();
+  }
   
   /**
    * Check if a clipper has reached the campaign goals and update their completion status
@@ -217,15 +223,27 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
   }
 
   /**
-   * Mark a clipper's campaign participation as complete
+   * Mark a clipper's campaign as complete with completion details and trigger automatic payout
    */
-  async markClipperCampaignComplete(
-    clipperCampaignId: string, 
-    goalType: string, 
-    targetValue: number, 
-    achievedValue: number
-  ): Promise<void> {
+  async markClipperCampaignComplete(clipperCampaignId: string, goalType: string, targetValue: number, achievedValue: number): Promise<void> {
     try {
+      // Get clipper campaign details for payout calculation
+      const [clipperCampaign] = await db
+        .select({
+          id: clipperCampaigns.id,
+          clipperId: clipperCampaigns.clipperId,
+          campaignId: clipperCampaigns.campaignId,
+          rewardRates: campaigns.rewardRates,
+          budget: campaigns.budget,
+        })
+        .from(clipperCampaigns)
+        .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+        .where(eq(clipperCampaigns.id, clipperCampaignId));
+
+      if (!clipperCampaign) {
+        throw new Error("Clipper campaign not found");
+      }
+
       const completionMetrics = {
         goalReached: {
           type: goalType as any,
@@ -235,6 +253,7 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
         },
       };
 
+      // Mark campaign as complete
       await db
         .update(clipperCampaigns)
         .set({
@@ -244,10 +263,68 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
         })
         .where(eq(clipperCampaigns.id, clipperCampaignId));
 
-      console.log(`✅ Clipper campaign ${clipperCampaignId} marked as complete. Goal: ${goalType} (${achievedValue}/${targetValue})`);
+      // Calculate completion reward - fixed bonus for completing goal
+      const rewardRates = JSON.parse(clipperCampaign.rewardRates || "{}");
+      const baseReward = parseFloat(rewardRates[goalType] || "10"); // Base reward per goal type
+      const completionReward = baseReward * 10; // 10x bonus for completing the full goal
+
+      // Create an automatic completion bonus payment
+      await this.processCompletionPayout(
+        clipperCampaign.clipperId,
+        clipperCampaign.campaignId,
+        clipperCampaignId,
+        completionReward,
+        goalType,
+        achievedValue
+      );
+
+      console.log(`✅ Clipper campaign ${clipperCampaignId} marked as complete. Goal: ${goalType} (${achievedValue}/${targetValue}). Completion payout: $${completionReward}`);
     } catch (error) {
       console.error('Error marking clipper campaign complete:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Process automatic payout when clipper completes campaign goals
+   */
+  private async processCompletionPayout(
+    clipperId: string,
+    campaignId: string,
+    clipperCampaignId: string,
+    completionReward: number,
+    goalType: string,
+    achievedValue: number
+  ): Promise<void> {
+    try {
+      // Create a virtual tracking event for the completion reward
+      const [completionEvent] = await db
+        .insert(trackingEvents)
+        .values({
+          clipperId: clipperId,
+          campaignId,
+          clipperCampaignId,
+          eventType: 'completion_bonus',
+          eventValue: achievedValue.toString(),
+          rewardAmount: completionReward.toString(),
+          status: 'verified', // Auto-verify completion bonuses
+          metadata: JSON.stringify({
+            type: 'goal_completion',
+            goalType,
+            achievedValue,
+            isCompletionBonus: true,
+          }),
+        })
+        .returning();
+
+      // Process automatic payment through escrow system
+      await this.escrowService.processAutomaticPayment(completionEvent.id);
+
+      console.log(`💰 Completion payout processed for clipper ${clipperId}: $${completionReward} for ${goalType} completion`);
+    } catch (error) {
+      console.error('❌ Error processing completion payout:', error);
+      // Don't throw error to prevent campaign completion from failing
+      // Log error and continue - manual payout can be processed later
     }
   }
 }

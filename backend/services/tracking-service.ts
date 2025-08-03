@@ -89,6 +89,19 @@ export class TrackingService {
         })
         .returning();
 
+      // Check if clipper has reached campaign goals after recording this event
+      try {
+        const { campaignCompletionService } = await import('./campaign-completion');
+        const goalReached = await campaignCompletionService.checkAndUpdateClipperCompletion(data.clipperCampaignId);
+        
+        if (goalReached) {
+          console.log(`🎯 Goal reached! Clipper campaign ${data.clipperCampaignId} automatically completed with escrow release`);
+        }
+      } catch (error: any) {
+        console.error(`❌ Error checking goal completion for clipper campaign ${data.clipperCampaignId}:`, error.message);
+        // Continue without throwing - completion can be checked manually later
+      }
+
       return {
         eventId: trackingEvent.id,
         rewardAmount,
