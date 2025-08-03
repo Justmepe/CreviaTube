@@ -4,7 +4,7 @@ import {
   type ClipperCampaign, type InsertClipperCampaign,
   type TrackingEvent, type InsertTrackingEvent,
   type Payout, type InsertPayout
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { db } from "./db";
 import { eq, and, desc, sql, sum } from "drizzle-orm";
 import session from "express-session";

@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, campaigns } from "@shared/schema";
+import { users, campaigns } from "../shared/schema.js";
 import { EscrowService } from "./services/escrow-service";
 
 async function testPaymentSystem() {

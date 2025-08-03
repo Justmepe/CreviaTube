@@ -1,6 +1,6 @@
 // Unified Metrics Synchronization Service
 import { db } from "../db";
-import { users, socialMetrics, tradingMetrics, websiteMetrics } from "@shared/schema";
+import { users, socialMetrics, tradingMetrics, websiteMetrics } from "../../shared/schema.js";
 import { eq, and } from "drizzle-orm";
 import { SocialMediaAggregator } from "./social-media-apis";
 import { TradingMetricsAggregator } from "./trading-apis";

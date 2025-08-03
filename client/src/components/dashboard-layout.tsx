@@ -176,3 +176,5 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
     </div>
   );
 }
+
+export default DashboardLayout;

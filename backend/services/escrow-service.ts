@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { budgetEscrow, autoPayments, campaigns, trackingEvents, users, payouts, clipperCampaigns } from "@shared/schema";
+import { budgetEscrow, autoPayments, campaigns, trackingEvents, users, payouts, clipperCampaigns } from "../../shared/schema.js";
 import { eq, and, sum } from "drizzle-orm";
 interface PesaPalConfig {
   consumerKey: string;

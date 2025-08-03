@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents } from "@shared/schema";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte } from "drizzle-orm";
 import { db } from "./db";

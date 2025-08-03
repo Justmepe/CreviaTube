@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { trackingEvents, users, campaigns, clipperCampaigns, socialMetrics } from "@shared/schema";
+import { trackingEvents, users, campaigns, clipperCampaigns, socialMetrics } from "../../shared/schema.js";
 import { eq, and, desc, sum, count, sql } from "drizzle-orm";
 
 export interface TrackingData {
