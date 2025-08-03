@@ -28,6 +28,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup clipper progress and completion routes
   setupClipperProgressRoutes(app);
   
+  // Setup goal completion API
+  const { setupGoalCompletionAPI } = await import("./api/goal-completion");
+  setupGoalCompletionAPI(app);
+  
   // Setup payments routes for testing PesaPal integration
   app.use("/api/payments", paymentsRoutes);
 

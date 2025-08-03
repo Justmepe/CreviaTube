@@ -26,6 +26,12 @@ router.delete("/:id", requireAuth, campaignController.deleteCampaign);
 // Get campaign metrics
 router.get("/:id/metrics", requireAuth, campaignController.getCampaignMetrics);
 
+// Get campaign analytics
+router.get("/:id/analytics", requireAuth, campaignController.getCampaignAnalytics);
+
+// Get budget metrics
+router.get("/:id/budget-metrics/:timeframe", requireAuth, campaignController.getBudgetMetrics);
+
 // Apply to campaign (clippers only)
 router.post("/:id/apply", requireRole(["clipper"]), campaignController.applyToCampaign);
 

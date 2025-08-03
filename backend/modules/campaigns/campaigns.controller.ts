@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { CampaignService } from "./campaigns.service";
+import { CampaignAnalyticsService } from "./analytics.service";
 import { insertCampaignSchema } from "../../../shared/schema";
 
 export class CampaignController {
   private campaignService = new CampaignService();
+  private analyticsService = new CampaignAnalyticsService();
 
   createCampaign = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -108,6 +110,32 @@ export class CampaignController {
   getCampaignMetrics = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const metrics = await this.campaignService.getCampaignMetrics(req.params.id);
+      res.json(metrics);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getCampaignAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { timeframe = "7d" } = req.query;
+      const analytics = await this.analyticsService.getCampaignAnalytics(
+        req.params.id, 
+        timeframe as "24h" | "7d" | "30d"
+      );
+      res.json(analytics);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getBudgetMetrics = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { timeframe } = req.params;
+      const metrics = await this.analyticsService.getBudgetMetrics(
+        req.params.id,
+        timeframe as "24h" | "7d" | "30d"
+      );
       res.json(metrics);
     } catch (error) {
       next(error);

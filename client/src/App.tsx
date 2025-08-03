@@ -29,6 +29,8 @@ import BotMonitoring from "@/pages/bot-monitoring";
 import ClipperApplication from "@/pages/clipper-application";
 import CreatorApplicationReview from "@/pages/creator-application-review";
 import AdminAnalytics from "@/pages/admin-analytics";
+import EnhancedCampaignCreation from "@/pages/enhanced-campaign-creation";
+import CampaignsEnhanced from "@/pages/campaigns-enhanced";
 
 function Router() {
   return (
@@ -37,8 +39,10 @@ function Router() {
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
       <ProtectedRoute path="/campaigns" component={() => {
         const { user } = useAuth();
-        return user?.role === "clipper" ? <CampaignsMarketplace /> : <CampaignsList />;
+        return user?.role === "clipper" ? <CampaignsMarketplace /> : <CampaignsEnhanced />;
       }} />
+      <ProtectedRoute path="/campaigns/create" component={CampaignCreation} />
+      <ProtectedRoute path="/campaigns/create-enhanced" component={EnhancedCampaignCreation} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
       <ProtectedRoute path="/campaigns/:id/apply" component={ClipperApplication} />
