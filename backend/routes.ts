@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
+import { campaignCompletionService } from "./services/campaign-completion";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { sql, eq, gte } from "drizzle-orm";
@@ -11,6 +12,7 @@ import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
 import { aiContentDetection } from "./services/ai-content-detection";
+import { setupClipperProgressRoutes } from "./api/clipper-progress";
 // PesaPal configuration for African payments
 let pesapalConfigured = false;
 
@@ -21,6 +23,9 @@ if (process.env.PESAPAL_CONSUMER_KEY && process.env.PESAPAL_CONSUMER_SECRET) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
+  
+  // Setup clipper progress and completion routes
+  setupClipperProgressRoutes(app);
 
   // Campaign routes
   
@@ -496,6 +501,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const event = await storage.createTrackingEvent(eventData);
+      
+      // Check if this event causes the clipper to complete their campaign
+      if (event.clipperCampaignId) {
+        try {
+          const isCompleted = await campaignCompletionService.checkAndUpdateClipperCompletion(event.clipperCampaignId);
+          if (isCompleted) {
+            console.log(`🎉 Clipper campaign ${event.clipperCampaignId} completed!`);
+          }
+        } catch (completionError) {
+          console.error('Error checking campaign completion:', completionError);
+          // Don't fail the tracking event if completion check fails
+        }
+      }
+      
       res.status(201).json(event);
     } catch (error) {
       res.status(400).json({ message: "Invalid tracking event data", error });

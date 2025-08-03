@@ -77,6 +77,17 @@ export const campaigns = pgTable("campaigns", {
   targetPlatforms: text("target_platforms").notNull(), // JSON array
   requirements: text("requirements"),
   duration: integer("duration").notNull().default(30), // campaign duration in days
+  
+  // Campaign goals for individual clipper completion
+  campaignGoals: json("campaign_goals").$type<{
+    viewsGoal?: number;
+    clicksGoal?: number;
+    signupsGoal?: number;
+    depositsGoal?: number;
+    tradesGoal?: number;
+    conversionsGoal?: number;
+    primaryGoal?: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions';
+  }>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -89,6 +100,24 @@ export const clipperCampaigns = pgTable("clipper_campaigns", {
   trackingCode: text("tracking_code").notNull().unique(),
   isApproved: boolean("is_approved").notNull().default(false),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  
+  // Individual clipper campaign completion tracking
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  completionMetrics: json("completion_metrics").$type<{
+    totalViews?: number;
+    totalClicks?: number;
+    totalSignups?: number;
+    totalDeposits?: number;
+    totalTrades?: number;
+    totalConversions?: number;
+    goalReached?: {
+      type: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions';
+      target: number;
+      achieved: number;
+      reachedAt: string;
+    };
+  }>(),
   
   // UGC Content Submission for AI Detection
   submittedContent: text("submitted_content"), // The actual content submitted by clipper

@@ -58,6 +58,7 @@ The database uses a multi-entity relational design supporting users (creators/cl
 ### Key Features
 - **Authentication System**: Session-based authentication with secure password hashing and role-based access control.
 - **Campaign Management**: Creators define and manage campaigns with budgets, reward rates, and platform requirements, with real-time budget tracking.
+- **Individual Campaign Completion**: Each clipper's participation is tracked separately - when a clipper reaches the campaign goal (e.g., 10,000 views), their participation is marked complete while the campaign remains active for other clippers.
 - **Affiliate Tracking**: Tracks various events (click, signup, deposit, trade, view, conversion) with configurable reward rates and status management.
 - **Payout System**: Automated payout calculations with global payment integrations, including mobile money and various international payment methods.
 - **User Management**: Supports multiple roles (Creator, Clipper, Admin) with distinct capabilities and profile management.
