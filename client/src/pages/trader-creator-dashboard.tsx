@@ -24,10 +24,18 @@ export default function TraderCreatorDashboard() {
     enabled: !!user && user.role === "creator",
   });
 
-  // Calculate trader-specific stats
-  const totalSignups = (trackingEvents as any[]).filter((e: any) => e.eventType === "signup").length;
-  const totalDeposits = (trackingEvents as any[]).filter((e: any) => e.eventType === "deposit").length;
-  const totalTrades = (trackingEvents as any[]).filter((e: any) => e.eventType === "trade").length;
+  // Get REAL SYSTEM-CALCULATED trader metrics instead of hardcoded values
+  const { data: traderMetrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ["/api/analytics/trader"],
+    enabled: !!user && user.role === "creator",
+  });
+
+  // Calculate trader-specific stats from real data
+  const totalSignups = (traderMetrics as any)?.totalSignups || 0;
+  const totalDeposits = (traderMetrics as any)?.totalDeposits || 0;
+  const totalTrades = (traderMetrics as any)?.totalTrades || 0;
+  const totalVolume = (traderMetrics as any)?.totalVolume || 0;
+  const conversionRate = (traderMetrics as any)?.conversionRate || 0;
   const activeClippers = (clipperCampaigns as any[]).filter((cc: any) => cc.isApproved).length;
 
   const navigation = [
@@ -39,45 +47,9 @@ export default function TraderCreatorDashboard() {
     { name: "Payouts", href: "/payouts", icon: DollarSign },
   ];
 
-  // Deriv-specific activities
-  const recentTraderActivities = [
-    {
-      id: 1,
-      type: "signup",
-      clipper: "Kevin Mwangi",
-      description: "generated new Deriv account signup",
-      amount: "+KES 100",
-      timestamp: "5 minutes ago",
-      icon: UserCheck,
-      iconBg: "bg-success-50 text-success-500"
-    },
-    {
-      id: 2,
-      type: "deposit",
-      clipper: "Grace Wanjiku", 
-      description: "user deposited $50 and completed first trade",
-      amount: "+KES 200",
-      timestamp: "25 minutes ago",
-      icon: DollarSign,
-      iconBg: "bg-primary-50 text-primary-500"
-    },
-    {
-      id: 3,
-      type: "volume",
-      clipper: "Brian Kimani",
-      description: "user traded 1.5 standard lots this week",
-      amount: "+KES 450", 
-      timestamp: "2 hours ago",
-      icon: Activity,
-      iconBg: "bg-accent-50 text-accent-500"
-    }
-  ];
-
-  const topTradingClippers = [
-    { name: "Kevin Mwangi", specialty: "TikTok Deriv Content", signups: 23, volume: "12.5 lots", earnings: "KES 8,450" },
-    { name: "Grace Wanjiku", specialty: "Instagram Trading Tips", signups: 19, volume: "9.8 lots", earnings: "KES 7,120" },
-    { name: "Brian Kimani", specialty: "YouTube Analysis", signups: 15, volume: "7.2 lots", earnings: "KES 5,890" },
-  ];
+  // Get REAL trading activities and clippers from system-calculated data
+  const recentTraderActivities = (traderMetrics as any)?.recentActivities || [];
+  const topTradingClippers = (traderMetrics as any)?.topClippers || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative">
@@ -124,7 +96,7 @@ export default function TraderCreatorDashboard() {
                     <p className="text-sm font-medium text-slate-600">Total Signups</p>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{totalSignups}</p>
-                  <p className="text-sm text-blue-600 font-medium">+12.5% this month</p>
+                  <p className="text-sm text-blue-600 font-medium">{conversionRate}% conversion rate</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <UserCheck className="w-6 h-6 text-white" />
@@ -157,7 +129,7 @@ export default function TraderCreatorDashboard() {
                     <Activity className="w-4 h-4 text-purple-600" />
                     <p className="text-sm font-medium text-slate-600">Trading Volume</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">{totalTrades} lots</p>
+                  <p className="text-3xl font-bold text-slate-800">{totalVolume} lots</p>
                   <p className="text-sm text-purple-600 font-medium">Last 30 days</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">

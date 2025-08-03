@@ -24,10 +24,17 @@ export default function EntrepreneurDashboard() {
     enabled: !!user && user.role === "creator",
   });
 
-  // Calculate entrepreneur-specific stats
-  const totalClicks = (trackingEvents as any[]).filter((e: any) => e.eventType === "click").length;
-  const totalConversions = (trackingEvents as any[]).filter((e: any) => e.eventType === "conversion").length;
-  const conversionRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(1) : "0";
+  // Get REAL SYSTEM-CALCULATED entrepreneur metrics instead of hardcoded values
+  const { data: entrepreneurMetrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ["/api/analytics/entrepreneur"],
+    enabled: !!user && user.role === "creator",
+  });
+
+  // Calculate entrepreneur-specific stats from real data
+  const totalClicks = (entrepreneurMetrics as any)?.totalClicks || 0;
+  const totalConversions = (entrepreneurMetrics as any)?.totalConversions || 0;
+  const conversionRate = (entrepreneurMetrics as any)?.conversionRate || 0;
+  const totalRevenue = (entrepreneurMetrics as any)?.totalRevenue || 0;
   const activeClippers = (clipperCampaigns as any[]).filter((cc: any) => cc.isApproved).length;
 
   const navigation = [
@@ -38,66 +45,9 @@ export default function EntrepreneurDashboard() {
     { name: "Payouts", href: "/payouts", icon: Wallet },
   ];
 
-  // Business-specific activities
-  const recentBusinessActivities = [
-    {
-      id: 1,
-      type: "conversion",
-      clipper: "Kevin Mwangi",
-      description: "generated 3 qualified leads for your SaaS product",
-      amount: "+KES 450",
-      timestamp: "15 minutes ago",
-      icon: Target,
-      iconBg: "bg-green-50 text-green-500"
-    },
-    {
-      id: 2,
-      type: "clicks",
-      clipper: "Grace Wanjiku", 
-      description: "drove 250 clicks to your landing page",
-      amount: "+KES 125",
-      timestamp: "1 hour ago",
-      icon: MousePointer,
-      iconBg: "bg-blue-50 text-blue-500"
-    },
-    {
-      id: 3,
-      type: "sale",
-      clipper: "Brian Kimani",
-      description: "referred customer completed purchase (KES 15,000)",
-      amount: "+KES 750", 
-      timestamp: "4 hours ago",
-      icon: ShoppingCart,
-      iconBg: "bg-purple-50 text-purple-500"
-    }
-  ];
-
-  const topBusinessClippers = [
-    { 
-      name: "Kevin Mwangi", 
-      specialty: "B2B Lead Generation", 
-      clicks: 1247, 
-      conversions: 23,
-      conversionRate: "1.8%",
-      earnings: "KES 8,450" 
-    },
-    { 
-      name: "Grace Wanjiku", 
-      specialty: "E-commerce Promotion", 
-      clicks: 987, 
-      conversions: 19,
-      conversionRate: "1.9%",
-      earnings: "KES 7,120" 
-    },
-    { 
-      name: "Brian Kimani", 
-      specialty: "Service Marketing", 
-      clicks: 756, 
-      conversions: 15,
-      conversionRate: "2.0%",
-      earnings: "KES 5,890" 
-    },
-  ];
+  // Get REAL business activities and clippers from system-calculated data
+  const recentBusinessActivities = (entrepreneurMetrics as any)?.recentActivities || [];
+  const topBusinessClippers = (entrepreneurMetrics as any)?.topClippers || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-100 relative">
@@ -144,7 +94,7 @@ export default function EntrepreneurDashboard() {
                     <p className="text-sm font-medium text-slate-600">Total Clicks</p>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{totalClicks.toLocaleString()}</p>
-                  <p className="text-sm text-blue-600 font-medium">+15.3% this month</p>
+                  <p className="text-sm text-blue-600 font-medium">{(entrepreneurMetrics as any)?.clickGrowth || 0}% this month</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <MousePointer className="w-6 h-6 text-white" />
@@ -177,7 +127,7 @@ export default function EntrepreneurDashboard() {
                     <ShoppingCart className="w-4 h-4 text-purple-600" />
                     <p className="text-sm font-medium text-slate-600">Revenue Generated</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">KES 245K</p>
+                  <p className="text-3xl font-bold text-slate-800">KES {totalRevenue.toLocaleString()}</p>
                   <p className="text-sm text-purple-600 font-medium">This quarter</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
