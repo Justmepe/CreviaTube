@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ChevronLeft, ChevronRight, Target, DollarSign, Settings, TrendingUp, Users, Calendar, Globe, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Target, DollarSign, Settings, TrendingUp, Users, Calendar, Globe, Zap, ExternalLink, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { getQueryFn } from "@/lib/queryClient";
 
 // Step schemas
 const basicInfoSchema = z.object({
@@ -55,11 +57,17 @@ const targetingSchema = z.object({
   }),
 });
 
-// Combined schema for final submission
-const campaignWizardSchema = basicInfoSchema
+const brokerLinkSchema = z.object({
+  selectedBrokerLinks: z.array(z.string()).min(1, "Select at least one broker link for trading campaigns"),
+});
+
+// Combined schema for final submission - conditionally include broker links for traders
+const baseCampaignWizardSchema = basicInfoSchema
   .merge(budgetSchema)
   .merge(goalsSchema)
   .merge(targetingSchema);
+
+const campaignWizardSchema = baseCampaignWizardSchema.merge(brokerLinkSchema.partial());
 
 type CampaignWizardData = z.infer<typeof campaignWizardSchema>;
 
@@ -91,7 +99,16 @@ const languages = [
 export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizardProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  
+  // Dynamic total steps based on user type
+  const totalSteps = user?.userType === "trader_creator" ? 5 : 4;
+  
+  // Fetch personalized broker links for trader creators
+  const { data: brokerLinks = [], isLoading: brokerLinksLoading } = useQuery({
+    queryKey: ["/api/broker-links/personal"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: user?.userType === "trader_creator",
+  });
 
   const form = useForm<CampaignWizardData>({
     resolver: zodResolver(campaignWizardSchema),
@@ -115,6 +132,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
       minFollowers: 1000,
       maxFollowers: undefined,
       ageRange: { min: 18, max: 45 },
+      selectedBrokerLinks: [],
     },
   });
 
@@ -139,6 +157,11 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
       description: "Choose platforms and clipper requirements",
       icon: <Users className="h-5 w-5" />,
     },
+    ...(user?.userType === "trader_creator" ? [{
+      title: "Broker Links",
+      description: "Select your personalized broker affiliate links",
+      icon: <ExternalLink className="h-5 w-5" />,
+    }] : []),
   ];
 
   const nextStep = async () => {
@@ -898,6 +921,112 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
                     )}
                   />
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 5: Broker Links (Trader Creators Only) */}
+          {currentStep === 5 && user?.userType === "trader_creator" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5 text-primary" />
+                  <CardTitle>Select Your Broker Affiliate Links</CardTitle>
+                </div>
+                <CardDescription>
+                  Choose which of your personalized broker affiliate links to use for this campaign. 
+                  Clippers will promote your selected brokers to earn commissions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {brokerLinksLoading ? (
+                  <div className="animate-pulse space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    ))}
+                  </div>
+                ) : brokerLinks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ExternalLink className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Broker Links Found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You need to add your personalized broker affiliate links before creating trading campaigns.
+                    </p>
+                    <Button 
+                      type="button" 
+                      onClick={() => window.open('/broker-links', '_blank')}
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Broker Links
+                    </Button>
+                  </div>
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="selectedBrokerLinks"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Available Broker Links</FormLabel>
+                        <FormDescription>
+                          Select the broker affiliate links you want to include in this campaign
+                        </FormDescription>
+                        <div className="grid grid-cols-1 gap-4">
+                          {brokerLinks.map((brokerLink: any) => (
+                            <div
+                              key={brokerLink.id}
+                              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                                field.value?.includes(brokerLink.id)
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                              onClick={() => {
+                                const current = field.value || [];
+                                if (current.includes(brokerLink.id)) {
+                                  field.onChange(current.filter((id: string) => id !== brokerLink.id));
+                                } else {
+                                  field.onChange([...current, brokerLink.id]);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    checked={field.value?.includes(brokerLink.id)}
+                                    readOnly
+                                  />
+                                  <div>
+                                    <h4 className="font-semibold">{brokerLink.brokerName}</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      {brokerLink.brokerType.toUpperCase()} • 
+                                      {brokerLink.isActive ? " Active" : " Inactive"}
+                                    </p>
+                                    {brokerLink.description && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {brokerLink.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right text-sm">
+                                  <div className="text-muted-foreground">Performance</div>
+                                  <div>
+                                    {brokerLink.trackingStats?.totalClicks || 0} clicks • 
+                                    {brokerLink.trackingStats?.totalSignups || 0} signups
+                                  </div>
+                                  <div className="text-primary font-semibold">
+                                    {brokerLink.trackingStats?.conversionRate || 0}% conversion
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </CardContent>
             </Card>
           )}

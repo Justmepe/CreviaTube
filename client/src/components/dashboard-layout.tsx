@@ -63,7 +63,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
 
     // Add specific items based on creator type
     if (user?.userType === "trader_creator") {
-      baseNavigation.push({ name: "Broker Integration", href: "/broker", icon: Wallet });
+      baseNavigation.push({ name: "Broker Links", href: "/broker-links", icon: Wallet });
     }
 
     baseNavigation.push({ name: "Payouts", href: "/payouts", icon: DollarSign });

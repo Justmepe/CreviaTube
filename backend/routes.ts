@@ -32,6 +32,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { setupGoalCompletionAPI } = await import("./api/goal-completion");
   setupGoalCompletionAPI(app);
   
+  // Setup personalized broker links API
+  const { setupPersonalizedBrokerLinksAPI } = await import("./api/personalized-broker-links");
+  setupPersonalizedBrokerLinksAPI(app);
+  
   // Setup payments routes for testing PesaPal integration
   app.use("/api/payments", paymentsRoutes);
 

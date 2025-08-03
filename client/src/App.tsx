@@ -31,6 +31,7 @@ import CreatorApplicationReview from "@/pages/creator-application-review";
 import AdminAnalytics from "@/pages/admin-analytics";
 import EnhancedCampaignCreation from "@/pages/enhanced-campaign-creation";
 import CampaignsEnhanced from "@/pages/campaigns-enhanced";
+import PersonalizedBrokerLinks from "@/pages/personalized-broker-links";
 
 function Router() {
   return (
@@ -51,7 +52,8 @@ function Router() {
       <ProtectedRoute path="/marketplace" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/clippers" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/channels" component={MetricsDashboard} />
-      <ProtectedRoute path="/broker" component={BrokerIntegration} />
+      <ProtectedRoute path="/broker" component={PersonalizedBrokerLinks} />
+      <ProtectedRoute path="/broker-links" component={PersonalizedBrokerLinks} />
       <ProtectedRoute path="/analytics" component={MetricsDashboard} />
       <ProtectedRoute path="/creators" component={EnhancedClipperMarketplace} />
       <ProtectedRoute path="/payouts" component={Payouts} />

@@ -12,6 +12,7 @@ export const campaignStatusEnum = pgEnum("campaign_status", ["active", "paused",
 export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "deposit", "trade", "view", "conversion"]);
 export const eventStatusEnum = pgEnum("event_status", ["pending", "verified", "paid", "rejected"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
+export const brokerTypeEnum = pgEnum("broker_type", ["forex", "crypto", "stocks", "futures", "options", "cfds"]);
 
 // Users table
 export const users = pgTable("users", {
@@ -253,6 +254,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   socialMetrics: many(socialMetrics),
   tradingMetrics: many(tradingMetrics),
   websiteMetrics: many(websiteMetrics),
+  personalizedBrokerLinks: many(personalizedBrokerLinks),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -318,6 +320,8 @@ export const websiteMetricsRelations = relations(websiteMetrics, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -399,6 +403,33 @@ export const autoPayments = pgTable("auto_payments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Personalized Broker Links table
+export const personalizedBrokerLinks = pgTable("personalized_broker_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  brokerName: text("broker_name").notNull(),
+  brokerType: brokerTypeEnum("broker_type").notNull(),
+  affiliateLink: text("affiliate_link").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const personalizedBrokerLinksRelations = relations(personalizedBrokerLinks, ({ one }) => ({
+  user: one(users, {
+    fields: [personalizedBrokerLinks.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertPersonalizedBrokerLinkSchema = createInsertSchema(personalizedBrokerLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
@@ -411,3 +442,5 @@ export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
 export type AutoPayment = typeof autoPayments.$inferSelect;
+export type PersonalizedBrokerLink = typeof personalizedBrokerLinks.$inferSelect;
+export type InsertPersonalizedBrokerLink = z.infer<typeof insertPersonalizedBrokerLinkSchema>;
