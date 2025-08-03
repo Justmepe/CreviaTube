@@ -260,6 +260,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced campaigns endpoint for the new interface (my campaigns)
+  app.get("/api/campaigns/my-campaigns", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      if (req.user.role === "creator") {
+        const campaigns = await storage.getCampaignsByCreator(req.user.id);
+        res.json(campaigns);
+      } else if (req.user.role === "clipper") {
+        const clipperCampaigns = await storage.getClipperCampaignsByClipper(req.user.id);
+        res.json(clipperCampaigns);
+      } else {
+        res.status(403).json({ message: "Access denied" });
+      }
+    } catch (error: any) {
+      console.error('Error fetching my campaigns:', error);
+      res.status(500).json({ message: "Failed to fetch campaigns" });
+    }
+  });
+
   // Available campaigns for clippers
   app.get("/api/campaigns/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

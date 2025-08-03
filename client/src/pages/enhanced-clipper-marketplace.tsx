@@ -216,7 +216,6 @@ export default function EnhancedClipperMarketplace() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Clipper Marketplace</h1>
             <p className="text-gray-600">Discover campaigns and start earning with your social media influence</p>
           </div>
           <div className="flex items-center gap-2">
