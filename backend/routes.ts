@@ -13,6 +13,7 @@ import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot
 import type { BotDetectionRequest } from "./middleware/bot-detection";
 import { aiContentDetection } from "./services/ai-content-detection";
 import { setupClipperProgressRoutes } from "./api/clipper-progress";
+import { paymentsRoutes } from "./modules/payments/payments.routes";
 // PesaPal configuration for African payments
 let pesapalConfigured = false;
 
@@ -26,6 +27,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup clipper progress and completion routes
   setupClipperProgressRoutes(app);
+  
+  // Setup payments routes for testing PesaPal integration
+  app.use("/api/payments", paymentsRoutes);
 
   // Campaign routes
   
