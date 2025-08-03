@@ -3,7 +3,12 @@ import { db } from "../db";
 import { personalizedBrokerLinks, trackingEvents } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
-import { nanoid } from "nanoid";
+
+// Type extension for user to include userType and id
+interface AuthenticatedUser {
+  id: string;
+  userType: string;
+}
 
 const brokerLinkSchema = z.object({
   brokerName: z.string().min(1, "Broker name is required"),
@@ -19,54 +24,47 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
   // Get user's personalized broker links
   app.get("/api/broker-links/personal", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user?.userType !== "trader_creator") {
+    
+    const user = req.user as any as AuthenticatedUser;
+    if (user?.userType !== "trader_creator") {
       return res.status(403).json({ message: "Only traders can manage broker links" });
     }
     
     try {
+      // First get the broker links
       const links = await db
-        .select({
-          id: personalizedBrokerLinks.id,
-          brokerName: personalizedBrokerLinks.brokerName,
-          brokerType: personalizedBrokerLinks.brokerType,
-          affiliateLink: personalizedBrokerLinks.affiliateLink,
-          description: personalizedBrokerLinks.description,
-          isActive: personalizedBrokerLinks.isActive,
-          createdAt: personalizedBrokerLinks.createdAt,
-          totalClicks: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'click' THEN 1 END)`,
-          totalSignups: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'signup' THEN 1 END)`,
-          totalDeposits: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'deposit' THEN 1 END)`,
-        })
+        .select()
         .from(personalizedBrokerLinks)
-        .leftJoin(
-          trackingEvents,
-          and(
-            eq(trackingEvents.referralSource, personalizedBrokerLinks.id),
-            eq(trackingEvents.clipperId, req.user.id)
-          )
-        )
-        .where(eq(personalizedBrokerLinks.userId, req.user.id))
-        .groupBy(personalizedBrokerLinks.id);
+        .where(eq(personalizedBrokerLinks.userId, user.id));
 
-      // Format response with tracking stats
-      const formattedLinks = links.map(link => ({
-        id: link.id,
-        brokerName: link.brokerName,
-        brokerType: link.brokerType,
-        affiliateLink: link.affiliateLink,
-        description: link.description,
-        isActive: link.isActive,
-        createdAt: link.createdAt.toISOString(),
-        trackingStats: {
-          totalClicks: link.totalClicks || 0,
-          totalSignups: link.totalSignups || 0,
-          totalDeposits: link.totalDeposits || 0,
-          conversionRate: link.totalClicks > 0 ? ((link.totalSignups || 0) / link.totalClicks) * 100 : 0,
-          revenue: (link.totalSignups || 0) * 50 + (link.totalDeposits || 0) * 200, // Example commission rates
-        }
-      }));
+      // Get tracking stats separately for each link
+      const linksWithStats = await Promise.all(
+        links.map(async (link) => {
+          const stats = await db
+            .select({
+              totalClicks: sql<number>`COUNT(CASE WHEN event_type = 'click' THEN 1 END)`,
+              totalSignups: sql<number>`COUNT(CASE WHEN event_type = 'signup' THEN 1 END)`,
+              totalDeposits: sql<number>`COUNT(CASE WHEN event_type = 'deposit' THEN 1 END)`,
+            })
+            .from(trackingEvents)
+            .where(eq(trackingEvents.clipperId, link.id));
 
-      res.json(formattedLinks);
+          const stat = stats[0] || { totalClicks: 0, totalSignups: 0, totalDeposits: 0 };
+          
+          return {
+            ...link,
+            trackingStats: {
+              totalClicks: Number(stat.totalClicks) || 0,
+              totalSignups: Number(stat.totalSignups) || 0,
+              totalDeposits: Number(stat.totalDeposits) || 0,
+              conversionRate: stat.totalClicks > 0 ? (Number(stat.totalSignups) / Number(stat.totalClicks)) * 100 : 0,
+              revenue: (Number(stat.totalSignups) || 0) * 50 + (Number(stat.totalDeposits) || 0) * 200,
+            }
+          };
+        })
+      );
+
+      res.json(linksWithStats);
     } catch (error: any) {
       console.error('Error fetching personalized broker links:', error);
       res.status(500).json({ message: "Failed to fetch broker links" });
@@ -76,7 +74,9 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
   // Add new personalized broker link
   app.post("/api/broker-links/personal", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user?.userType !== "trader_creator") {
+    
+    const user = req.user as any as AuthenticatedUser;
+    if (user?.userType !== "trader_creator") {
       return res.status(403).json({ message: "Only traders can manage broker links" });
     }
     
@@ -86,14 +86,12 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
       const [newLink] = await db
         .insert(personalizedBrokerLinks)
         .values({
-          id: nanoid(),
-          userId: req.user.id,
+          userId: user.id,
           brokerName: validatedData.brokerName,
           brokerType: validatedData.brokerType,
           affiliateLink: validatedData.affiliateLink,
           description: validatedData.description || null,
           isActive: true,
-          createdAt: new Date(),
         })
         .returning();
 
@@ -122,7 +120,9 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
   // Update broker link (toggle active status)
   app.patch("/api/broker-links/personal/:linkId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user?.userType !== "trader_creator") {
+    
+    const user = req.user as any as AuthenticatedUser;
+    if (user?.userType !== "trader_creator") {
       return res.status(403).json({ message: "Only traders can manage broker links" });
     }
     
@@ -137,7 +137,7 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
         .where(
           and(
             eq(personalizedBrokerLinks.id, linkId),
-            eq(personalizedBrokerLinks.userId, req.user.id)
+            eq(personalizedBrokerLinks.userId, user.id)
           )
         );
 
@@ -161,7 +161,9 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
   // Delete broker link
   app.delete("/api/broker-links/personal/:linkId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user?.userType !== "trader_creator") {
+    
+    const user = req.user as any as AuthenticatedUser;
+    if (user?.userType !== "trader_creator") {
       return res.status(403).json({ message: "Only traders can manage broker links" });
     }
     
@@ -175,7 +177,7 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
         .where(
           and(
             eq(personalizedBrokerLinks.id, linkId),
-            eq(personalizedBrokerLinks.userId, req.user.id)
+            eq(personalizedBrokerLinks.userId, user.id)
           )
         );
 
@@ -210,16 +212,15 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
         return res.status(404).json({ message: "Broker link not found or inactive" });
       }
 
-      // Create tracking event
+      // Create tracking event - simplified for now
       await db
         .insert(trackingEvents)
         .values({
-          id: nanoid(),
-          campaignId: campaignId || null,
           clipperId: clipperId || brokerLink.userId,
           eventType,
-          referralSource: linkId,
-          createdAt: new Date(),
+          clipperCampaignId: "broker-" + linkId, // Use as reference
+          amount: 0,
+          status: "verified",
         });
 
       res.json({ 
@@ -247,7 +248,7 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
         .where(
           and(
             eq(personalizedBrokerLinks.id, linkId),
-            eq(personalizedBrokerLinks.userId, req.user.id)
+            eq(personalizedBrokerLinks.userId, (req.user as any).id)
           )
         );
 
@@ -264,7 +265,7 @@ export function setupPersonalizedBrokerLinksAPI(app: Express) {
           uniqueClippers: sql<number>`COUNT(DISTINCT ${trackingEvents.clipperId})`,
         })
         .from(trackingEvents)
-        .where(eq(trackingEvents.referralSource, linkId));
+        .where(eq(trackingEvents.clipperCampaignId, "broker-" + linkId));
 
       const totalClicks = analytics?.totalClicks || 0;
       const totalSignups = analytics?.totalSignups || 0;
