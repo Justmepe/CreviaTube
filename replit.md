@@ -7,14 +7,14 @@ CreoCash is a comprehensive affiliate marketing platform designed for the global
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Project Structure: Scalable, well-organized modular architecture with separate frontend and backend folders.
+Project Structure: Scalable, well-organized modular architecture with separate client and backend folders.
 
 ## System Architecture
 
-### Project Structure (UPDATED 2025-01-02)
+### Project Structure (UPDATED 2025-01-03)
 ```
 CreoCash/
-├── frontend/              # React frontend application
+├── client/                # React frontend application
 │   ├── src/
 │   │   ├── features/     # Feature-based modules (auth, campaigns, admin, etc.)
 │   │   ├── components/   # Shared UI components
