@@ -750,6 +750,9 @@ export default function BrokerIntegration() {
                                 <Input
                                   type={showApiKey.new ? "text" : "password"}
                                   placeholder="Enter your API key"
+                                  autoComplete="off"
+                                  autoSave="off"
+                                  data-lpignore="true"
                                   {...field}
                                 />
                                 <Button
@@ -775,7 +778,13 @@ export default function BrokerIntegration() {
                           <FormItem>
                             <FormLabel>Account ID</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your trading account ID" {...field} />
+                              <Input 
+                                placeholder="Your trading account ID" 
+                                autoComplete="off"
+                                autoSave="off"
+                                data-lpignore="true"
+                                {...field} 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -791,7 +800,11 @@ export default function BrokerIntegration() {
                           <FormItem>
                             <FormLabel>Server URL</FormLabel>
                             <FormControl>
-                              <Input placeholder="https://your-broker-server.com" {...field} />
+                              <Input 
+                                placeholder="https://your-broker-server.com" 
+                                autoComplete="off"
+                                {...field} 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

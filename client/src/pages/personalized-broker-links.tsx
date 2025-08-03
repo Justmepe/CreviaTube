@@ -352,7 +352,13 @@ export default function PersonalizedBrokerLinks() {
                       <FormItem>
                         <FormLabel>Your Affiliate Link</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://broker.com/signup?ref=your-code" {...field} />
+                          <Input 
+                            placeholder="https://broker.com/signup?ref=your-code" 
+                            autoComplete="off"
+                            autoSave="off"
+                            data-lpignore="true"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -366,7 +372,11 @@ export default function PersonalizedBrokerLinks() {
                       <FormItem>
                         <FormLabel>Description (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="Brief description about this broker" {...field} />
+                          <Input 
+                            placeholder="Brief description about this broker" 
+                            autoComplete="off"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

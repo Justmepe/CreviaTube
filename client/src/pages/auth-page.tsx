@@ -298,6 +298,7 @@ export default function AuthPage() {
                           value={loginData.username}
                           onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
                           required
+                          autoComplete="off"
                           className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                           placeholder="Enter your username"
                         />
@@ -310,6 +311,9 @@ export default function AuthPage() {
                           value={loginData.password}
                           onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                           required
+                          autoComplete="new-password"
+                          autoSave="off"
+                          data-lpignore="true"
                           className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                           placeholder="Enter your password"
                         />
@@ -369,6 +373,7 @@ export default function AuthPage() {
                             value={registerData.username}
                             onChange={(e) => setRegisterData(prev => ({ ...prev, username: e.target.value }))}
                             required
+                            autoComplete="off"
                             className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                             placeholder="Choose username"
                           />
@@ -383,6 +388,7 @@ export default function AuthPage() {
                           value={registerData.email}
                           onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
                           required
+                          autoComplete="off"
                           className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                           placeholder="your@email.com"
                         />
@@ -395,6 +401,7 @@ export default function AuthPage() {
                           type="tel"
                           value={registerData.phoneNumber}
                           onChange={(e) => setRegisterData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                          autoComplete="off"
                           className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                           placeholder="+254 712 345 678"
                         />
@@ -426,6 +433,9 @@ export default function AuthPage() {
                           value={registerData.password}
                           onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
                           required
+                          autoComplete="new-password"
+                          autoSave="off"
+                          data-lpignore="true"
                           className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                           placeholder="Create a strong password"
                         />

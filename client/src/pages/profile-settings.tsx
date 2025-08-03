@@ -247,7 +247,14 @@ export default function ProfileSettings() {
                       <FormItem>
                         <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="Enter current password" {...field} />
+                          <Input 
+                            type="password" 
+                            placeholder="Enter current password" 
+                            autoComplete="current-password"
+                            autoSave="off"
+                            data-lpignore="true"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -261,7 +268,14 @@ export default function ProfileSettings() {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="Enter new password" {...field} />
+                          <Input 
+                            type="password" 
+                            placeholder="Enter new password" 
+                            autoComplete="new-password"
+                            autoSave="off"
+                            data-lpignore="true"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormDescription>
                           Password must be at least 6 characters long.
@@ -278,7 +292,14 @@ export default function ProfileSettings() {
                       <FormItem>
                         <FormLabel>Confirm New Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="Confirm new password" {...field} />
+                          <Input 
+                            type="password" 
+                            placeholder="Confirm new password" 
+                            autoComplete="new-password"
+                            autoSave="off"
+                            data-lpignore="true"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
