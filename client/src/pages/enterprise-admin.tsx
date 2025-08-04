@@ -671,6 +671,9 @@ export default function EnterpriseAdmin() {
                     <SelectItem value="zoom">Zoom Call</SelectItem>
                     <SelectItem value="google_meet">Google Meet</SelectItem>
                     <SelectItem value="teams">Microsoft Teams</SelectItem>
+                    <SelectItem value="webex">Webex</SelectItem>
+                    <SelectItem value="gotomeeting">GoToMeeting</SelectItem>
+                    <SelectItem value="skype">Skype</SelectItem>
                     <SelectItem value="phone">Phone Call</SelectItem>
                     <SelectItem value="in_person">In Person</SelectItem>
                   </SelectContent>
@@ -683,9 +686,34 @@ export default function EnterpriseAdmin() {
                   id="meetingLink"
                   type="url"
                   value={meetingLink}
-                  onChange={(e) => setMeetingLink(e.target.value)}
-                  placeholder="https://zoom.us/j/..."
+                  onChange={(e) => {
+                    const url = e.target.value;
+                    setMeetingLink(url);
+                    
+                    // Auto-detect meeting type based on URL
+                    if (url) {
+                      if (url.includes('zoom.us') || url.includes('zoom.com')) {
+                        setMeetingType('zoom');
+                      } else if (url.includes('meet.google.com') || url.includes('meet.google')) {
+                        setMeetingType('google_meet');
+                      } else if (url.includes('teams.microsoft.com') || url.includes('teams.live.com')) {
+                        setMeetingType('teams');
+                      } else if (url.includes('webex.com') || url.includes('cisco.webex.com')) {
+                        setMeetingType('webex');
+                      } else if (url.includes('gotomeeting.com') || url.includes('gotomeet.me')) {
+                        setMeetingType('gotomeeting');
+                      } else if (url.includes('skype.com')) {
+                        setMeetingType('skype');
+                      }
+                    }
+                  }}
+                  placeholder="https://meet.google.com/xyz-abc-def or https://zoom.us/j/123456789"
                 />
+                {meetingLink && (
+                  <div className="mt-1 text-xs text-green-600">
+                    ✓ Auto-detected: {meetingType.replace('_', ' ')}
+                  </div>
+                )}
               </div>
               
               <div>

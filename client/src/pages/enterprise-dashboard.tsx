@@ -380,15 +380,26 @@ function EnterpriseDashboard() {
                             {/* Meeting Link Section */}
                             {request.meetingLink ? (
                               <div className="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                <p className="font-medium text-blue-800 mb-2">Meeting Access</p>
+                                <p className="font-medium text-blue-800 mb-2 flex items-center">
+                                  {request.meetingType === 'google_meet' && <span className="mr-2 text-green-600">📱</span>}
+                                  {request.meetingType === 'zoom' && <span className="mr-2 text-blue-600">🎥</span>}
+                                  {request.meetingType === 'teams' && <span className="mr-2 text-purple-600">💼</span>}
+                                  {request.meetingType === 'webex' && <span className="mr-2 text-orange-600">🌐</span>}
+                                  Meeting Access ({request.meetingType?.replace('_', ' ')})
+                                </p>
                                 <a 
                                   href={request.meetingLink} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                  className={`inline-flex items-center px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors ${
+                                    request.meetingType === 'google_meet' ? 'bg-green-600 hover:bg-green-700' :
+                                    request.meetingType === 'teams' ? 'bg-purple-600 hover:bg-purple-700' :
+                                    request.meetingType === 'webex' ? 'bg-orange-600 hover:bg-orange-700' :
+                                    'bg-blue-600 hover:bg-blue-700'
+                                  }`}
                                 >
                                   <Calendar className="w-4 h-4 mr-2" />
-                                  Join {request.meetingType?.toUpperCase() || 'Meeting'}
+                                  Join {request.meetingType?.replace('_', ' ').toUpperCase() || 'Meeting'}
                                 </a>
                               </div>
                             ) : (
