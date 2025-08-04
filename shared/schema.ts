@@ -68,6 +68,40 @@ export const systemHealthMetrics = pgTable("system_health_metrics", {
   metadata: json("metadata"),
 });
 
+// Enterprise contact requests table
+export const enterpriseRequests = pgTable("enterprise_requests", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  contactName: text("contact_name").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone"),
+  companyName: text("company_name").notNull(),
+  companySize: text("company_size").notNull(),
+  requestType: text("request_type").notNull(), // pricing, demo, technical, custom_setup, other
+  message: text("message").notNull(),
+  preferredMeetingTime: text("preferred_meeting_time").notNull(),
+  urgency: text("urgency").notNull(), // low, medium, high, urgent
+  status: text("status").notNull().default("pending"), // pending, contacted, in_progress, completed
+  assignedTo: text("assigned_to"), // admin user id
+  meetingScheduled: boolean("meeting_scheduled").default(false),
+  notes: text("notes").default(""),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Admin notifications table
+export const adminNotifications = pgTable("admin_notifications", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(), // enterprise_contact, system_alert, user_issue, etc.
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  data: json("data"), // Additional structured data
+  read: boolean("read").default(false),
+  urgent: boolean("urgent").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  readAt: timestamp("read_at"),
+});
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),

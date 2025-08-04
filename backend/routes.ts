@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { db } from "./db";
@@ -1330,8 +1330,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: '',
       };
 
-      // Store in database (you'd typically have an enterprise_requests table)
-      // For now, we'll create a simple notification system for admins
+      // Store enterprise request in database
+      await db.insert(enterpriseRequests).values(contactRequest);
+      
       console.log('🔔 New Enterprise Contact Request:', {
         id: contactRequest.id,
         company: companyName,
@@ -1342,13 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: req.user.username,
       });
 
-      // In a real system, you'd:
-      // 1. Store in enterprise_requests table
-      // 2. Send email notification to enterprise team
-      // 3. Create calendar booking link
-      // 4. Add to admin dashboard notifications
-
-      // For demo purposes, create a mock admin notification
+      // Create admin notification
       const adminNotification = {
         id: randomBytes(8).toString('hex'),
         type: 'enterprise_contact',
@@ -1356,10 +1351,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `${contactName} (${contactEmail}) has requested ${requestType}. Urgency: ${urgency}`,
         data: contactRequest,
         read: false,
-        createdAt: new Date().toISOString(),
+        urgent: urgency === 'urgent' || urgency === 'high',
       };
 
-      // Store notification (in real system, this would go to admin_notifications table)
+      // Store admin notification in database
+      await db.insert(adminNotifications).values(adminNotification);
       console.log('📧 Admin Notification Created:', adminNotification);
 
       res.json({
@@ -1370,6 +1366,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Enterprise contact request error:", error);
       res.status(500).json({ message: "Failed to submit contact request" });
+    }
+  });
+
+  // Get enterprise requests (Admin only)
+  app.get("/api/admin/enterprise-requests", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const requests = await db.select().from(enterpriseRequests).orderBy(desc(enterpriseRequests.createdAt));
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Failed to fetch enterprise requests:", error);
+      res.status(500).json({ message: "Failed to fetch enterprise requests" });
+    }
+  });
+
+  // Get admin notifications
+  app.get("/api/admin/notifications", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const notifications = await db.select().from(adminNotifications).orderBy(desc(adminNotifications.createdAt)).limit(50);
+      res.json(notifications);
+    } catch (error: any) {
+      console.error("Failed to fetch admin notifications:", error);
+      res.status(500).json({ message: "Failed to fetch admin notifications" });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/admin/notifications/:id/read", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      await db.update(adminNotifications)
+        .set({ read: true, readAt: new Date() })
+        .where(eq(adminNotifications.id, req.params.id));
+      res.json({ message: "Notification marked as read" });
+    } catch (error: any) {
+      console.error("Failed to mark notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Update enterprise request status
+  app.patch("/api/admin/enterprise-requests/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const { status, assignedTo, notes, meetingScheduled } = req.body;
+      
+      await db.update(enterpriseRequests)
+        .set({ 
+          status, 
+          assignedTo, 
+          notes, 
+          meetingScheduled,
+          updatedAt: new Date()
+        })
+        .where(eq(enterpriseRequests.id, req.params.id));
+      
+      res.json({ message: "Enterprise request updated successfully" });
+    } catch (error: any) {
+      console.error("Failed to update enterprise request:", error);
+      res.status(500).json({ message: "Failed to update enterprise request" });
     }
   });
 

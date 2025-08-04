@@ -15,8 +15,18 @@ import {
   Star,
   Sparkles,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Bell,
+  Building,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Phone,
+  Mail,
+  Calendar
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -30,6 +40,16 @@ export default function AdminDashboard() {
   const { data: systemHealth } = useQuery({
     queryKey: ["/api/admin/system-health"],
     refetchInterval: 60000, // Refetch every minute
+  });
+
+  const { data: notifications } = useQuery({
+    queryKey: ["/api/admin/notifications"],
+    refetchInterval: 15000, // Refetch every 15 seconds for real-time notifications
+  });
+
+  const { data: enterpriseRequests } = useQuery({
+    queryKey: ["/api/admin/enterprise-requests"],
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   if (isLoading) {
@@ -281,11 +301,125 @@ export default function AdminDashboard() {
               </div>
             </div>
             
+            {/* Enterprise Requests */}
+            {enterpriseRequests && enterpriseRequests.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <Building className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800">Enterprise Contact Requests</h3>
+                  <Badge variant="destructive" className="animate-pulse">
+                    {enterpriseRequests.filter((req: any) => req.status === 'pending').length} New
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {enterpriseRequests.slice(0, 4).map((request: any, index: number) => (
+                    <div key={index} className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-slate-800">{request.companyName}</h4>
+                          <p className="text-sm text-slate-600">{request.contactName}</p>
+                        </div>
+                        <Badge 
+                          variant={request.status === 'pending' ? 'destructive' : 'default'}
+                          className={`text-xs ${
+                            request.urgency === 'urgent' ? 'animate-pulse' : ''
+                          }`}
+                        >
+                          {request.urgency} • {request.status}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-3 h-3 text-slate-500" />
+                          <span className="text-slate-600">{request.contactEmail}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-3 h-3 text-slate-500" />
+                          <span className="text-slate-600">
+                            Requested: {request.requestType} • {request.preferredMeetingTime}
+                          </span>
+                        </div>
+                        <p className="text-slate-700 text-xs bg-white/60 rounded p-2 mt-2">
+                          {request.message.substring(0, 120)}...
+                        </p>
+                      </div>
+                      <div className="flex space-x-2 mt-3">
+                        <Button size="sm" className="text-xs">
+                          Contact
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs">
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Admin Notifications */}
+            {notifications && notifications.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                    <Bell className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800">Recent Notifications</h3>
+                  <Badge variant="secondary">
+                    {notifications.filter((notif: any) => !notif.read).length} Unread
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  {notifications.slice(0, 5).map((notification: any, index: number) => (
+                    <div 
+                      key={index} 
+                      className={`flex items-start space-x-3 p-3 rounded-lg border ${
+                        notification.read 
+                          ? 'bg-gray-50 border-gray-200' 
+                          : 'bg-blue-50 border-blue-200'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        notification.type === 'enterprise_contact' 
+                          ? 'bg-orange-100 text-orange-600' 
+                          : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {notification.type === 'enterprise_contact' ? 
+                          <Building className="w-4 h-4" /> : 
+                          <Bell className="w-4 h-4" />
+                        }
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-800 text-sm">{notification.title}</h4>
+                        <p className="text-xs text-slate-600 mt-1">{notification.message}</p>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span className="text-xs text-slate-500">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </span>
+                          {notification.urgent && (
+                            <Badge variant="destructive" className="text-xs animate-pulse">
+                              Urgent
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="text-center py-12 text-slate-500">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <BarChart3 className="w-8 h-8 text-blue-500" />
               </div>
-              <p className="text-lg font-medium text-slate-700 mb-2">Analytics Dashboard Coming Soon</p>
+              <p className="text-lg font-medium text-slate-700 mb-2">Analytics Dashboard</p>
               <p className="text-slate-500">Real-time platform metrics and performance insights</p>
             </div>
           </div>
