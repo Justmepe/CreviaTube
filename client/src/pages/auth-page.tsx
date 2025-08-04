@@ -55,12 +55,20 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    loginMutation.mutate(loginData);
+    try {
+      loginMutation.mutate(loginData);
+    } catch (error) {
+      console.error("Login error:", error);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    registerMutation.mutate(registerData);
+    try {
+      registerMutation.mutate(registerData);
+    } catch (error) {
+      console.error("Registration error:", error);
+    }
   };
 
   // Icon mapping for dynamic features

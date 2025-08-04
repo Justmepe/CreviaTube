@@ -34,17 +34,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Login failed" }));
+        throw new Error(errorData.message || "Invalid username or password");
+      }
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
       // Clear all cached data when logging in to prevent seeing other users' data
       queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully logged in to CreoCash.",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "Please check your username and password.",
         variant: "destructive",
       });
     },
@@ -53,17 +62,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
       const res = await apiRequest("POST", "/api/register", credentials);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Registration failed" }));
+        throw new Error(errorData.message || "Registration failed");
+      }
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
       // Clear all cached data when registering to ensure clean state
       queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Account created successfully!",
+        description: "Welcome to CreoCash. You can now start creating campaigns.",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: error.message || "An error occurred during registration. Please try again.",
         variant: "destructive",
       });
     },

@@ -6,7 +6,7 @@ import {
   type Payout, type InsertPayout
 } from "../shared/schema.js";
 import { db } from "./db";
-import { eq, and, desc, sql, sum } from "drizzle-orm";
+import { eq, and, desc, sql, sum, count, gte } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -117,9 +117,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    // Safely handle JSON fields for social accounts
+    const userData = {
+      ...insertUser,
+      socialAccounts: insertUser.socialAccounts ? JSON.parse(JSON.stringify(insertUser.socialAccounts)) : null,
+    };
+    
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values([userData])
       .returning();
     return user;
   }
@@ -157,9 +163,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
+    // Safely handle JSON fields for campaign goals
+    const campaignData = {
+      ...campaign,
+      campaignGoals: campaign.campaignGoals ? JSON.parse(JSON.stringify(campaign.campaignGoals)) : null,
+    };
+    
     const [newCampaign] = await db
       .insert(campaigns)
-      .values(campaign)
+      .values([campaignData])
       .returning();
     return newCampaign;
   }
@@ -210,9 +222,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createClipperCampaign(clipperCampaign: InsertClipperCampaign): Promise<ClipperCampaign> {
+    // Safely handle JSON fields for completion metrics
+    const clipperData = {
+      ...clipperCampaign,
+      completionMetrics: clipperCampaign.completionMetrics ? JSON.parse(JSON.stringify(clipperCampaign.completionMetrics)) : null,
+      aiDetectionResult: clipperCampaign.aiDetectionResult ? JSON.parse(JSON.stringify(clipperCampaign.aiDetectionResult)) : null,
+      aiFlags: clipperCampaign.aiFlags ? JSON.parse(JSON.stringify(clipperCampaign.aiFlags)) : null,
+    };
+    
     const [newClipperCampaign] = await db
       .insert(clipperCampaigns)
-      .values(clipperCampaign)
+      .values([clipperData])
       .returning();
     return newClipperCampaign;
   }
@@ -260,9 +280,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPayout(payout: InsertPayout): Promise<Payout> {
+    const payoutData = {
+      ...payout,
+      amount: payout.amount.toString(), // Convert number to string for database
+    };
     const [newPayout] = await db
       .insert(payouts)
-      .values(payout)
+      .values([payoutData])
       .returning();
     return newPayout;
   }
@@ -600,7 +624,7 @@ export class DatabaseStorage implements IStorage {
         clipperId: clipperCampaigns.clipperId,
         campaignId: clipperCampaigns.campaignId,
         clipperUsername: users.username,
-        campaignTitle: campaigns.title,
+        campaignTitle: campaigns.name,
         submittedContent: clipperCampaigns.submittedContent,
         contentType: clipperCampaigns.contentType,
         contentDescription: clipperCampaigns.contentDescription,

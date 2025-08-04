@@ -94,7 +94,7 @@ const formatCurrency = (amount: number | string) => {
   }).format(num || 0);
 };
 
-export default function EnterpriseDashboard() {
+function EnterpriseDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [brandingModalOpen, setBrandingModalOpen] = useState(false);
@@ -394,3 +394,5 @@ export default function EnterpriseDashboard() {
     </div>
   );
 }
+
+export default EnterpriseDashboard;
