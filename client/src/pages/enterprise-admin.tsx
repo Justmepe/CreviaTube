@@ -161,12 +161,13 @@ export default function EnterpriseAdmin() {
   const pendingRequests = (requests as EnterpriseRequest[])?.filter(req => req.status === 'pending') || [];
   const activeRequests = (requests as EnterpriseRequest[])?.filter(req => req.status === 'in_progress') || [];
   const completedRequests = (requests as EnterpriseRequest[])?.filter(req => req.status === 'completed') || [];
+  const scheduledRequests = (requests as EnterpriseRequest[])?.filter(req => req.meetingScheduled) || [];
 
   return (
     <DashboardLayout title="Enterprise Requests Management">
       <div className="space-y-6">
         {/* Header Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
@@ -194,9 +195,21 @@ export default function EnterpriseAdmin() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <Calendar className="w-5 h-5 text-green-600" />
                 <div>
-                  <p className="text-2xl font-bold text-green-600">{completedRequests.length}</p>
+                  <p className="text-2xl font-bold text-green-600">{scheduledRequests.length}</p>
+                  <p className="text-sm text-gray-600">Meetings Scheduled</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-purple-600" />
+                <div>
+                  <p className="text-2xl font-bold text-purple-600">{completedRequests.length}</p>
                   <p className="text-sm text-gray-600">Completed</p>
                 </div>
               </div>
@@ -206,9 +219,9 @@ export default function EnterpriseAdmin() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Building className="w-5 h-5 text-purple-600" />
+                <Building className="w-5 h-5 text-orange-600" />
                 <div>
-                  <p className="text-2xl font-bold text-purple-600">{(requests as EnterpriseRequest[])?.length || 0}</p>
+                  <p className="text-2xl font-bold text-orange-600">{(requests as EnterpriseRequest[])?.length || 0}</p>
                   <p className="text-sm text-gray-600">Total Requests</p>
                 </div>
               </div>
@@ -218,6 +231,74 @@ export default function EnterpriseAdmin() {
 
         {/* Requests List */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Scheduled Meetings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-green-600" />
+                <span>Scheduled Meetings</span>
+                {scheduledRequests.length > 0 && (
+                  <Badge variant="default" className="bg-green-100 text-green-800">
+                    {scheduledRequests.length}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {scheduledRequests.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No scheduled meetings</p>
+              ) : (
+                scheduledRequests.map((request) => (
+                  <div key={request.id} className="border-l-4 border-green-500 bg-green-50 rounded-lg p-4 hover:bg-green-100 cursor-pointer"
+                       onClick={() => setSelectedRequest(request)}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-lg text-green-800">{request.companyName}</h3>
+                        <p className="text-sm text-green-700">{request.contactName}</p>
+                      </div>
+                      <Badge className="bg-green-600 text-white">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        SCHEDULED
+                      </Badge>
+                    </div>
+                    
+                    {request.meetingDate && (
+                      <div className="bg-white p-3 rounded border mb-3">
+                        <div className="flex items-center space-x-2 text-sm font-medium text-green-800">
+                          <Calendar className="w-4 h-4" />
+                          <span>{new Date(request.meetingDate).toLocaleDateString()} at {request.meetingTime}</span>
+                        </div>
+                        {request.meetingNotes && (
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">{request.meetingNotes}</p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-1 mb-3">
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
+                        <Mail className="w-4 h-4" />
+                        <span>{request.contactEmail}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
+                        <Phone className="w-4 h-4" />
+                        <span>{request.contactPhone}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="bg-white">
+                        {request.requestType.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                      <Badge className={getUrgencyColor(request.urgency)}>
+                        {request.urgency.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
           {/* Pending Requests */}
           <Card>
             <CardHeader>
