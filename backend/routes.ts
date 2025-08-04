@@ -2356,5 +2356,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get enterprise contact requests for current user
+  app.get("/api/enterprise/contact-requests", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const userId = req.user.id;
+      
+      // Fetch enterprise contact requests for this user
+      const requests = await db.select()
+        .from(enterpriseRequests)
+        .where(eq(enterpriseRequests.userId, userId))
+        .orderBy(sql`${enterpriseRequests.createdAt} DESC`);
+
+      res.json(requests);
+    } catch (error: any) {
+      console.error('Error fetching enterprise contact requests:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

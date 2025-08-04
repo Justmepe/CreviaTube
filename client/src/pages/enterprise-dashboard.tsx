@@ -94,6 +94,31 @@ const formatCurrency = (amount: number | string) => {
   }).format(num || 0);
 };
 
+interface ContactRequest {
+  id: string;
+  userId: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  companyName: string;
+  companySize: string;
+  requestType: string;
+  message: string;
+  preferredMeetingTime: string;
+  urgency: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'rejected';
+  assignedTo: string | null;
+  meetingScheduled: boolean;
+  meetingDate: string | null;
+  meetingTime: string | null;
+  meetingNotes: string | null;
+  meetingType?: string;
+  meetingLink?: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 function EnterpriseDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -112,6 +137,12 @@ function EnterpriseDashboard() {
 
   const { data: analytics } = useQuery<Analytics>({
     queryKey: ["/api/analytics/enterprise"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  // Fetch contact requests for current user
+  const { data: contactRequests } = useQuery<ContactRequest[]>({
+    queryKey: ["/api/enterprise/contact-requests"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
@@ -265,6 +296,117 @@ function EnterpriseDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Enterprise Setup Progress & Meetings Section */}
+          {contactRequests && contactRequests.length > 0 && (
+            <div className="bg-white/60 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-slate-800 mb-2">Enterprise Setup Progress</h2>
+                <p className="text-slate-600">Track your white-label platform setup and scheduled meetings</p>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Contact Requests Status */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-slate-800 flex items-center">
+                    <Building className="w-5 h-5 mr-2 text-blue-600" />
+                    Setup Requests
+                  </h3>
+                  {contactRequests.map((request) => (
+                    <div key={request.id} className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-4 border border-blue-200/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`${
+                            request.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                            request.status === 'in_progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                            'bg-gray-100 text-gray-700 border-gray-200'
+                          }`}>
+                            {request.status.replace('_', ' ')}
+                          </Badge>
+                          <Badge variant="outline" className={`${
+                            request.urgency === 'urgent' ? 'border-red-200 text-red-700' :
+                            request.urgency === 'high' ? 'border-orange-200 text-orange-700' :
+                            request.urgency === 'medium' ? 'border-yellow-200 text-yellow-700' :
+                            'border-green-200 text-green-700'
+                          }`}>
+                            {request.urgency}
+                          </Badge>
+                        </div>
+                        <span className="text-sm text-slate-500">
+                          {new Date(request.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        <p><strong>Request Type:</strong> {request.requestType.replace('_', ' ')}</p>
+                        <p><strong>Company:</strong> {request.companyName}</p>
+                        {request.notes && (
+                          <p className="mt-2 text-xs bg-white/50 p-2 rounded">
+                            <strong>Admin Notes:</strong> {request.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Scheduled Meetings */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-slate-800 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-green-600" />
+                    Scheduled Meetings
+                  </h3>
+                  {contactRequests.filter(r => r.meetingScheduled && r.meetingDate).length > 0 ? (
+                    contactRequests
+                      .filter(r => r.meetingScheduled && r.meetingDate)
+                      .map((request) => (
+                        <div key={request.id} className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-4 border border-green-200/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4 text-green-600" />
+                              <span className="font-medium text-slate-800">
+                                {new Date(request.meetingDate!).toLocaleDateString()} at {request.meetingTime}
+                              </span>
+                            </div>
+                            <Badge className="bg-green-100 text-green-700 border-green-200">
+                              {request.meetingType?.replace('_', ' ') || 'Meeting'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-slate-600 space-y-1">
+                            <p><strong>Company:</strong> {request.companyName}</p>
+                            <p><strong>Purpose:</strong> {request.requestType.replace('_', ' ')}</p>
+                            {request.meetingLink && (
+                              <p>
+                                <strong>Meeting Link:</strong>{' '}
+                                <a 
+                                  href={request.meetingLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  Join Meeting
+                                </a>
+                              </p>
+                            )}
+                            {request.meetingNotes && (
+                              <p className="mt-2 text-xs bg-white/50 p-2 rounded">
+                                <strong>Meeting Notes:</strong> {request.meetingNotes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4 border border-gray-200/50 text-center">
+                      <Calendar className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">No meetings scheduled yet</p>
+                      <p className="text-xs text-gray-500">Contact our enterprise team to schedule a setup meeting</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Enterprise White-Label Features Section */}
           <div className="bg-white/60 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl p-8">
