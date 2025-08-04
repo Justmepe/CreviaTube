@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { db } from "./db";
@@ -1400,6 +1400,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Failed to fetch enterprise requests:", error);
       res.status(500).json({ message: "Failed to fetch enterprise requests" });
+    }
+  });
+
+  // Create enterprise account after agreement
+  app.post("/api/admin/enterprise-accounts", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const accountData = req.body;
+      
+      // Generate unique account ID
+      const accountId = randomBytes(16).toString('hex');
+      
+      const newAccount = {
+        id: accountId,
+        requestId: accountData.requestId,
+        userId: accountData.userId,
+        companyName: accountData.companyName,
+        customDomain: accountData.customDomain,
+        brandingConfig: accountData.brandingConfig,
+        pricingConfig: accountData.pricingConfig,
+        features: accountData.features,
+        status: 'setup',
+        billingCycle: accountData.billingCycle,
+        contractDetails: accountData.contractDetails,
+      };
+
+      await db.insert(enterpriseAccounts).values(newAccount);
+      
+      console.log('🏢 Enterprise Account Created:', {
+        id: accountId,
+        company: accountData.companyName,
+        domain: accountData.customDomain,
+        commission: accountData.pricingConfig.commissionRate
+      });
+
+      res.json(newAccount);
+    } catch (error: any) {
+      console.error('Error creating enterprise account:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get enterprise accounts
+  app.get("/api/admin/enterprise-accounts", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const accounts = await db.select().from(enterpriseAccounts).orderBy(desc(enterpriseAccounts.createdAt));
+      res.json(accounts);
+    } catch (error: any) {
+      console.error('Error fetching enterprise accounts:', error);
+      res.status(500).json({ message: error.message });
     }
   });
 

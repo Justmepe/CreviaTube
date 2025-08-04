@@ -19,9 +19,11 @@ import {
   XCircle,
   Calendar,
   MessageSquare,
-  ArrowUpRight
+  ArrowUpRight,
+  Settings
 } from "lucide-react";
 import { useState } from "react";
+import { EnterpriseSetupModal } from '@/components/enterprise-setup-modal';
 
 interface EnterpriseRequest {
   id: string;
@@ -54,6 +56,10 @@ export default function EnterpriseAdmin() {
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
+  const [meetingType, setMeetingType] = useState('zoom');
+  const [meetingLink, setMeetingLink] = useState('');
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [setupRequest, setSetupRequest] = useState<EnterpriseRequest | null>(null);
 
   // Fetch enterprise requests
   const { data: requests, isLoading } = useQuery({
@@ -115,6 +121,11 @@ export default function EnterpriseAdmin() {
       return;
     }
     
+    if (!meetingLink && meetingType !== 'phone') {
+      toast({ title: "Please provide meeting link", variant: "destructive" });
+      return;
+    }
+    
     updateRequestMutation.mutate({
       id: selectedRequest.id,
       updates: {
@@ -122,6 +133,8 @@ export default function EnterpriseAdmin() {
         meetingDate,
         meetingTime,
         meetingNotes: meetingNotes || '',
+        meetingType,
+        meetingLink: meetingLink || '',
         status: 'in_progress',
         updatedAt: new Date().toISOString(),
       }
@@ -264,10 +277,21 @@ export default function EnterpriseAdmin() {
                     
                     {request.meetingDate && (
                       <div className="bg-white p-3 rounded border mb-3">
-                        <div className="flex items-center space-x-2 text-sm font-medium text-green-800">
+                        <div className="flex items-center space-x-2 text-sm font-medium text-green-800 mb-2">
                           <Calendar className="w-4 h-4" />
                           <span>{new Date(request.meetingDate).toLocaleDateString()} at {request.meetingTime}</span>
                         </div>
+                        {(request as any).meetingType && (
+                          <div className="flex items-center space-x-2 text-xs text-green-700 mb-1">
+                            <span className="font-medium">{(request as any).meetingType.replace('_', ' ').toUpperCase()}</span>
+                            {(request as any).meetingLink && (
+                              <a href={(request as any).meetingLink} target="_blank" rel="noopener noreferrer" 
+                                 className="text-blue-600 hover:underline truncate max-w-40">
+                                {(request as any).meetingType === 'phone' ? (request as any).meetingLink : 'Join Meeting'}
+                              </a>
+                            )}
+                          </div>
+                        )}
                         {request.meetingNotes && (
                           <p className="text-xs text-gray-600 mt-1 line-clamp-2">{request.meetingNotes}</p>
                         )}
@@ -462,7 +486,15 @@ export default function EnterpriseAdmin() {
                       )}
                     </p>
                     {selectedRequest.meetingDate && (
-                      <p><strong>Meeting Date:</strong> {new Date(selectedRequest.meetingDate).toLocaleDateString()} at {selectedRequest.meetingTime}</p>
+                      <div>
+                        <p><strong>Meeting Date:</strong> {new Date(selectedRequest.meetingDate).toLocaleDateString()} at {selectedRequest.meetingTime}</p>
+                        {(selectedRequest as any).meetingType && (
+                          <p><strong>Meeting Type:</strong> {(selectedRequest as any).meetingType.replace('_', ' ')}</p>
+                        )}
+                        {(selectedRequest as any).meetingLink && (
+                          <p><strong>Meeting Link:</strong> <a href={(selectedRequest as any).meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{(selectedRequest as any).meetingLink}</a></p>
+                        )}
+                      </div>
                     )}
                     <p><strong>Created:</strong> {new Date(selectedRequest.createdAt).toLocaleString()}</p>
                   </div>
@@ -495,7 +527,7 @@ export default function EnterpriseAdmin() {
                     <Calendar className="w-4 h-4 mr-2" />
                     Schedule Meeting
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-1">Meeting Date</label>
                       <Input
@@ -515,12 +547,44 @@ export default function EnterpriseAdmin() {
                       />
                     </div>
 
-                    <div className="md:col-span-1">
-                      <label className="block text-sm font-medium mb-1">Preferred Time</label>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Meeting Type</label>
+                      <Select value={meetingType} onValueChange={setMeetingType}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="zoom">Zoom Meeting</SelectItem>
+                          <SelectItem value="google_meet">Google Meet</SelectItem>
+                          <SelectItem value="teams">Microsoft Teams</SelectItem>
+                          <SelectItem value="phone">Phone Call</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Client Preference</label>
                       <div className="p-2 bg-gray-50 rounded text-sm text-gray-600">
-                        Client prefers: {selectedRequest.preferredMeetingTime}
+                        Prefers: {selectedRequest.preferredMeetingTime}
                       </div>
                     </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-1">
+                      {meetingType === 'phone' ? 'Phone Number' : 'Meeting Link'}
+                    </label>
+                    <Input
+                      type={meetingType === 'phone' ? 'tel' : 'url'}
+                      value={meetingLink}
+                      onChange={(e) => setMeetingLink(e.target.value)}
+                      placeholder={
+                        meetingType === 'zoom' ? 'https://zoom.us/j/123456789' :
+                        meetingType === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' :
+                        meetingType === 'teams' ? 'https://teams.microsoft.com/l/meetup-join/...' :
+                        '+1-555-123-4567'
+                      }
+                    />
                   </div>
                   
                   <div className="mt-4">
@@ -536,7 +600,7 @@ export default function EnterpriseAdmin() {
                   <div className="flex space-x-2 mt-4">
                     <Button 
                       onClick={handleScheduleMeeting}
-                      disabled={updateRequestMutation.isPending || !meetingDate || !meetingTime}
+                      disabled={updateRequestMutation.isPending || !meetingDate || !meetingTime || (!meetingLink && meetingType !== 'phone')}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Calendar className="w-4 h-4 mr-2" />
@@ -583,6 +647,20 @@ export default function EnterpriseAdmin() {
                   >
                     {updateRequestMutation.isPending ? 'Updating...' : 'Update Request'}
                   </Button>
+                  
+                  {selectedRequest.status === 'completed' && (
+                    <Button 
+                      onClick={() => {
+                        setSetupRequest(selectedRequest);
+                        setShowSetupModal(true);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Setup Enterprise Account
+                    </Button>
+                  )}
+                  
                   <Button variant="outline" onClick={() => setSelectedRequest(null)}>
                     Cancel
                   </Button>
@@ -590,6 +668,21 @@ export default function EnterpriseAdmin() {
               </div>
             </CardContent>
           </Card>
+        )}
+        
+        {/* Enterprise Setup Modal */}
+        {showSetupModal && setupRequest && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="max-w-6xl w-full max-h-screen overflow-y-auto">
+              <EnterpriseSetupModal 
+                request={setupRequest}
+                onClose={() => {
+                  setShowSetupModal(false);
+                  setSetupRequest(null);
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>

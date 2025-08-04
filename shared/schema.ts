@@ -87,6 +87,8 @@ export const enterpriseRequests = pgTable("enterprise_requests", {
   meetingDate: timestamp("meeting_date"),
   meetingTime: text("meeting_time"),
   meetingNotes: text("meeting_notes"),
+  meetingType: text("meeting_type"), // zoom, google_meet, teams, phone
+  meetingLink: text("meeting_link"),
   notes: text("notes").default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -103,6 +105,41 @@ export const adminNotifications = pgTable("admin_notifications", {
   urgent: boolean("urgent").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   readAt: timestamp("read_at"),
+});
+
+// Enterprise accounts table for white-label clients
+export const enterpriseAccounts = pgTable("enterprise_accounts", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").notNull(), // reference to enterprise_requests
+  userId: text("user_id").notNull(), // main contact user ID
+  companyName: text("company_name").notNull(),
+  customDomain: text("custom_domain"), // e.g., partner.creocash.com
+  brandingConfig: json("branding_config").$type<{
+    logo?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    customCss?: string;
+    companyName?: string;
+  }>(),
+  pricingConfig: json("pricing_config").$type<{
+    commissionRate: number; // e.g., 0.15 for 15%
+    payoutThreshold: number; // minimum payout amount
+    customRates?: { [key: string]: number }; // per campaign type
+  }>(),
+  features: json("features").$type<{
+    whiteLabel: boolean;
+    customBranding: boolean;
+    apiAccess: boolean;
+    customDomains: boolean;
+    prioritySupport: boolean;
+    dedicatedManager: boolean;
+  }>(),
+  status: text("status").notNull().default("setup"), // setup, active, suspended, cancelled
+  activatedAt: timestamp("activated_at"),
+  billingCycle: text("billing_cycle"), // monthly, quarterly, yearly
+  contractDetails: json("contract_details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const users = pgTable("users", {
