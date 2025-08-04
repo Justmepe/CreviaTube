@@ -83,6 +83,8 @@ export default function EnterpriseAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/enterprise-requests"] });
+      // Also invalidate enterprise user's contact requests cache
+      queryClient.invalidateQueries({ queryKey: ["/api/enterprise/contact-requests"] });
       toast({ title: "Request updated successfully" });
       setSelectedRequest(null);
     },
@@ -120,6 +122,7 @@ export default function EnterpriseAdmin() {
       updatedAt: new Date().toISOString(),
     }
 
+    console.log('About to call updateRequestMutation with:', { id: selectedRequest.id, updates });
     updateRequestMutation.mutate({ id: selectedRequest.id, updates });
     setShowMeetingScheduler(false);
     setMeetingDate('');

@@ -1600,7 +1600,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         meetingLink,
         meetingType,
         meetingDate,
-        meetingTime
+        meetingTime,
+        fullBody: req.body
       }); // Debug log
       
       const updateData: any = {
