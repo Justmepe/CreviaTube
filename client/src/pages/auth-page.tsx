@@ -38,7 +38,16 @@ export default function AuthPage() {
     phoneNumber: "",
   });
 
-  // Redirect if already logged in
+  // Fetch platform features and stats from API (must be before any conditional returns)
+  const { data: features } = useQuery({
+    queryKey: ["/api/platform/features"],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/platform/stats"],
+  });
+
+  // Redirect if user is already logged in (after all hooks)
   if (user) {
     setLocation("/");
     return null;
@@ -53,15 +62,6 @@ export default function AuthPage() {
     e.preventDefault();
     registerMutation.mutate(registerData);
   };
-
-  // Fetch platform features and stats from API
-  const { data: features } = useQuery({
-    queryKey: ["/api/platform/features"],
-  });
-
-  const { data: stats } = useQuery({
-    queryKey: ["/api/platform/stats"],
-  });
 
   // Icon mapping for dynamic features
   const iconMap = {

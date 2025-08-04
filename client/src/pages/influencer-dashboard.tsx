@@ -11,31 +11,31 @@ export default function InfluencerDashboard() {
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
     queryKey: ["/api/campaigns"],
-    enabled: !!user && user.role === "creator",
+    enabled: !!user,
   });
 
   const { data: clipperCampaigns = [] } = useQuery({
     queryKey: ["/api/clipper-campaigns"],
-    enabled: !!user && user.role === "creator",
+    enabled: !!user,
   });
 
   const { data: trackingEvents = [] } = useQuery({
     queryKey: ["/api/tracking-events"],
-    enabled: !!user && user.role === "creator",
+    enabled: !!user,
   });
 
   // Get REAL SYSTEM-CALCULATED metrics instead of hardcoded values
   const { data: influencerMetrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/analytics/influencer"],
-    enabled: !!user && user.role === "creator",
+    enabled: !!user,
   });
 
   // Calculate influencer-specific stats from real data
-  const totalViews = influencerMetrics?.totalViews || 0;
-  const viewGrowth = influencerMetrics?.viewGrowth || 0;
-  const totalFollowers = influencerMetrics?.totalFollowers || 0;
-  const followerGrowth = influencerMetrics?.followerGrowth || 0;
-  const engagementRate = influencerMetrics?.engagementRate || 0;
+  const totalViews = (influencerMetrics as any)?.totalViews || 0;
+  const viewGrowth = (influencerMetrics as any)?.viewGrowth || 0;
+  const totalFollowers = (influencerMetrics as any)?.totalFollowers || 0;
+  const followerGrowth = (influencerMetrics as any)?.followerGrowth || 0;
+  const engagementRate = (influencerMetrics as any)?.engagementRate || 0;
   const activeClippers = (clipperCampaigns as any[]).filter((cc: any) => cc.isApproved).length;
 
   const navigation = [
@@ -47,8 +47,8 @@ export default function InfluencerDashboard() {
   ];
 
   // Get REAL activities and clippers from system-calculated data
-  const recentSocialActivities = influencerMetrics?.recentActivities || [];
-  const topInfluencerClippers = influencerMetrics?.topClippers || [];
+  const recentSocialActivities = (influencerMetrics as any)?.recentActivities || [];
+  const topInfluencerClippers = (influencerMetrics as any)?.topClippers || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-pink-50 to-rose-100 relative">
@@ -57,7 +57,7 @@ export default function InfluencerDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-pink-400/10 to-rose-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout navigation={navigation} user={user}>
+      <DashboardLayout navigation={navigation}>
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">
