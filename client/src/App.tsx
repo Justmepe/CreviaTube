@@ -36,6 +36,7 @@ import PersonalizedBrokerLinks from "@/pages/personalized-broker-links";
 import EnterpriseAdmin from "@/pages/enterprise-admin";
 import EnterpriseAccounts from "@/pages/enterprise-accounts";
 import EnterprisePortal from "@/pages/enterprise-portal";
+import EnterpriseDashboard from "@/pages/enterprise-dashboard";
 
 function Router() {
   return (
@@ -83,6 +84,11 @@ function DashboardRouter() {
   const { user } = useAuth();
   
   if (!user) return null;
+  
+  // Check if user has enterprise account and redirect to enterprise dashboard
+  if (user.role === "creator" && user.userType === "enterprise") {
+    return <EnterpriseDashboard />;
+  }
   
   switch (user.role) {
     case "creator":

@@ -59,6 +59,25 @@ interface Analytics {
   recentActivity: any[];
 }
 
+interface EnterpriseDashboardData {
+  stats: {
+    totalCampaigns: number;
+    activeCampaigns: number;
+    totalRevenue: number;
+    totalEvents: number;
+  };
+  campaigns: Campaign[];
+  account: {
+    id: string;
+    companyName: string;
+    customDomain: string;
+    pricingConfig: {
+      commissionRate: number;
+    };
+    status: string;
+  };
+}
+
 const navigation = [
   { name: "Brand Campaigns", href: "/campaigns", icon: Crown },
   { name: "Creator Network", href: "/marketplace", icon: Users },
@@ -80,6 +99,11 @@ export default function EnterpriseDashboard() {
   const { toast } = useToast();
   const [brandingModalOpen, setBrandingModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+
+  // Fetch enterprise account data first
+  const { data: enterpriseData } = useQuery<EnterpriseDashboardData>({
+    queryKey: ["/api/enterprise/dashboard"],
+  });
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -138,7 +162,7 @@ export default function EnterpriseDashboard() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                    Enterprise Command Center
+                    {enterpriseData?.account?.companyName ? `${enterpriseData.account.companyName} Enterprise` : 'Enterprise Command Center'}
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
                     <Badge variant="outline" className="bg-purple-100/80 text-purple-700 border-purple-200/50 text-xs">
@@ -150,7 +174,12 @@ export default function EnterpriseDashboard() {
                   </div>
                 </div>
               </div>
-              <p className="text-slate-600 text-lg font-medium">Complete CreoCash platform with custom branding and enterprise features</p>
+              <p className="text-slate-600 text-lg font-medium">
+                {enterpriseData?.account?.customDomain 
+                  ? `White-label platform at ${enterpriseData.account.customDomain} with ${(enterpriseData.account.pricingConfig.commissionRate * 100).toFixed(1)}% commission rate`
+                  : 'Complete CreoCash platform with custom branding and enterprise features'
+                }
+              </p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 shadow-lg">
@@ -349,7 +378,7 @@ export default function EnterpriseDashboard() {
       <EnterpriseBrandingModal
         open={brandingModalOpen}
         onOpenChange={setBrandingModalOpen}
-        currentBranding={user?.businessIntegration?.enterpriseSettings?.customBranding}
+        currentBranding={enterpriseData?.account?.companyName ? { companyName: enterpriseData.account.companyName } : undefined}
       />
 
       {/* Enterprise Contact Modal */}
@@ -359,7 +388,7 @@ export default function EnterpriseDashboard() {
         userInfo={{
           fullName: user?.fullName,
           email: user?.email,
-          companyName: user?.businessIntegration?.enterpriseSettings?.customBranding?.companyName,
+          companyName: enterpriseData?.account?.companyName,
         }}
       />
     </div>
