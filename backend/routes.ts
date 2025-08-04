@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const availableCampaigns = await storage.getAvailableCampaigns();
       // Filter out campaigns this clipper has already joined
-      const filteredCampaigns = [];
+      const filteredCampaigns: typeof availableCampaigns = [];
       for (const campaign of availableCampaigns) {
         const existing = await storage.getClipperCampaign(req.user.id, campaign.id);
         if (!existing) {
@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (req.user.role === "creator") {
         // Get all clipper campaigns for creator's campaigns
         const campaigns = await storage.getCampaignsByCreator(req.user.id);
-        const allClipperCampaigns = [];
+        const allClipperCampaigns: any[] = [];
         
         for (const campaign of campaigns) {
           const clipperCampaigns = await storage.getClipperCampaignsByCampaign(campaign.id);
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await aiContentDetection.analyzeContent({
         type,
         content,
-        metadata: { description }
+        metadata: {}
       });
 
       res.json(result);
@@ -512,7 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (req.user.role === "creator") {
         // Get events for creator's campaigns
         const campaigns = await storage.getCampaignsByCreator(req.user.id);
-        const allEvents = [];
+        const allEvents: any[] = [];
         
         for (const campaign of campaigns) {
           const events = await storage.getTrackingEventsByCampaign(campaign.id);
@@ -539,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add bot detection data to the event
       const eventData = {
         ...validatedData,
-        botScore: req.botDetection?.confidence || 0,
+        botScore: (req.botDetection?.confidence || 0).toString(),
         flaggedAsBot: req.botDetection?.isBot || false,
         deviceFingerprint: JSON.stringify(req.deviceFingerprint),
         userAgent: req.deviceFingerprint?.userAgent || req.get('User-Agent'),
@@ -696,8 +696,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create payout request
       const payout = await storage.createPayout({
         clipperId: req.user.id,
-        amount: requestedAmount.toString(),
+        amount: requestedAmount,
         mpesaNumber: paymentDetails?.phoneNumber || paymentDetails?.accountNumber || req.user.email,
+        paymentMethod: paymentMethod || "mobile_money",
         status: "pending",
       });
 
