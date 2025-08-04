@@ -94,6 +94,18 @@ export default function EnterprisePortal() {
     refetchInterval: 30000,
   });
 
+  // Debug logging
+  console.log("Enterprise Data:", enterpriseData);
+  console.log("Loading:", isLoading);
+  console.log("Error:", error);
+
+  // Force re-render when data changes
+  if (enterpriseData) {
+    console.log("Account Name:", enterpriseData.account?.companyName);
+    console.log("Custom Domain:", enterpriseData.account?.customDomain);
+    console.log("Commission Rate:", enterpriseData.account?.pricingConfig?.commissionRate);
+  }
+
   if (isLoading) {
     return (
       <DashboardLayout title="Enterprise Portal">
@@ -104,7 +116,24 @@ export default function EnterprisePortal() {
     );
   }
 
-  if (error || !enterpriseData) {
+  if (error) {
+    return (
+      <DashboardLayout title="Enterprise Portal">
+        <div className="text-center py-12">
+          <Building className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Enterprise Account</h3>
+          <p className="text-gray-600 mb-6">
+            {error?.message || "Failed to load enterprise account data"}
+          </p>
+          <Link href="/enterprise">
+            <Button>Contact Enterprise Team</Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!enterpriseData) {
     return (
       <DashboardLayout title="Enterprise Portal">
         <div className="text-center py-12">
