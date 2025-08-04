@@ -1113,8 +1113,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/affiliate/track-click", async (req, res) => {
-          signupBonus: 200,
-  app.post("/api/affiliate/track-click", async (req, res) => {
     try {
       const { brokerId, referralCode, userAgent, ipAddress } = req.body;
       
