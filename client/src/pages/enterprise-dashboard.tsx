@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { EnterpriseBrandingModal } from "@/components/enterprise-branding-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +77,7 @@ const formatCurrency = (amount: number | string) => {
 export default function EnterpriseDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [brandingModalOpen, setBrandingModalOpen] = useState(false);
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -295,7 +298,10 @@ export default function EnterpriseDashboard() {
                   <h3 className="font-semibold text-slate-800 mb-2">Ready to Customize Your Platform?</h3>
                   <p className="text-slate-600 text-sm">Contact our enterprise team to set up your white-label branding and custom domain.</p>
                 </div>
-                <Button className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700">
+                <Button 
+                  onClick={() => setBrandingModalOpen(true)}
+                  className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
+                >
                   Configure Branding
                 </Button>
               </div>
@@ -303,6 +309,13 @@ export default function EnterpriseDashboard() {
           </div>
         </div>
       </DashboardLayout>
+
+      {/* Enterprise Branding Configuration Modal */}
+      <EnterpriseBrandingModal
+        open={brandingModalOpen}
+        onOpenChange={setBrandingModalOpen}
+        currentBranding={user?.businessIntegration?.enterpriseSettings?.customBranding}
+      />
     </div>
   );
 }

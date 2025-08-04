@@ -1202,6 +1202,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enterprise branding configuration endpoint
+  app.put("/api/enterprise/branding", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    // Only enterprise users can configure branding
+    if (req.user.userType !== "enterprise") {
+      return res.status(403).json({ message: "Enterprise access required" });
+    }
+
+    try {
+      const { companyName, logoUrl, primaryColor, secondaryColor, customDomain } = req.body;
+      
+      // Validate the branding data
+      if (!companyName || companyName.trim() === "") {
+        return res.status(400).json({ message: "Company name is required" });
+      }
+
+      const enterpriseSettings = {
+        customBranding: {
+          companyName: companyName.trim(),
+          logoUrl: logoUrl || null,
+          primaryColor: primaryColor || "#7c3aed",
+          secondaryColor: secondaryColor || "#3b82f6",
+          customDomain: customDomain || null,
+        },
+        platformSettings: {
+          allowedCreatorTypes: ["trader_creator", "influencer", "entrepreneur"],
+          customPayoutThresholds: {},
+          customCommissionRates: {},
+        },
+        adminSettings: {
+          userManagementEnabled: true,
+          customReportingEnabled: true,
+          prioritySupport: true,
+        },
+      };
+
+      // Update user with enterprise settings
+      const updatedUser = await storage.updateUser(req.user.id, {
+        businessIntegration: {
+          ...req.user.businessIntegration,
+          enterpriseSettings,
+        },
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ 
+        message: "Enterprise branding updated successfully",
+        enterpriseSettings 
+      });
+    } catch (error: any) {
+      console.error("Enterprise branding update error:", error);
+      res.status(500).json({ message: "Failed to update enterprise branding" });
+    }
+  });
+
+  // Get enterprise branding configuration
+  app.get("/api/enterprise/branding", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    if (req.user.userType !== "enterprise") {
+      return res.status(403).json({ message: "Enterprise access required" });
+    }
+
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const enterpriseSettings = user.businessIntegration?.enterpriseSettings || {
+        customBranding: {
+          companyName: "Your Company",
+          logoUrl: null,
+          primaryColor: "#7c3aed",
+          secondaryColor: "#3b82f6",
+          customDomain: null,
+        },
+      };
+
+      res.json(enterpriseSettings);
+    } catch (error: any) {
+      console.error("Enterprise branding fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch enterprise branding" });
+    }
+  });
+
   // Admin dashboard endpoints
   app.get("/api/admin/stats", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
