@@ -91,7 +91,10 @@ export default function EnterprisePortal() {
   // Fetch enterprise account data
   const { data: enterpriseData, isLoading, error } = useQuery<EnterpriseDashboardData>({
     queryKey: ["/api/enterprise/dashboard"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 30000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Simple debug to ensure data is loaded
@@ -155,7 +158,7 @@ export default function EnterprisePortal() {
             <div>
               <div className="flex items-center space-x-3 mb-2">
                 <Crown className="w-8 h-8 text-yellow-300" />
-                <h1 className="text-2xl font-bold">{account?.companyName || 'Enterprise Account'}</h1>
+                <h1 className="text-2xl font-bold">{account.companyName}</h1>
                 <Badge className="bg-white text-blue-600 font-semibold">
                   Enterprise Account
                 </Badge>
@@ -166,7 +169,7 @@ export default function EnterprisePortal() {
               <div className="flex items-center space-x-4 text-sm">
                 <div className="flex items-center space-x-2">
                   <Globe className="w-4 h-4" />
-                  <span>{account.customDomain || 'Custom domain pending'}</span>
+                  <span>{account.customDomain}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4" />
