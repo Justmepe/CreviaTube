@@ -1293,6 +1293,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enterprise contact request endpoint
+  app.post("/api/enterprise/contact", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const {
+        contactName,
+        contactEmail,
+        contactPhone,
+        companyName,
+        companySize,
+        requestType,
+        message,
+        preferredMeetingTime,
+        urgency
+      } = req.body;
+
+      // Create enterprise contact request record
+      const contactRequest = {
+        id: randomBytes(16).toString('hex'),
+        userId: req.user.id,
+        contactName: contactName.trim(),
+        contactEmail: contactEmail.trim(),
+        contactPhone: contactPhone?.trim() || null,
+        companyName: companyName.trim(),
+        companySize,
+        requestType,
+        message: message.trim(),
+        preferredMeetingTime,
+        urgency,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        assignedTo: null, // Will be assigned by admin
+        meetingScheduled: false,
+        notes: '',
+      };
+
+      // Store in database (you'd typically have an enterprise_requests table)
+      // For now, we'll create a simple notification system for admins
+      console.log('🔔 New Enterprise Contact Request:', {
+        id: contactRequest.id,
+        company: companyName,
+        contact: contactName,
+        email: contactEmail,
+        type: requestType,
+        urgency: urgency,
+        user: req.user.username,
+      });
+
+      // In a real system, you'd:
+      // 1. Store in enterprise_requests table
+      // 2. Send email notification to enterprise team
+      // 3. Create calendar booking link
+      // 4. Add to admin dashboard notifications
+
+      // For demo purposes, create a mock admin notification
+      const adminNotification = {
+        id: randomBytes(8).toString('hex'),
+        type: 'enterprise_contact',
+        title: `New Enterprise Request from ${companyName}`,
+        message: `${contactName} (${contactEmail}) has requested ${requestType}. Urgency: ${urgency}`,
+        data: contactRequest,
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Store notification (in real system, this would go to admin_notifications table)
+      console.log('📧 Admin Notification Created:', adminNotification);
+
+      res.json({
+        message: "Enterprise contact request submitted successfully",
+        requestId: contactRequest.id,
+        estimatedResponse: urgency === 'urgent' ? '4 hours' : urgency === 'high' ? '24 hours' : '48 hours',
+      });
+    } catch (error: any) {
+      console.error("Enterprise contact request error:", error);
+      res.status(500).json({ message: "Failed to submit contact request" });
+    }
+  });
+
   // Admin dashboard endpoints
   app.get("/api/admin/stats", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {

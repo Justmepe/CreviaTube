@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { EnterpriseBrandingModal } from "@/components/enterprise-branding-modal";
+import { EnterpriseContactModal } from "@/components/enterprise-contact-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +79,7 @@ export default function EnterpriseDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [brandingModalOpen, setBrandingModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -329,7 +331,11 @@ export default function EnterpriseDashboard() {
                     <h3 className="font-semibold text-slate-800 mb-2">Need Custom Configuration?</h3>
                     <p className="text-slate-600 text-sm">Contact CreoCash enterprise team for custom pricing, advanced features, and dedicated support.</p>
                   </div>
-                  <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                  <Button 
+                    variant="outline" 
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                    onClick={() => setContactModalOpen(true)}
+                  >
                     Contact Enterprise Team
                   </Button>
                 </div>
@@ -344,6 +350,17 @@ export default function EnterpriseDashboard() {
         open={brandingModalOpen}
         onOpenChange={setBrandingModalOpen}
         currentBranding={user?.businessIntegration?.enterpriseSettings?.customBranding}
+      />
+
+      {/* Enterprise Contact Modal */}
+      <EnterpriseContactModal
+        open={contactModalOpen}
+        onOpenChange={setContactModalOpen}
+        userInfo={{
+          fullName: user?.fullName,
+          email: user?.email,
+          companyName: user?.businessIntegration?.enterpriseSettings?.customBranding?.companyName,
+        }}
       />
     </div>
   );
