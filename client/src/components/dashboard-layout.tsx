@@ -13,7 +13,8 @@ import {
   Wallet,
   LogOut,
   User,
-  Settings
+  Settings,
+  Building
 } from "lucide-react";
 
 interface NavigationItem {
@@ -41,6 +42,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+        { name: "Enterprise", href: "/enterprise", icon: Building },
         { name: "Payouts", href: "/payouts", icon: DollarSign },
         { name: "Real Analytics", href: "/admin/real-analytics", icon: Activity },
       ];
