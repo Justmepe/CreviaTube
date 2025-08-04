@@ -1471,13 +1471,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      // Check if user has enterprise account
-      const [account] = await db
-        .select()
-        .from(enterpriseAccounts)
-        .where(eq(enterpriseAccounts.userId, req.user.id));
-
-      if (!account) {
+      // Check if user is enterprise type
+      if (req.user.userType !== "enterprise") {
         return res.status(403).json({ message: "Enterprise account required" });
       }
 

@@ -85,8 +85,8 @@ function DashboardRouter() {
   
   if (!user) return null;
   
-  // Check if user has enterprise account and redirect to enterprise dashboard
-  if (user.role === "creator" && user.userType === "enterprise") {
+  // Enterprise users get the enterprise dashboard regardless of their role
+  if (user.userType === "enterprise") {
     return <EnterpriseDashboard />;
   }
   

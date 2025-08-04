@@ -38,6 +38,17 @@ export default function AuthPage() {
     phoneNumber: "",
   });
 
+  // Update role automatically based on user type selection
+  const handleUserTypeChange = (userType: string) => {
+    setRegisterData(prev => ({
+      ...prev,
+      userType: userType as any,
+      // Enterprise, trading educators, influencers, and entrepreneurs are creators
+      // Only regular users without specific types are clippers
+      role: userType === "enterprise" || userType === "trader_creator" || userType === "influencer" || userType === "entrepreneur" ? "creator" : "clipper"
+    }));
+  };
+
   // Fetch platform features and stats from API (must be before any conditional returns)
   const { data: features } = useQuery({
     queryKey: ["/api/platform/features"],
@@ -410,7 +421,7 @@ export default function AuthPage() {
                         <Label htmlFor="userType" className="text-slate-700 font-medium">Creator Type</Label>
                         <Select 
                           value={registerData.userType} 
-                          onValueChange={(value) => setRegisterData(prev => ({ ...prev, userType: value as any }))}
+                          onValueChange={handleUserTypeChange}
                         >
                           <SelectTrigger className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl">
                             <SelectValue placeholder="Select your creator type" />
