@@ -1445,7 +1445,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get enterprise accounts
+  // Enterprise portal routes for account holders
+  app.get("/api/enterprise/account", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const [account] = await db
+        .select()
+        .from(enterpriseAccounts)
+        .where(eq(enterpriseAccounts.userId, req.user.id));
+
+      if (!account) {
+        return res.status(404).json({ message: "No enterprise account found" });
+      }
+
+      res.json(account);
+    } catch (error: any) {
+      console.error("Error fetching enterprise account:", error);
+      res.status(500).json({ message: "Failed to fetch enterprise account" });
+    }
+  });
+
+  // Get enterprise dashboard data
+  app.get("/api/enterprise/dashboard", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Check if user has enterprise account
+      const [account] = await db
+        .select()
+        .from(enterpriseAccounts)
+        .where(eq(enterpriseAccounts.userId, req.user.id));
+
+      if (!account) {
+        return res.status(403).json({ message: "Enterprise account required" });
+      }
+
+      // Get campaigns created by this enterprise user
+      const enterpriseCampaigns = await db
+        .select()
+        .from(campaigns)
+        .where(eq(campaigns.creatorId, req.user.id))
+        .orderBy(desc(campaigns.createdAt));
+
+      // Get tracking events for enterprise campaigns
+      const campaignIds = enterpriseCampaigns.map(c => c.id);
+      
+      let totalEvents = 0;
+      let totalRevenue = 0;
+      
+      if (campaignIds.length > 0) {
+        const [eventStats] = await db
+          .select({ count: count(trackingEvents.id) })
+          .from(trackingEvents)
+          .where(sql`campaign_id = ANY(${campaignIds})`);
+        
+        totalEvents = eventStats?.count || 0;
+        
+        // Calculate revenue based on enterprise commission rate
+        const commissionRate = (account.pricingConfig as any)?.commissionRate || 0.15;
+        totalRevenue = enterpriseCampaigns.reduce((sum, campaign) => 
+          sum + (campaign.budgetUsed * commissionRate), 0
+        );
+      }
+
+      const stats = {
+        totalCampaigns: enterpriseCampaigns.length,
+        activeCampaigns: enterpriseCampaigns.filter(c => c.status === 'active').length,
+        totalRevenue: Math.round(totalRevenue),
+        totalEvents,
+        account: {
+          company: account.companyName,
+          domain: account.customDomain,
+          status: account.status,
+          commissionRate: (account.pricingConfig as any)?.commissionRate || 0.15,
+          features: account.features
+        }
+      };
+
+      res.json({
+        stats,
+        campaigns: enterpriseCampaigns,
+        account
+      });
+    } catch (error: any) {
+      console.error("Error fetching enterprise dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch enterprise dashboard" });
+    }
+  });
+
+  // Get enterprise accounts (Admin only)
   app.get("/api/admin/enterprise-accounts", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
       return res.sendStatus(403);
