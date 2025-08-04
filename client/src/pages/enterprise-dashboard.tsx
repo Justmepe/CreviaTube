@@ -356,44 +356,71 @@ function EnterpriseDashboard() {
                     <Calendar className="w-5 h-5 mr-2 text-green-600" />
                     Scheduled Meetings
                   </h3>
-                  {contactRequests.filter(r => r.meetingScheduled && r.meetingDate).length > 0 ? (
+                  {contactRequests.filter(r => r.meetingScheduled).length > 0 ? (
                     contactRequests
-                      .filter(r => r.meetingScheduled && r.meetingDate)
+                      .filter(r => r.meetingScheduled)
                       .map((request) => (
                         <div key={request.id} className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-4 border border-green-200/50">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-4 h-4 text-green-600" />
                               <span className="font-medium text-slate-800">
-                                {new Date(request.meetingDate!).toLocaleDateString()} at {request.meetingTime}
+                                {request.meetingDate ? new Date(request.meetingDate).toLocaleDateString() : 'Date TBD'}
+                                {request.meetingTime && ` at ${request.meetingTime}`}
                               </span>
                             </div>
                             <Badge className="bg-green-100 text-green-700 border-green-200">
                               {request.meetingType?.replace('_', ' ') || 'Meeting'}
                             </Badge>
                           </div>
-                          <div className="text-sm text-slate-600 space-y-1">
+                          <div className="text-sm text-slate-600 space-y-2">
                             <p><strong>Company:</strong> {request.companyName}</p>
                             <p><strong>Purpose:</strong> {request.requestType.replace('_', ' ')}</p>
-                            {request.meetingLink && (
-                              <p>
-                                <strong>Meeting Link:</strong>{' '}
+                            
+                            {/* Meeting Link Section */}
+                            {request.meetingLink ? (
+                              <div className="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <p className="font-medium text-blue-800 mb-2">Meeting Access</p>
                                 <a 
                                   href={request.meetingLink} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
+                                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                                 >
-                                  Join Meeting
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Join {request.meetingType?.toUpperCase() || 'Meeting'}
                                 </a>
-                              </p>
+                              </div>
+                            ) : (
+                              <div className="mt-3 bg-orange-50 p-3 rounded-lg border border-orange-200">
+                                <p className="text-orange-700 text-sm">Meeting link will be provided by admin</p>
+                              </div>
                             )}
+
+                            {/* Meeting Notes */}
                             {request.meetingNotes && (
-                              <p className="mt-2 text-xs bg-white/50 p-2 rounded">
-                                <strong>Meeting Notes:</strong> {request.meetingNotes}
-                              </p>
+                              <div className="mt-3 bg-white/60 p-3 rounded-lg border border-gray-200">
+                                <p className="font-medium text-slate-800 mb-1">Meeting Notes</p>
+                                <p className="text-slate-600 text-sm">{request.meetingNotes}</p>
+                              </div>
                             )}
                           </div>
+                          
+                          {/* Debug info (can be removed later) */}
+                          <details className="mt-3">
+                            <summary className="text-xs text-gray-500 cursor-pointer">Debug Info</summary>
+                            <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-auto">
+                              {JSON.stringify({
+                                id: request.id,
+                                meetingScheduled: request.meetingScheduled,
+                                meetingDate: request.meetingDate,
+                                meetingTime: request.meetingTime,
+                                meetingLink: request.meetingLink,
+                                meetingType: request.meetingType,
+                                meetingNotes: request.meetingNotes
+                              }, null, 2)}
+                            </pre>
+                          </details>
                         </div>
                       ))
                   ) : (
