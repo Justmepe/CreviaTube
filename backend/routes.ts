@@ -1229,8 +1229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         platformSettings: {
           allowedCreatorTypes: ["trader_creator", "influencer", "entrepreneur"],
-          customPayoutThresholds: {},
-          customCommissionRates: {},
+          customPayoutThresholds: {}, // Set by CreoCash team during account setup
+          customCommissionRates: {}, // Negotiated rates, not standard 20%
+          hasCustomPricing: true, // Flag indicating custom pricing is active
         },
         adminSettings: {
           userManagementEnabled: true,

@@ -292,18 +292,47 @@ export default function EnterpriseDashboard() {
               </div>
             </div>
 
-            <div className="mt-6 bg-gradient-to-r from-purple-100 to-violet-100 rounded-xl p-6 border border-purple-200/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-slate-800 mb-2">Ready to Customize Your Platform?</h3>
-                  <p className="text-slate-600 text-sm">Contact our enterprise team to set up your white-label branding and custom domain.</p>
+            <div className="mt-6 space-y-4">
+              {/* Custom Pricing Section */}
+              <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-6 border border-green-200/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-800 mb-2">Enterprise Custom Pricing</h3>
+                    <p className="text-slate-600 text-sm">Your enterprise account has custom pricing rates negotiated with CreoCash. No standard 20% platform fees apply.</p>
+                  </div>
+                  <Badge variant="outline" className="bg-green-100/80 text-green-700 border-green-200/50">
+                    Custom Rates Active
+                  </Badge>
                 </div>
-                <Button 
-                  onClick={() => setBrandingModalOpen(true)}
-                  className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
-                >
-                  Configure Branding
-                </Button>
+              </div>
+
+              {/* Branding Configuration */}
+              <div className="bg-gradient-to-r from-purple-100 to-violet-100 rounded-xl p-6 border border-purple-200/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-800 mb-2">White-Label Branding</h3>
+                    <p className="text-slate-600 text-sm">Customize your platform with company branding, colors, and domain.</p>
+                  </div>
+                  <Button 
+                    onClick={() => setBrandingModalOpen(true)}
+                    className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
+                  >
+                    Configure Branding
+                  </Button>
+                </div>
+              </div>
+
+              {/* Contact Enterprise Team */}
+              <div className="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl p-6 border border-blue-200/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-800 mb-2">Need Custom Configuration?</h3>
+                    <p className="text-slate-600 text-sm">Contact CreoCash enterprise team for custom pricing, advanced features, and dedicated support.</p>
+                  </div>
+                  <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                    Contact Enterprise Team
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

@@ -58,4 +58,18 @@ Enterprise users pay for premium access and receive white-label functionality, a
 - Enterprise-specific analytics
 
 ## Business Model
-Enterprise users pay a premium subscription fee to access the white-label platform, allowing them to operate their own affiliate marketing platform powered by CreoCash technology while maintaining their brand identity.
+
+### Custom Pricing Structure
+- Enterprise customers do NOT pay the standard 20% platform fee
+- Pricing is negotiated directly with CreoCash based on volume and requirements
+- Custom commission rates and payout structures are configured by CreoCash team
+- Enterprise accounts receive personalized pricing that fits their business model
+
+### Account Setup Process
+1. **Enterprise Inquiry**: Company contacts CreoCash for enterprise pricing
+2. **Custom Negotiation**: CreoCash team works with client to establish custom rates
+3. **Account Configuration**: CreoCash team configures the enterprise account with agreed pricing
+4. **Platform Access**: Enterprise customer receives full white-label platform access
+5. **Ongoing Support**: Dedicated enterprise support and account management
+
+Enterprise users pay a negotiated subscription fee to access the white-label platform, allowing them to operate their own affiliate marketing platform powered by CreoCash technology with custom pricing and their own brand identity.
