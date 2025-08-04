@@ -84,6 +84,9 @@ export const enterpriseRequests = pgTable("enterprise_requests", {
   status: text("status").notNull().default("pending"), // pending, contacted, in_progress, completed
   assignedTo: text("assigned_to"), // admin user id
   meetingScheduled: boolean("meeting_scheduled").default(false),
+  meetingDate: timestamp("meeting_date"),
+  meetingTime: text("meeting_time"),
+  meetingNotes: text("meeting_notes"),
   notes: text("notes").default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

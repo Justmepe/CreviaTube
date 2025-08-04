@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -37,6 +38,9 @@ interface EnterpriseRequest {
   status: 'pending' | 'in_progress' | 'completed' | 'rejected';
   assignedTo: string | null;
   meetingScheduled: boolean;
+  meetingDate: string | null;
+  meetingTime: string | null;
+  meetingNotes: string | null;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -47,6 +51,9 @@ export default function EnterpriseAdmin() {
   const [selectedRequest, setSelectedRequest] = useState<EnterpriseRequest | null>(null);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
+  const [meetingNotes, setMeetingNotes] = useState('');
 
   // Fetch enterprise requests
   const { data: requests, isLoading } = useQuery({
@@ -78,11 +85,44 @@ export default function EnterpriseAdmin() {
   const handleUpdateRequest = () => {
     if (!selectedRequest) return;
     
+    const updates: any = {
+      status: status || selectedRequest.status,
+      notes: notes || selectedRequest.notes,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Add meeting details if provided
+    if (meetingDate) {
+      updates.meetingDate = meetingDate;
+      updates.meetingScheduled = true;
+    }
+    if (meetingTime) {
+      updates.meetingTime = meetingTime;
+    }
+    if (meetingNotes) {
+      updates.meetingNotes = meetingNotes;
+    }
+    
+    updateRequestMutation.mutate({
+      id: selectedRequest.id,
+      updates
+    });
+  };
+
+  const handleScheduleMeeting = () => {
+    if (!selectedRequest || !meetingDate || !meetingTime) {
+      toast({ title: "Please select meeting date and time", variant: "destructive" });
+      return;
+    }
+    
     updateRequestMutation.mutate({
       id: selectedRequest.id,
       updates: {
-        status: status || selectedRequest.status,
-        notes: notes || selectedRequest.notes,
+        meetingScheduled: true,
+        meetingDate,
+        meetingTime,
+        meetingNotes: meetingNotes || '',
+        status: 'in_progress',
         updatedAt: new Date().toISOString(),
       }
     });
@@ -233,9 +273,17 @@ export default function EnterpriseAdmin() {
                       <span className="text-xs text-gray-500">
                         {new Date(request.createdAt).toLocaleDateString()}
                       </span>
-                      <span className="text-xs text-gray-500">
-                        Prefers {request.preferredMeetingTime} meetings
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        {request.meetingScheduled && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            Meeting Scheduled
+                          </Badge>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          Prefers {request.preferredMeetingTime}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -319,6 +367,22 @@ export default function EnterpriseAdmin() {
                       </Badge>
                     </p>
                     <p><strong>Preferred Meeting:</strong> {selectedRequest.preferredMeetingTime}</p>
+                    <p><strong>Meeting Scheduled:</strong> 
+                      {selectedRequest.meetingScheduled ? (
+                        <Badge className="ml-2 bg-green-100 text-green-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Yes
+                        </Badge>
+                      ) : (
+                        <Badge className="ml-2 bg-gray-100 text-gray-800">
+                          <XCircle className="w-3 h-3 mr-1" />
+                          No
+                        </Badge>
+                      )}
+                    </p>
+                    {selectedRequest.meetingDate && (
+                      <p><strong>Meeting Date:</strong> {new Date(selectedRequest.meetingDate).toLocaleDateString()} at {selectedRequest.meetingTime}</p>
+                    )}
                     <p><strong>Created:</strong> {new Date(selectedRequest.createdAt).toLocaleString()}</p>
                   </div>
                 </div>
@@ -336,9 +400,74 @@ export default function EnterpriseAdmin() {
                 </div>
               )}
 
+              {selectedRequest.meetingNotes && (
+                <div>
+                  <h4 className="font-semibold mb-2">Meeting Notes</h4>
+                  <p className="bg-green-50 p-3 rounded-lg">{selectedRequest.meetingNotes}</p>
+                </div>
+              )}
+
+              {/* Meeting Scheduling */}
+              {!selectedRequest.meetingScheduled && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Schedule Meeting
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Meeting Date</label>
+                      <Input
+                        type="date"
+                        value={meetingDate}
+                        onChange={(e) => setMeetingDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Meeting Time</label>
+                      <Input
+                        type="time"
+                        value={meetingTime}
+                        onChange={(e) => setMeetingTime(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="md:col-span-1">
+                      <label className="block text-sm font-medium mb-1">Preferred Time</label>
+                      <div className="p-2 bg-gray-50 rounded text-sm text-gray-600">
+                        Client prefers: {selectedRequest.preferredMeetingTime}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-1">Meeting Agenda/Notes</label>
+                    <Textarea
+                      value={meetingNotes}
+                      onChange={(e) => setMeetingNotes(e.target.value)}
+                      placeholder="Add meeting agenda, preparation notes, or specific topics to discuss..."
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-2 mt-4">
+                    <Button 
+                      onClick={handleScheduleMeeting}
+                      disabled={updateRequestMutation.isPending || !meetingDate || !meetingTime}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {updateRequestMutation.isPending ? 'Scheduling...' : 'Schedule Meeting'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Update Form */}
               <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Update Request</h4>
+                <h4 className="font-semibold mb-3">Update Request Status</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Status</label>
