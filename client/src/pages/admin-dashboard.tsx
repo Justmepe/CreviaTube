@@ -52,6 +52,13 @@ export default function AdminDashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
+  console.log('Admin Dashboard Data:', { 
+    notifications, 
+    enterpriseRequests, 
+    stats,
+    systemHealth 
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -192,14 +199,14 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className={`px-2 py-1 text-xs font-bold rounded-full ${
-                      systemHealth?.services?.every(s => s.status === 'healthy') 
+                      (systemHealth as any)?.services?.every((s: any) => s.status === 'healthy') 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {systemHealth?.services?.every(s => s.status === 'healthy') ? 'Healthy' : 'Issues'}
+                      {(systemHealth as any)?.services?.every((s: any) => s.status === 'healthy') ? 'Healthy' : 'Issues'}
                     </div>
                   </div>
-                  <p className="text-sm text-teal-600 font-medium">{systemHealth?.totalUptime || '99.8%'} uptime</p>
+                  <p className="text-sm text-teal-600 font-medium">{(systemHealth as any)?.totalUptime || '99.8%'} uptime</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Shield className="w-6 h-6 text-white" />
@@ -302,7 +309,7 @@ export default function AdminDashboard() {
             </div>
             
             {/* Enterprise Requests */}
-            {enterpriseRequests && enterpriseRequests.length > 0 && (
+            {enterpriseRequests && (enterpriseRequests as any[]).length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
@@ -310,11 +317,11 @@ export default function AdminDashboard() {
                   </div>
                   <h3 className="font-semibold text-slate-800">Enterprise Contact Requests</h3>
                   <Badge variant="destructive" className="animate-pulse">
-                    {enterpriseRequests.filter((req: any) => req.status === 'pending').length} New
+                    {(enterpriseRequests as any[]).filter((req: any) => req.status === 'pending').length} New
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {enterpriseRequests.slice(0, 4).map((request: any, index: number) => (
+                  {(enterpriseRequests as any[]).slice(0, 4).map((request: any, index: number) => (
                     <div key={index} className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -360,7 +367,7 @@ export default function AdminDashboard() {
             )}
 
             {/* Admin Notifications */}
-            {notifications && notifications.length > 0 && (
+            {notifications && (notifications as any[]).length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
@@ -368,11 +375,11 @@ export default function AdminDashboard() {
                   </div>
                   <h3 className="font-semibold text-slate-800">Recent Notifications</h3>
                   <Badge variant="secondary">
-                    {notifications.filter((notif: any) => !notif.read).length} Unread
+                    {(notifications as any[]).filter((notif: any) => !notif.read).length} Unread
                   </Badge>
                 </div>
                 <div className="space-y-3">
-                  {notifications.slice(0, 5).map((notification: any, index: number) => (
+                  {(notifications as any[]).slice(0, 5).map((notification: any, index: number) => (
                     <div 
                       key={index} 
                       className={`flex items-start space-x-3 p-3 rounded-lg border ${
@@ -436,7 +443,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {stats?.userDistribution?.map((userType: any, index: number) => (
+                  {(stats as any)?.userDistribution?.map((userType: any, index: number) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${
