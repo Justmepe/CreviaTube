@@ -94,16 +94,9 @@ export default function EnterprisePortal() {
     refetchInterval: 30000,
   });
 
-  // Debug logging
-  console.log("Enterprise Data:", enterpriseData);
-  console.log("Loading:", isLoading);
-  console.log("Error:", error);
-
-  // Force re-render when data changes
-  if (enterpriseData) {
-    console.log("Account Name:", enterpriseData.account?.companyName);
-    console.log("Custom Domain:", enterpriseData.account?.customDomain);
-    console.log("Commission Rate:", enterpriseData.account?.pricingConfig?.commissionRate);
+  // Simple debug to ensure data is loaded
+  if (enterpriseData && !enterpriseData.account?.companyName) {
+    console.warn("Enterprise data loaded but missing company name");
   }
 
   if (isLoading) {
@@ -154,7 +147,7 @@ export default function EnterprisePortal() {
   const commissionDisplay = (account.pricingConfig.commissionRate * 100).toFixed(1);
 
   return (
-    <DashboardLayout title={`${account.companyName} Portal`}>
+    <DashboardLayout title={`${account.companyName} Portal`} key={account.id}>
       <div className="space-y-6">
         {/* Enterprise Account Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
@@ -162,7 +155,7 @@ export default function EnterprisePortal() {
             <div>
               <div className="flex items-center space-x-3 mb-2">
                 <Crown className="w-8 h-8 text-yellow-300" />
-                <h1 className="text-2xl font-bold">{account.companyName}</h1>
+                <h1 className="text-2xl font-bold">{account?.companyName || 'Enterprise Account'}</h1>
                 <Badge className="bg-white text-blue-600 font-semibold">
                   Enterprise Account
                 </Badge>
