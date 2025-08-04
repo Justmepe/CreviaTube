@@ -707,8 +707,11 @@ export default function EnterpriseAdmin() {
                       }
                     }
                   }}
-                  placeholder="https://meet.google.com/abc-defg-hij or https://zoom.us/j/1234567890"
+                  placeholder="Create meeting first, then paste: https://meet.google.com/ztg-fmky-vhz"
                 />
+                <div className="mt-1 text-xs text-slate-500">
+                  💡 Tip: Create the meeting room first in your platform, then copy the link here
+                </div>
                 {meetingLink && (
                   <div className="mt-1 space-y-1">
                     <div className="text-xs text-green-600">
