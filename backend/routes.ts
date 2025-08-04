@@ -1243,7 +1243,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user with enterprise settings
       const updatedUser = await storage.updateUser(req.user.id, {
         businessIntegration: {
-          ...req.user.businessIntegration,
+          website: req.user.businessIntegration?.website,
+          googleAnalyticsId: req.user.businessIntegration?.googleAnalyticsId,
+          conversionGoals: req.user.businessIntegration?.conversionGoals,
           enterpriseSettings,
         },
       });
@@ -1276,7 +1278,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const enterpriseSettings = user.businessIntegration?.enterpriseSettings || {
+      const businessIntegration = user.businessIntegration as any;
+      const enterpriseSettings = businessIntegration?.enterpriseSettings || {
         customBranding: {
           companyName: "Your Company",
           logoUrl: null,
@@ -1331,7 +1334,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Store enterprise request in database
-      await db.insert(enterpriseRequests).values(contactRequest);
+      await db.insert(enterpriseRequests).values({
+        id: contactRequest.id,
+        userId: contactRequest.userId,
+        contactName: contactRequest.contactName,
+        contactEmail: contactRequest.contactEmail,
+        contactPhone: contactRequest.contactPhone,
+        companyName: contactRequest.companyName,
+        companySize: contactRequest.companySize,
+        requestType: contactRequest.requestType,
+        message: contactRequest.message,
+        preferredMeetingTime: contactRequest.preferredMeetingTime,
+        urgency: contactRequest.urgency,
+        status: contactRequest.status,
+        assignedTo: contactRequest.assignedTo,
+        meetingScheduled: contactRequest.meetingScheduled,
+        notes: contactRequest.notes,
+      });
       
       console.log('🔔 New Enterprise Contact Request:', {
         id: contactRequest.id,
