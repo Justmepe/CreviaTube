@@ -262,8 +262,12 @@ export default function EnterpriseAdmin() {
                 <p className="text-gray-500 text-center py-4">No scheduled meetings</p>
               ) : (
                 scheduledRequests.map((request) => (
-                  <div key={request.id} className="border-l-4 border-green-500 bg-green-50 rounded-lg p-4 hover:bg-green-100 cursor-pointer"
-                       onClick={() => setSelectedRequest(request)}>
+                  <div key={request.id} className="border-l-4 border-green-500 bg-green-50 rounded-lg p-4 hover:bg-green-100 cursor-pointer transition-all duration-200"
+                       onClick={(e) => {
+                         e.preventDefault();
+                         e.stopPropagation();
+                         setSelectedRequest(request);
+                       }}>
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="font-semibold text-lg text-green-800">{request.companyName}</h3>
@@ -286,7 +290,7 @@ export default function EnterpriseAdmin() {
                             <span className="font-medium">{(request as any).meetingType.replace('_', ' ').toUpperCase()}</span>
                             {(request as any).meetingLink && (
                               <a href={(request as any).meetingLink} target="_blank" rel="noopener noreferrer" 
-                                 className="text-blue-600 hover:underline truncate max-w-40">
+                                 className="text-blue-600 hover:underline truncate max-w-40 cursor-pointer">
                                 {(request as any).meetingType === 'phone' ? (request as any).meetingLink : 'Join Meeting'}
                               </a>
                             )}
@@ -407,11 +411,15 @@ export default function EnterpriseAdmin() {
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {(requests as EnterpriseRequest[])?.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                       onClick={() => setSelectedRequest(request)}>
+                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                       onClick={(e) => {
+                         e.preventDefault(); 
+                         e.stopPropagation();
+                         setSelectedRequest(request);
+                       }}>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">{request.companyName}</span>
+                        <span className="font-medium hover:text-blue-600">{request.companyName}</span>
                         <Badge className={getStatusColor(request.status)} variant="outline">
                           {request.status.replace('_', ' ')}
                         </Badge>
