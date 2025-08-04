@@ -578,7 +578,7 @@ export default function EnterpriseAdmin() {
                     {updateRequestMutation.isPending ? 'Updating...' : 'Update Request'}
                   </Button>
                   
-                  {selectedRequest.status === 'pending' && !selectedRequest.meetingScheduled && (
+                  {(selectedRequest.status === 'pending' || selectedRequest.status === 'in_progress') && !selectedRequest.meetingScheduled && (
                     <Button 
                       onClick={() => setShowMeetingScheduler(true)}
                       className="bg-green-600 hover:bg-green-700"
