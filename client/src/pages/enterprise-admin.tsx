@@ -174,7 +174,7 @@ export default function EnterpriseAdmin() {
   const pendingRequests = (requests as EnterpriseRequest[])?.filter(req => req.status === 'pending') || [];
   const activeRequests = (requests as EnterpriseRequest[])?.filter(req => req.status === 'in_progress') || [];
   const completedRequests = (requests as EnterpriseRequest[])?.filter(req => req.status === 'completed') || [];
-  const scheduledRequests = (requests as EnterpriseRequest[])?.filter(req => req.meetingScheduled) || [];
+  const scheduledRequests = (requests as EnterpriseRequest[])?.filter(req => req.meetingScheduled && req.status !== 'completed') || [];
 
   return (
     <DashboardLayout title="Enterprise Requests Management">
@@ -243,7 +243,7 @@ export default function EnterpriseAdmin() {
         </div>
 
         {/* Requests List */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Scheduled Meetings */}
           <Card>
             <CardHeader>
@@ -393,6 +393,78 @@ export default function EnterpriseAdmin() {
                           Prefers {request.preferredMeetingTime}
                         </span>
                       </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Completed Requests - Ready for Enterprise Setup */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span>Completed Agreements</span>
+                {completedRequests.length > 0 && (
+                  <Badge variant="default" className="bg-green-100 text-green-800">
+                    {completedRequests.length}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {completedRequests.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No completed agreements</p>
+              ) : (
+                completedRequests.map((request) => (
+                  <div key={request.id} className="border-l-4 border-green-500 bg-green-50 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-lg text-green-800">{request.companyName}</h3>
+                        <p className="text-sm text-green-700">{request.contactName}</p>
+                      </div>
+                      <Badge className="bg-green-600 text-white">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        AGREEMENT COMPLETE
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-1 mb-3">
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
+                        <Mail className="w-4 h-4" />
+                        <span>{request.contactEmail}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
+                        <Phone className="w-4 h-4" />
+                        <span>{request.contactPhone}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
+                        <Users className="w-4 h-4" />
+                        <span>{request.companySize} employees</span>
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <Badge variant="outline">{request.requestType.replace('_', ' ').toUpperCase()}</Badge>
+                    </div>
+
+                    {/* Enterprise Account Setup Button */}
+                    <Button 
+                      onClick={() => setSelectedRequest(request)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Building className="w-4 h-4 mr-2" />
+                      Setup Enterprise Account
+                    </Button>
+                    
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        Completed: {new Date(request.updatedAt).toLocaleDateString()}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        Ready for white-label setup
+                      </span>
                     </div>
                   </div>
                 ))
