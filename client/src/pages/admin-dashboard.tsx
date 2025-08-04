@@ -71,6 +71,7 @@ export default function AdminDashboard() {
     { name: "Overview", href: "/", icon: BarChart3, current: true },
     { name: "Users", href: "/users", icon: Users },
     { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+    { name: "Enterprise", href: "/enterprise", icon: Building, badge: (enterpriseRequests as any[])?.filter((req: any) => req.status === 'pending').length || 0 },
     { name: "Payouts", href: "/payouts", icon: DollarSign },
     { name: "Security", href: "/security", icon: Shield },
   ];
@@ -82,7 +83,7 @@ export default function AdminDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout title="CreoCash Admin Control Center">
+      <DashboardLayout title="CreoCash Admin Control Center" navigation={navigation}>
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">

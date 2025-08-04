@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import {
   BarChart3,
@@ -20,6 +21,7 @@ interface NavigationItem {
   href: string;
   icon: any;
   current?: boolean;
+  badge?: number;
 }
 
 interface DashboardLayoutProps {
@@ -107,11 +109,23 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
                           item.current
                             ? "bg-teal-50 text-teal-700 border-r-2 border-teal-500"
                             : "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
-                          "group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors cursor-pointer"
+                          "group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors cursor-pointer items-center justify-between"
                         )}
                       >
-                        <Icon className="h-5 w-5 shrink-0" />
-                        {item.name}
+                        <div className="flex items-center gap-x-3">
+                          <Icon className="h-5 w-5 shrink-0" />
+                          {item.name}
+                        </div>
+                        {item.badge && item.badge > 0 && (
+                          <Badge 
+                            variant={item.name === 'Enterprise' ? 'destructive' : 'secondary'}
+                            className={`text-xs ${
+                              item.name === 'Enterprise' ? 'animate-pulse bg-red-500 text-white' : ''
+                            }`}
+                          >
+                            {item.badge}
+                          </Badge>
+                        )}
                       </div>
                     </Link>
                   </li>
