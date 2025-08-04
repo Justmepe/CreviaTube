@@ -122,26 +122,38 @@ export default function EnterpriseDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-violet-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout title="Enterprise Command Center">
+      <DashboardLayout navigation={navigation}>
         <div className="relative z-10 space-y-8">
-          {/* Modern Enterprise Header */}
+          {/* Enterprise White-Label Header */}
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-3 mb-2">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Crown className="w-5 h-5 text-white" />
                 </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                  Enterprise Command Center
-                </h1>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                    Enterprise Command Center
+                  </h1>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Badge variant="outline" className="bg-purple-100/80 text-purple-700 border-purple-200/50 text-xs">
+                      White-Label Access
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-100/80 text-blue-700 border-blue-200/50 text-xs">
+                      Full Platform Control
+                    </Badge>
+                  </div>
+                </div>
               </div>
-              <p className="text-slate-600 text-lg font-medium">Manage your global creator marketing campaigns</p>
+              <p className="text-slate-600 text-lg font-medium">Complete CreoCash platform with custom branding and enterprise features</p>
             </div>
             <div className="flex items-center space-x-3">
-              <Badge variant="outline" className="bg-purple-100/80 text-purple-700 border-purple-200/50 backdrop-blur-sm px-4 py-2">
-                <Crown className="w-4 h-4 mr-2" />
-                Enterprise Account
-              </Badge>
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-slate-700">Enterprise Active</span>
+                </div>
+              </div>
               <Button className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
                 New Campaign
@@ -216,6 +228,76 @@ export default function EnterpriseDashboard() {
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enterprise White-Label Features Section */}
+          <div className="bg-white/60 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Enterprise White-Label Features</h2>
+              <p className="text-slate-600">Your enterprise subscription provides complete platform access with custom branding and advanced controls</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Custom Branding */}
+              <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-xl p-6 border border-purple-200/50">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800">Custom Branding</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li>• Replace CreoCash branding with your company logo</li>
+                  <li>• Custom color schemes and themes</li>
+                  <li>• White-label URL and domain</li>
+                  <li>• Branded email templates and communications</li>
+                </ul>
+              </div>
+
+              {/* Full Platform Access */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 border border-blue-200/50">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <Building className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800">Complete Platform</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li>• All creator types (trader, influencer, entrepreneur)</li>
+                  <li>• Advanced campaign management tools</li>
+                  <li>• Real-time analytics and reporting</li>
+                  <li>• Multi-platform integrations</li>
+                </ul>
+              </div>
+
+              {/* Enterprise Controls */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-6 border border-green-200/50">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-slate-800">Enterprise Controls</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li>• User management and permissions</li>
+                  <li>• Custom payout settings and thresholds</li>
+                  <li>• Advanced fraud detection</li>
+                  <li>• Priority support and onboarding</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-gradient-to-r from-purple-100 to-violet-100 rounded-xl p-6 border border-purple-200/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-slate-800 mb-2">Ready to Customize Your Platform?</h3>
+                  <p className="text-slate-600 text-sm">Contact our enterprise team to set up your white-label branding and custom domain.</p>
+                </div>
+                <Button className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700">
+                  Configure Branding
+                </Button>
               </div>
             </div>
           </div>

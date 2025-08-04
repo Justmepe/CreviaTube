@@ -112,6 +112,8 @@ export const users = pgTable("users", {
       value: number;
     }>;
   }>(),
+
+
 });
 
 // Campaigns table

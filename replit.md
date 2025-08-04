@@ -61,12 +61,13 @@ The database uses a multi-entity relational design supporting users (creators/cl
 ### Key Features
 - **Authentication System**: Session-based authentication with secure password hashing and role-based access control.
 - **Enhanced Campaign Management**: Comprehensive campaign creation wizard with multi-step flows for different creator types (trader, entrepreneur, enterprise, influencer).
+- **Enterprise White-Label Platform**: Complete white-label access for enterprise users with custom branding, domain, color schemes, and full platform control.
 - **Advanced Budget Tracking**: Real-time budget allocation, escrow monitoring, automatic payout calculations with 20/80 platform/clipper split, and detailed spending analytics.
 - **Goal-Based Completion System**: Individual clipper participation tracked separately with automatic completion detection when primary goals (views, clicks, signups, deposits, trades, conversions) are reached and immediate payout processing.
 - **Comprehensive Analytics**: Real-time campaign performance tracking, goal progress monitoring, conversion analytics with comprehensive metrics dashboard and interactive visualizations.
 - **Affiliate Tracking**: Tracks various events (click, signup, deposit, trade, view, conversion) with configurable reward rates and status management.
 - **Automated Payout System**: Escrow-based payment system with automatic reward calculations, goal-based triggers, and global payment integrations including mobile money.
-- **User Management**: Supports multiple roles (Creator, Clipper, Admin) with distinct capabilities and profile management.
+- **User Management**: Supports multiple roles (Creator, Clipper, Admin, Enterprise) with distinct capabilities and profile management.
 - **Bot Protection**: Advanced anti-bot system with behavioral analysis, device fingerprinting, and real-time rate limiting.
 - **AI Content Detection**: Multi-layer analysis for detecting AI-generated content to enforce authentic user-generated content.
 
