@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -55,6 +57,7 @@ export default function EnterpriseAdmin() {
   const [status, setStatus] = useState('');
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupRequest, setSetupRequest] = useState<EnterpriseRequest | null>(null);
+  const [showMeetingScheduler, setShowMeetingScheduler] = useState(false);
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
@@ -118,6 +121,12 @@ export default function EnterpriseAdmin() {
     }
 
     updateRequestMutation.mutate({ id: selectedRequest.id, updates });
+    setShowMeetingScheduler(false);
+    setMeetingDate('');
+    setMeetingTime('');
+    setMeetingNotes('');
+    setMeetingLink('');
+    setMeetingType('zoom');
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -561,7 +570,7 @@ export default function EnterpriseAdmin() {
                   </div>
                 </div>
                 
-                <div className="flex space-x-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <Button 
                     onClick={handleUpdateRequest}
                     disabled={updateRequestMutation.isPending}
@@ -569,13 +578,41 @@ export default function EnterpriseAdmin() {
                     {updateRequestMutation.isPending ? 'Updating...' : 'Update Request'}
                   </Button>
                   
+                  {selectedRequest.status === 'pending' && !selectedRequest.meetingScheduled && (
+                    <Button 
+                      onClick={() => setShowMeetingScheduler(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Schedule Meeting
+                    </Button>
+                  )}
+                  
+                  {selectedRequest.meetingScheduled && selectedRequest.status !== 'completed' && (
+                    <Button 
+                      onClick={() => {
+                        const updates = {
+                          status: 'completed',
+                          meetingCompleted: true,
+                          completedAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                        };
+                        updateRequestMutation.mutate({ id: selectedRequest.id, updates });
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark Meeting Completed
+                    </Button>
+                  )}
+                  
                   {selectedRequest.status === 'completed' && (
                     <Button 
                       onClick={() => {
                         setSetupRequest(selectedRequest);
                         setShowSetupModal(true);
                       }}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-purple-600 hover:bg-purple-700"
                     >
                       <Settings className="w-4 h-4 mr-2" />
                       Setup Enterprise Account
@@ -591,6 +628,103 @@ export default function EnterpriseAdmin() {
           </Card>
         )}
         
+        {/* Meeting Scheduler Modal */}
+        <Dialog open={showMeetingScheduler} onOpenChange={setShowMeetingScheduler}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <span>Schedule Meeting</span>
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="meetingDate">Meeting Date</Label>
+                  <Input
+                    id="meetingDate"
+                    type="date"
+                    value={meetingDate}
+                    onChange={(e) => setMeetingDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="meetingTime">Meeting Time</Label>
+                  <Input
+                    id="meetingTime"
+                    type="time"
+                    value={meetingTime}
+                    onChange={(e) => setMeetingTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="meetingType">Meeting Type</Label>
+                <Select value={meetingType} onValueChange={setMeetingType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select meeting type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="zoom">Zoom Call</SelectItem>
+                    <SelectItem value="google_meet">Google Meet</SelectItem>
+                    <SelectItem value="teams">Microsoft Teams</SelectItem>
+                    <SelectItem value="phone">Phone Call</SelectItem>
+                    <SelectItem value="in_person">In Person</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="meetingLink">Meeting Link (optional)</Label>
+                <Input
+                  id="meetingLink"
+                  type="url"
+                  value={meetingLink}
+                  onChange={(e) => setMeetingLink(e.target.value)}
+                  placeholder="https://zoom.us/j/..."
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="meetingNotes">Meeting Notes (optional)</Label>
+                <Textarea
+                  id="meetingNotes"
+                  value={meetingNotes}
+                  onChange={(e) => setMeetingNotes(e.target.value)}
+                  placeholder="Add notes about the meeting agenda..."
+                  className="h-20"
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={handleScheduleMeeting}
+                  disabled={updateRequestMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {updateRequestMutation.isPending ? 'Scheduling...' : 'Schedule Meeting'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowMeetingScheduler(false);
+                    setMeetingDate('');
+                    setMeetingTime('');
+                    setMeetingNotes('');
+                    setMeetingLink('');
+                    setMeetingType('zoom');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Enterprise Setup Modal */}
         {showSetupModal && setupRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
