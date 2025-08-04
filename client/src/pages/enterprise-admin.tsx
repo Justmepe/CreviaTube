@@ -53,13 +53,13 @@ export default function EnterpriseAdmin() {
   const [selectedRequest, setSelectedRequest] = useState<EnterpriseRequest | null>(null);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState('');
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [setupRequest, setSetupRequest] = useState<EnterpriseRequest | null>(null);
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
   const [meetingType, setMeetingType] = useState('zoom');
   const [meetingLink, setMeetingLink] = useState('');
-  const [showSetupModal, setShowSetupModal] = useState(false);
-  const [setupRequest, setSetupRequest] = useState<EnterpriseRequest | null>(null);
 
   // Fetch enterprise requests
   const { data: requests, isLoading } = useQuery({
@@ -97,48 +97,27 @@ export default function EnterpriseAdmin() {
       updatedAt: new Date().toISOString(),
     };
 
-    // Add meeting details if provided
-    if (meetingDate) {
-      updates.meetingDate = meetingDate;
-      updates.meetingScheduled = true;
-    }
-    if (meetingTime) {
-      updates.meetingTime = meetingTime;
-    }
-    if (meetingNotes) {
-      updates.meetingNotes = meetingNotes;
-    }
-    
-    updateRequestMutation.mutate({
-      id: selectedRequest.id,
-      updates
-    });
+    updateRequestMutation.mutate({ id: selectedRequest.id, updates });
   };
 
   const handleScheduleMeeting = () => {
-    if (!selectedRequest || !meetingDate || !meetingTime) {
-      toast({ title: "Please select meeting date and time", variant: "destructive" });
+    if (!selectedRequest || !meetingDate || !meetingTime || !meetingType) {
+      toast({ title: "Please fill all meeting details", variant: "destructive" });
       return;
     }
-    
-    if (!meetingLink && meetingType !== 'phone') {
-      toast({ title: "Please provide meeting link", variant: "destructive" });
-      return;
+
+    const updates = {
+      meetingScheduled: true,
+      meetingDate: meetingDate,
+      meetingTime: meetingTime,
+      meetingNotes: meetingNotes || '',
+      meetingType,
+      meetingLink: meetingLink || '',
+      status: 'in_progress',
+      updatedAt: new Date().toISOString(),
     }
-    
-    updateRequestMutation.mutate({
-      id: selectedRequest.id,
-      updates: {
-        meetingScheduled: true,
-        meetingDate,
-        meetingTime,
-        meetingNotes: meetingNotes || '',
-        meetingType,
-        meetingLink: meetingLink || '',
-        status: 'in_progress',
-        updatedAt: new Date().toISOString(),
-      }
-    });
+
+    updateRequestMutation.mutate({ id: selectedRequest.id, updates });
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -311,62 +290,7 @@ export default function EnterpriseAdmin() {
                         <Phone className="w-4 h-4" />
                         <span>{request.contactPhone}</span>
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="bg-white">
-                        {request.requestType.replace('_', ' ').toUpperCase()}
-                      </Badge>
-                      <Badge className={getUrgencyColor(request.urgency)}>
-                        {request.urgency.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Pending Requests */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                <span>Pending Requests</span>
-                {pendingRequests.length > 0 && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    {pendingRequests.length}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {pendingRequests.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No pending requests</p>
-              ) : (
-                pendingRequests.map((request) => (
-                  <div key={request.id} className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                       onClick={() => setSelectedRequest(request)}>
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-lg">{request.companyName}</h3>
-                        <p className="text-sm text-gray-600">{request.contactName}</p>
-                      </div>
-                      <Badge className={getUrgencyColor(request.urgency)}>
-                        {request.urgency.toUpperCase()}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1 mb-3">
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Mail className="w-4 h-4" />
-                        <span>{request.contactEmail}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Phone className="w-4 h-4" />
-                        <span>{request.contactPhone}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 text-sm text-green-700">
                         <Users className="w-4 h-4" />
                         <span>{request.companySize} employees</span>
                       </div>
@@ -451,8 +375,14 @@ export default function EnterpriseAdmin() {
 
                     {/* Enterprise Account Setup Button */}
                     <Button 
-                      onClick={() => setSelectedRequest(request)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Setting up enterprise account for:', request.companyName);
+                        setSetupRequest(request);
+                        setShowSetupModal(true);
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                     >
                       <Building className="w-4 h-4 mr-2" />
                       Setup Enterprise Account
@@ -513,60 +443,61 @@ export default function EnterpriseAdmin() {
           </Card>
         </div>
 
-        {/* Request Detail Modal */}
+        {/* Selected Request Details Modal */}
         {selectedRequest && (
-          <Card className="mt-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Request Details: {selectedRequest.companyName}</span>
+                <span className="flex items-center space-x-2">
+                  <Building className="w-6 h-6 text-blue-600" />
+                  <span>{selectedRequest.companyName} - Request Details</span>
+                </span>
                 <Button variant="outline" onClick={() => setSelectedRequest(null)}>
-                  Close
+                  <XCircle className="w-4 h-4" />
                 </Button>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-2">Contact Information</h4>
-                  <div className="space-y-2">
-                    <p><strong>Name:</strong> {selectedRequest.contactName}</p>
-                    <p><strong>Email:</strong> {selectedRequest.contactEmail}</p>
-                    <p><strong>Phone:</strong> {selectedRequest.contactPhone}</p>
-                    <p><strong>Company:</strong> {selectedRequest.companyName}</p>
-                    <p><strong>Company Size:</strong> {selectedRequest.companySize}</p>
+                  <h4 className="font-semibold mb-3">Contact Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-gray-500" />
+                      <span><strong>Contact:</strong> {selectedRequest.contactName}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                      <span><strong>Email:</strong> {selectedRequest.contactEmail}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Phone className="w-4 h-4 text-gray-500" />
+                      <span><strong>Phone:</strong> {selectedRequest.contactPhone}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Building className="w-4 h-4 text-gray-500" />
+                      <span><strong>Company Size:</strong> {selectedRequest.companySize}</span>
+                    </div>
                   </div>
                 </div>
-                
+
                 <div>
-                  <h4 className="font-semibold mb-2">Request Details</h4>
-                  <div className="space-y-2">
+                  <h4 className="font-semibold mb-3">Request Information</h4>
+                  <div className="space-y-2 text-sm">
                     <p><strong>Type:</strong> {selectedRequest.requestType.replace('_', ' ')}</p>
+                    <p><strong>Status:</strong> 
+                      <Badge className={`ml-2 ${getStatusColor(selectedRequest.status)}`}>
+                        {selectedRequest.status}
+                      </Badge>
+                    </p>
                     <p><strong>Urgency:</strong> 
                       <Badge className={`ml-2 ${getUrgencyColor(selectedRequest.urgency)}`}>
                         {selectedRequest.urgency}
                       </Badge>
                     </p>
-                    <p><strong>Status:</strong> 
-                      <Badge className={`ml-2 ${getStatusColor(selectedRequest.status)}`}>
-                        {selectedRequest.status.replace('_', ' ')}
-                      </Badge>
-                    </p>
                     <p><strong>Preferred Meeting:</strong> {selectedRequest.preferredMeetingTime}</p>
-                    <p><strong>Meeting Scheduled:</strong> 
-                      {selectedRequest.meetingScheduled ? (
-                        <Badge className="ml-2 bg-green-100 text-green-800">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Yes
-                        </Badge>
-                      ) : (
-                        <Badge className="ml-2 bg-gray-100 text-gray-800">
-                          <XCircle className="w-3 h-3 mr-1" />
-                          No
-                        </Badge>
-                      )}
-                    </p>
                     {selectedRequest.meetingDate && (
-                      <div>
+                      <div className="bg-green-50 p-2 rounded">
                         <p><strong>Meeting Date:</strong> {new Date(selectedRequest.meetingDate).toLocaleDateString()} at {selectedRequest.meetingTime}</p>
                         {(selectedRequest as any).meetingType && (
                           <p><strong>Meeting Type:</strong> {(selectedRequest as any).meetingType.replace('_', ' ')}</p>
@@ -600,105 +531,15 @@ export default function EnterpriseAdmin() {
                 </div>
               )}
 
-              {/* Meeting Scheduling */}
-              {!selectedRequest.meetingScheduled && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3 flex items-center">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Schedule Meeting
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Meeting Date</label>
-                      <Input
-                        type="date"
-                        value={meetingDate}
-                        onChange={(e) => setMeetingDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Meeting Time</label>
-                      <Input
-                        type="time"
-                        value={meetingTime}
-                        onChange={(e) => setMeetingTime(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Meeting Type</label>
-                      <Select value={meetingType} onValueChange={setMeetingType}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="zoom">Zoom Meeting</SelectItem>
-                          <SelectItem value="google_meet">Google Meet</SelectItem>
-                          <SelectItem value="teams">Microsoft Teams</SelectItem>
-                          <SelectItem value="phone">Phone Call</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Client Preference</label>
-                      <div className="p-2 bg-gray-50 rounded text-sm text-gray-600">
-                        Prefers: {selectedRequest.preferredMeetingTime}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium mb-1">
-                      {meetingType === 'phone' ? 'Phone Number' : 'Meeting Link'}
-                    </label>
-                    <Input
-                      type={meetingType === 'phone' ? 'tel' : 'url'}
-                      value={meetingLink}
-                      onChange={(e) => setMeetingLink(e.target.value)}
-                      placeholder={
-                        meetingType === 'zoom' ? 'https://zoom.us/j/123456789' :
-                        meetingType === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' :
-                        meetingType === 'teams' ? 'https://teams.microsoft.com/l/meetup-join/...' :
-                        '+1-555-123-4567'
-                      }
-                    />
-                  </div>
-                  
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium mb-1">Meeting Agenda/Notes</label>
-                    <Textarea
-                      value={meetingNotes}
-                      onChange={(e) => setMeetingNotes(e.target.value)}
-                      placeholder="Add meeting agenda, preparation notes, or specific topics to discuss..."
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div className="flex space-x-2 mt-4">
-                    <Button 
-                      onClick={handleScheduleMeeting}
-                      disabled={updateRequestMutation.isPending || !meetingDate || !meetingTime || (!meetingLink && meetingType !== 'phone')}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {updateRequestMutation.isPending ? 'Scheduling...' : 'Schedule Meeting'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Update Form */}
+              {/* Admin Actions */}
               <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Update Request Status</h4>
+                <h4 className="font-semibold mb-3">Admin Actions</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Status</label>
-                    <Select value={status || selectedRequest.status} onValueChange={setStatus}>
+                    <label className="block text-sm font-medium mb-1">Update Status</label>
+                    <Select value={status} onValueChange={setStatus}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder={selectedRequest.status} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
@@ -709,13 +550,13 @@ export default function EnterpriseAdmin() {
                     </Select>
                   </div>
                   
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-1">Admin Notes</label>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Add Notes</label>
                     <Textarea
-                      value={notes || selectedRequest.notes}
+                      value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Add internal notes about this request..."
-                      rows={3}
+                      placeholder="Add internal notes..."
+                      className="h-24"
                     />
                   </div>
                 </div>
