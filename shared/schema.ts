@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum, json, real } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -15,6 +15,59 @@ export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing"
 export const brokerTypeEnum = pgEnum("broker_type", ["forex", "crypto", "stocks", "futures", "options", "cfds"]);
 
 // Users table
+// Broker affiliate programs table
+export const brokerPrograms = pgTable("broker_programs", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  signupBonus: integer("signup_bonus").notNull().default(0),
+  depositBonus: integer("deposit_bonus").notNull().default(0),
+  volumeRate: real("volume_rate").notNull().default(0),
+  description: text("description"),
+  baseAffiliateLink: text("base_affiliate_link").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  region: text("region").notNull(),
+  category: text("category").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Revenue transactions table
+export const revenueTransactions = pgTable("revenue_transactions", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(), // Campaign Fee, Subscription, API Access, Transaction Fee
+  userId: text("user_id").notNull(),
+  amount: integer("amount").notNull(), // in cents
+  date: timestamp("date").notNull(),
+  source: text("source").notNull(),
+  campaignId: text("campaign_id"),
+  status: text("status").notNull().default("completed"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Payout records table
+export const payoutRecords = pgTable("payout_records", {
+  id: text("id").primaryKey(),
+  clipperId: text("clipper_id").notNull(),
+  campaignId: text("campaign_id").notNull(),
+  amount: integer("amount").notNull(), // in cents
+  method: text("method").notNull(), // Bank Transfer, PayPal, M-Pesa, Crypto
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  verification: text("verification"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// System health metrics table  
+export const systemHealthMetrics = pgTable("system_health_metrics", {
+  id: text("id").primaryKey(),
+  serviceName: text("service_name").notNull(),
+  status: text("status").notNull(), // healthy, warning, error
+  uptime: text("uptime"),
+  responseTime: text("response_time"),
+  lastChecked: timestamp("last_checked").defaultNow().notNull(),
+  metadata: json("metadata"),
+});
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
@@ -444,3 +497,30 @@ export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
 export type AutoPayment = typeof autoPayments.$inferSelect;
 export type PersonalizedBrokerLink = typeof personalizedBrokerLinks.$inferSelect;
 export type InsertPersonalizedBrokerLink = z.infer<typeof insertPersonalizedBrokerLinkSchema>;
+
+// Insert schemas for new tables
+export const insertBrokerProgramSchema = createInsertSchema(brokerPrograms).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRevenueTransactionSchema = createInsertSchema(revenueTransactions).omit({
+  createdAt: true,
+});
+
+export const insertPayoutRecordSchema = createInsertSchema(payoutRecords).omit({
+  createdAt: true,
+});
+
+export const insertSystemHealthMetricSchema = createInsertSchema(systemHealthMetrics).omit({
+  lastChecked: true,
+});
+
+export type BrokerProgram = typeof brokerPrograms.$inferSelect;
+export type InsertBrokerProgram = z.infer<typeof insertBrokerProgramSchema>;
+export type RevenueTransaction = typeof revenueTransactions.$inferSelect;
+export type InsertRevenueTransaction = z.infer<typeof insertRevenueTransactionSchema>;
+export type PayoutRecord = typeof payoutRecords.$inferSelect;
+export type InsertPayoutRecord = z.infer<typeof insertPayoutRecordSchema>;
+export type SystemHealthMetric = typeof systemHealthMetrics.$inferSelect;
+export type InsertSystemHealthMetric = z.infer<typeof insertSystemHealthMetricSchema>;

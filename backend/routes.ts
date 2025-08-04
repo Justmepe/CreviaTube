@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { db } from "./db";
@@ -1030,23 +1030,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      // In a real implementation, this would fetch actual affiliate data from broker APIs
-      // For now, returning simulated data that matches the UI
+      // Get REAL affiliate performance from tracking events
+      const [totalStats] = await db
+        .select({
+          totalClicks: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'click' THEN 1 END)`,
+          totalSignups: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'signup' THEN 1 END)`,
+          totalDeposits: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'deposit' THEN 1 END)`,
+          totalEarnings: sql<number>`COALESCE(SUM(${trackingEvents.rewardAmount}), 0)`
+        })
+        .from(trackingEvents)
+        .where(eq(trackingEvents.clipperId, req.user.id));
+
+      // Get breakdown by broker (from metadata or campaign info)
+      const recentActivity = await db
+        .select({
+          date: trackingEvents.createdAt,
+          type: trackingEvents.eventType,
+          broker: sql<string>`COALESCE(${campaigns.name}, 'System')`,
+          amount: trackingEvents.rewardAmount
+        })
+        .from(trackingEvents)
+        .leftJoin(campaigns, eq(trackingEvents.campaignId, campaigns.id))
+        .where(eq(trackingEvents.clipperId, req.user.id))
+        .orderBy(desc(trackingEvents.createdAt))
+        .limit(5);
+
       const affiliateData = {
-        totalClicks: 23,
-        totalSignups: 8,
-        totalDeposits: 5,
-        totalEarnings: 1250.00,
+        totalClicks: Number(totalStats.totalClicks) || 0,
+        totalSignups: Number(totalStats.totalSignups) || 0,
+        totalDeposits: Number(totalStats.totalDeposits) || 0,
+        totalEarnings: Number(totalStats.totalEarnings) || 0,
         breakdown: {
-          oanda: { clicks: 12, signups: 4, deposits: 3, earnings: 650.00 },
-          alpaca: { clicks: 8, signups: 3, deposits: 1, earnings: 350.00 },
-          interactiveBrokers: { clicks: 3, signups: 1, deposits: 1, earnings: 250.00 }
+          // This would be enhanced with real broker tracking
+          oanda: { clicks: 0, signups: 0, deposits: 0, earnings: 0 },
+          alpaca: { clicks: 0, signups: 0, deposits: 0, earnings: 0 },
+          interactiveBrokers: { clicks: 0, signups: 0, deposits: 0, earnings: 0 }
         },
-        recentActivity: [
-          { date: new Date().toISOString(), type: "deposit", broker: "OANDA", amount: 150.00 },
-          { date: new Date(Date.now() - 86400000).toISOString(), type: "signup", broker: "Alpaca", amount: 100.00 },
-          { date: new Date(Date.now() - 172800000).toISOString(), type: "volume", broker: "OANDA", amount: 85.50 }
-        ]
+        recentActivity: recentActivity.map(activity => ({
+          date: activity.date?.toISOString() || new Date().toISOString(),
+          type: activity.type || "system",
+          broker: activity.broker || "System",
+          amount: Number(activity.amount) || 0
+        }))
       };
       
       res.json(affiliateData);
@@ -1059,337 +1084,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      // Return available broker affiliate programs
-      const brokerPrograms = [
-        // Major Global Forex Brokers
-        {
-          id: "oanda",
-          name: "OANDA",
-          signupBonus: 150,
-          depositBonus: 300,
-          volumeRate: 1.2,
-          description: "Major forex broker with competitive spreads and 25+ years experience",
-          affiliateLink: `https://oanda.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `OANDA_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Forex"
-        },
-        {
-          id: "ig-markets",
-          name: "IG Markets",
-          signupBonus: 200,
-          depositBonus: 400,
-          volumeRate: 1.4,
-          description: "Best overall broker 2025, 8 regulatory jurisdictions worldwide",
-          affiliateLink: `https://ig.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `IG_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Forex"
-        },
-        {
-          id: "xtb",
-          name: "XTB",
-          signupBonus: 120,
-          depositBonus: 280,
-          volumeRate: 1.1,
-          description: "1M+ active clients, proprietary xStation 5 platform",
-          affiliateLink: `https://xtb.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `XTB_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Forex"
-        },
-        {
-          id: "plus500",
-          name: "Plus500",
-          signupBonus: 100,
-          depositBonus: 250,
-          volumeRate: 0.9,
-          description: "5,500+ tradeable symbols, publicly traded (LSE)",
-          affiliateLink: `https://plus500.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `PLUS_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "CFD"
-        },
-        {
-          id: "fxcm",
-          name: "FXCM",
-          signupBonus: 140,
-          depositBonus: 320,
-          volumeRate: 1.3,
-          description: "Active Trader Rebate Program, 25+ years established",
-          affiliateLink: `https://fxcm.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `FXCM_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Forex"
-        },
-        {
-          id: "etoro",
-          name: "eToro",
-          signupBonus: 80,
-          depositBonus: 200,
-          volumeRate: 0.7,
-          description: "Social trading and copy trading features",
-          affiliateLink: `https://etoro.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `ETORO_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Social Trading"
-        },
+      // Get REAL broker programs from database
+      const programs = await db
+        .select()
+        .from(brokerPrograms)
+        .where(eq(brokerPrograms.isActive, true))
+        .orderBy(brokerPrograms.name);
 
-        // US Stock Brokers
-        {
-          id: "charles-schwab",
-          name: "Charles Schwab",
-          signupBonus: 250,
-          depositBonus: 600,
-          volumeRate: 1.8,
-          description: "#1 overall broker, acquired TD Ameritrade, $9.93T AUM",
-          affiliateLink: `https://schwab.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `SCHWAB_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "US",
-          category: "Stocks"
-        },
-        {
-          id: "fidelity",
-          name: "Fidelity",
-          signupBonus: 220,
-          depositBonus: 550,
-          volumeRate: 1.6,
-          description: "51.5M active accounts, exceptional research tools, $5.8T AUM",
-          affiliateLink: `https://fidelity.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `FIDELITY_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "US",
-          category: "Stocks"
-        },
-        {
-          id: "etrade",
-          name: "E*TRADE",
-          signupBonus: 180,
-          depositBonus: 400,
-          volumeRate: 1.2,
-          description: "Morgan Stanley owned, 5-star education rating",
-          affiliateLink: `https://etrade.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `ETRADE_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "US",
-          category: "Stocks"
-        },
-        {
-          id: "robinhood",
-          name: "Robinhood",
-          signupBonus: 50,
-          depositBonus: 150,
-          volumeRate: 0.5,
-          description: "Commission-free trading, crypto access, mobile-first platform",
-          affiliateLink: `https://robinhood.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `ROBIN_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "US",
-          category: "Mobile Trading"
-        },
-        {
-          id: "alpaca",
-          name: "Alpaca Markets",
-          signupBonus: 100,
-          depositBonus: 250,
-          volumeRate: 0.8,
-          description: "Commission-free stock and crypto trading API",
-          affiliateLink: `https://alpaca.markets/affiliate/ref/${req.user.id}`,
-          trackingCode: `ALPACA_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "US",
-          category: "API Trading"
-        },
-        {
-          id: "ibkr",
-          name: "Interactive Brokers",
-          signupBonus: 200,
-          depositBonus: 500,
-          volumeRate: 1.5,
-          description: "Professional trading platform, 150+ global markets",
-          affiliateLink: `https://interactivebrokers.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `IBKR_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Professional"
-        },
-
-        // Kenya CMA Licensed Brokers
-        {
-          id: "egm-securities",
-          name: "EGM Securities (FX Pesa)",
-          signupBonus: 75,
-          depositBonus: 200,
-          volumeRate: 1.0,
-          description: "CMA License #107, M-Pesa support, FCA & CySEC regulated",
-          affiliateLink: `https://fxpesa.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `FXPESA_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "CMA Licensed"
-        },
-        {
-          id: "hf-markets-kenya",
-          name: "HF Markets Kenya",
-          signupBonus: 90,
-          depositBonus: 220,
-          volumeRate: 1.1,
-          description: "CMA License #155, FCA & FSCA regulated, global presence",
-          affiliateLink: `https://hfm.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `HFM_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "CMA Licensed"
-        },
-        {
-          id: "windsor-brokers",
-          name: "Windsor Markets Kenya",
-          signupBonus: 85,
-          depositBonus: 210,
-          volumeRate: 1.0,
-          description: "CMA License #156, CySEC regulated, local office in Nairobi",
-          affiliateLink: `https://windsor.co.ke/affiliate/ref/${req.user.id}`,
-          trackingCode: `WINDSOR_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "CMA Licensed"
-        },
-        {
-          id: "pepperstone-kenya",
-          name: "Pepperstone Kenya",
-          signupBonus: 95,
-          depositBonus: 240,
-          volumeRate: 1.2,
-          description: "CMA License #128, global broker with local presence",
-          affiliateLink: `https://pepperstone.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `PEPPER_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "CMA Licensed"
-        },
-        {
-          id: "exness-kenya",
-          name: "Exness (Tradenex Limited)",
-          signupBonus: 100,
-          depositBonus: 250,
-          volumeRate: 1.3,
-          description: "CMA License #162, FCA & FSCA regulated, M-Pesa support",
-          affiliateLink: `https://exness.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `EXNESS_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "CMA Licensed"
-        },
-        {
-          id: "scope-markets",
-          name: "Scope Markets (SCFM Limited)",
-          signupBonus: 70,
-          depositBonus: 180,
-          volumeRate: 0.9,
-          description: "CMA regulated, focused on Kenyan market",
-          affiliateLink: `https://scopemarkets.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `SCOPE_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "CMA Licensed"
-        },
-
-        // Popular Non-CMA Kenya Brokers
-        {
-          id: "deriv",
-          name: "Deriv",
-          signupBonus: 60,
-          depositBonus: 150,
-          volumeRate: 0.8,
-          description: "VFSC & BVI FSC licensed, M-Pesa support, popular in Kenya",
-          affiliateLink: `https://deriv.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `DERIV_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Kenya",
-          category: "International"
-        },
-
-        // Additional Global Brokers
-        {
-          id: "ic-markets",
-          name: "IC Markets",
-          signupBonus: 110,
-          depositBonus: 270,
-          volumeRate: 1.2,
-          description: "Top Australian broker, tight spreads, fast execution",
-          affiliateLink: `https://icmarkets.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `IC_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Australia",
-          category: "Forex"
-        },
-        {
-          id: "avatrade",
-          name: "AvaTrade",
-          signupBonus: 90,
-          depositBonus: 220,
-          volumeRate: 1.0,
-          description: "Multi-regulated global broker, copy trading available",
-          affiliateLink: `https://avatrade.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `AVA_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Global",
-          category: "Forex"
-        },
-        {
-          id: "forex-com",
-          name: "Forex.com",
-          signupBonus: 130,
-          depositBonus: 300,
-          volumeRate: 1.3,
-          description: "US regulated, advanced charting, institutional-grade platform",
-          affiliateLink: `https://forex.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `FOREX_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "US",
-          category: "Forex"
-        },
-        {
-          id: "saxo-bank",
-          name: "Saxo Bank",
-          signupBonus: 180,
-          depositBonus: 450,
-          volumeRate: 1.6,
-          description: "Danish investment bank, 71,000+ instruments, premium platform",
-          affiliateLink: `https://saxobank.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `SAXO_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Europe",
-          category: "Investment Bank"
-        },
-        {
-          id: "admiral-markets",
-          name: "Admiral Markets",
-          signupBonus: 100,
-          depositBonus: 250,
-          volumeRate: 1.1,
-          description: "Estonian broker, MetaTrader Supreme Edition, educational content",
-          affiliateLink: `https://admiralmarkets.com/affiliate/ref/${req.user.id}`,
-          trackingCode: `ADMIRAL_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-          isActive: true,
-          region: "Europe",
-          category: "Forex"
-        }
-      ];
+      // Format with personalized affiliate links
+      const formattedPrograms = programs.map(program => ({
+        id: program.id,
+        name: program.name,
+        signupBonus: program.signupBonus,
+        depositBonus: program.depositBonus,
+        volumeRate: program.volumeRate,
+        description: program.description,
+        affiliateLink: `${program.baseAffiliateLink}${req.user.id}`,
+        trackingCode: `${program.id.toUpperCase()}_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
+        isActive: program.isActive,
+        region: program.region,
+        category: program.category
+      }));
       
-      res.json(brokerPrograms);
+      res.json(formattedPrograms);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
+  app.post("/api/affiliate/track-click", async (req, res) => {
+          signupBonus: 200,
   app.post("/api/affiliate/track-click", async (req, res) => {
     try {
       const { brokerId, referralCode, userAgent, ipAddress } = req.body;
