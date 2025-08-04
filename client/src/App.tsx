@@ -33,6 +33,7 @@ import RealRevenueAnalytics from "@/pages/real-revenue-analytics";
 import EnhancedCampaignCreation from "@/pages/enhanced-campaign-creation";
 import CampaignsEnhanced from "@/pages/campaigns-enhanced";
 import PersonalizedBrokerLinks from "@/pages/personalized-broker-links";
+import EnterpriseAdmin from "@/pages/enterprise-admin";
 
 function Router() {
   return (
@@ -66,6 +67,7 @@ function Router() {
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/real-analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
+      <ProtectedRoute path="/enterprise" component={EnterpriseAdmin} />
       <ProtectedRoute path="/admin" component={RealRevenueAnalytics} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
