@@ -127,6 +127,14 @@ export function EnterpriseSetupModal({ request, onClose }: EnterpriseSetupModalP
       
       <CardContent className="p-6">
         <div className="mb-6">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <h3 className="text-lg font-semibold text-green-800 mb-2">Enterprise White-Label Setup</h3>
+            <p className="text-sm text-green-700">
+              This will create a complete white-label affiliate marketing platform for <strong>{request.companyName}</strong> 
+              with custom branding, domain, and negotiated commission rates separate from standard CreoCash users.
+            </p>
+          </div>
+          
           <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <p><strong>Contact:</strong> {request.contactName}</p>
@@ -287,16 +295,16 @@ export function EnterpriseSetupModal({ request, onClose }: EnterpriseSetupModalP
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="commissionRate">Default Commission Rate (%)</Label>
+                  <Label htmlFor="commissionRate">Enterprise Commission Rate (%)</Label>
                   <Input
                     id="commissionRate"
                     type="number"
                     value={commissionRate}
                     onChange={(e) => setCommissionRate(Number(e.target.value))}
                     min={0}
-                    max={50}
+                    max={30}
                   />
-                  <p className="text-xs text-gray-600 mt-1">Standard platform rate is 20%</p>
+                  <p className="text-xs text-gray-600 mt-1">Standard users: 20% | Enterprise: Custom negotiated rates</p>
                 </div>
                 
                 <div>
@@ -312,50 +320,68 @@ export function EnterpriseSetupModal({ request, onClose }: EnterpriseSetupModalP
               </div>
               
               <div className="space-y-4">
-                <h4 className="font-semibold">Custom Rates by Creator Type (%)</h4>
+                <h4 className="font-semibold">Enterprise Custom Rates by Creator Type (%)</h4>
+                <div className="bg-blue-50 p-3 rounded-lg mb-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> These custom rates apply only to this enterprise account. 
+                    Standard CreoCash users continue paying the standard 20% platform fee.
+                  </p>
+                </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label>Trading Educators</Label>
+                    <div>
+                      <Label>Trading Educators</Label>
+                      <p className="text-xs text-gray-500">Standard: 20%</p>
+                    </div>
                     <Input
                       type="number"
                       value={customRates.trader}
                       onChange={(e) => setCustomRates({...customRates, trader: Number(e.target.value)})}
                       className="w-20"
                       min={0}
-                      max={50}
+                      max={30}
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>Social Influencers</Label>
+                    <div>
+                      <Label>Social Influencers</Label>
+                      <p className="text-xs text-gray-500">Standard: 20%</p>
+                    </div>
                     <Input
                       type="number"
                       value={customRates.influencer}
                       onChange={(e) => setCustomRates({...customRates, influencer: Number(e.target.value)})}
                       className="w-20"
                       min={0}
-                      max={50}
+                      max={30}
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>Business Entrepreneurs</Label>
+                    <div>
+                      <Label>Business Entrepreneurs</Label>
+                      <p className="text-xs text-gray-500">Standard: 20%</p>
+                    </div>
                     <Input
                       type="number"
                       value={customRates.entrepreneur}
                       onChange={(e) => setCustomRates({...customRates, entrepreneur: Number(e.target.value)})}
                       className="w-20"
                       min={0}
-                      max={50}
+                      max={30}
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label>Enterprise Partners</Label>
+                    <div>
+                      <Label>Enterprise Sub-Partners</Label>
+                      <p className="text-xs text-gray-500">Standard: 20%</p>
+                    </div>
                     <Input
                       type="number"
                       value={customRates.enterprise}
                       onChange={(e) => setCustomRates({...customRates, enterprise: Number(e.target.value)})}
                       className="w-20"
                       min={0}
-                      max={50}
+                      max={30}
                     />
                   </div>
                 </div>

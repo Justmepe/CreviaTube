@@ -43,6 +43,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
         { name: "Enterprise", href: "/enterprise", icon: Building },
+        { name: "Enterprise Accounts", href: "/enterprise-accounts", icon: Building },
         { name: "Payouts", href: "/payouts", icon: DollarSign },
         { name: "Real Analytics", href: "/admin/real-analytics", icon: Activity },
       ];
