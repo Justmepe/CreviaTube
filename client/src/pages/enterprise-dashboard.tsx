@@ -143,6 +143,7 @@ function EnterpriseDashboard() {
   // Fetch contact requests for current user
   const { data: contactRequests } = useQuery<ContactRequest[]>({
     queryKey: ["/api/enterprise/contact-requests"],
+    refetchInterval: 30000, // Refetch every 30 seconds to get latest meeting updates
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
@@ -423,14 +424,12 @@ function EnterpriseDashboard() {
                           {/* Debug info (can be removed later) */}
                           <details className="mt-3">
                             <summary className="text-xs text-gray-500 cursor-pointer">Debug Info</summary>
-                            <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-auto">
+                            <pre className="text-xs mt-2 bg-gray-100 p-2 rounded overflow-auto">
                               {JSON.stringify({
-                                id: request.id,
-                                meetingScheduled: request.meetingScheduled,
-                                meetingDate: request.meetingDate,
-                                meetingTime: request.meetingTime,
                                 meetingLink: request.meetingLink,
                                 meetingType: request.meetingType,
+                                meetingDate: request.meetingDate,
+                                meetingTime: request.meetingTime,
                                 meetingNotes: request.meetingNotes
                               }, null, 2)}
                             </pre>

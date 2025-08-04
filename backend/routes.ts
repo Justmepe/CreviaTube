@@ -1595,6 +1595,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         meetingNotes 
       } = req.body;
       
+      console.log('Enterprise request update received:', {
+        id: req.params.id,
+        meetingLink,
+        meetingType,
+        meetingDate,
+        meetingTime
+      }); // Debug log
+      
       const updateData: any = {
         updatedAt: new Date()
       };
@@ -1609,6 +1617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (meetingLink !== undefined) updateData.meetingLink = meetingLink;
       if (meetingType !== undefined) updateData.meetingType = meetingType;
       if (meetingNotes !== undefined) updateData.meetingNotes = meetingNotes;
+      
+      console.log('Updating enterprise request with data:', updateData); // Debug log
       
       await db.update(enterpriseRequests)
         .set(updateData)
