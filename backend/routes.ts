@@ -1583,16 +1583,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { status, assignedTo, notes, meetingScheduled } = req.body;
+      const { 
+        status, 
+        assignedTo, 
+        notes, 
+        meetingScheduled, 
+        meetingDate, 
+        meetingTime, 
+        meetingLink, 
+        meetingType, 
+        meetingNotes 
+      } = req.body;
+      
+      const updateData: any = {
+        updatedAt: new Date()
+      };
+      
+      // Only update fields that are provided
+      if (status !== undefined) updateData.status = status;
+      if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
+      if (notes !== undefined) updateData.notes = notes;
+      if (meetingScheduled !== undefined) updateData.meetingScheduled = meetingScheduled;
+      if (meetingDate !== undefined) updateData.meetingDate = meetingDate ? new Date(meetingDate) : null;
+      if (meetingTime !== undefined) updateData.meetingTime = meetingTime;
+      if (meetingLink !== undefined) updateData.meetingLink = meetingLink;
+      if (meetingType !== undefined) updateData.meetingType = meetingType;
+      if (meetingNotes !== undefined) updateData.meetingNotes = meetingNotes;
       
       await db.update(enterpriseRequests)
-        .set({ 
-          status, 
-          assignedTo, 
-          notes, 
-          meetingScheduled,
-          updatedAt: new Date()
-        })
+        .set(updateData)
         .where(eq(enterpriseRequests.id, req.params.id));
       
       res.json({ message: "Enterprise request updated successfully" });
