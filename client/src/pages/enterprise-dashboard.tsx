@@ -401,6 +401,9 @@ function EnterpriseDashboard() {
                                   <Calendar className="w-4 h-4 mr-2" />
                                   Join {request.meetingType?.replace('_', ' ').toUpperCase() || 'Meeting'}
                                 </a>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Note: Meeting link will be activated by admin closer to meeting time
+                                </p>
                               </div>
                             ) : (
                               <div className="mt-3 bg-orange-50 p-3 rounded-lg border border-orange-200">

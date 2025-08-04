@@ -707,11 +707,23 @@ export default function EnterpriseAdmin() {
                       }
                     }
                   }}
-                  placeholder="https://meet.google.com/xyz-abc-def or https://zoom.us/j/123456789"
+                  placeholder="https://meet.google.com/abc-defg-hij or https://zoom.us/j/1234567890"
                 />
                 {meetingLink && (
-                  <div className="mt-1 text-xs text-green-600">
-                    ✓ Auto-detected: {meetingType.replace('_', ' ')}
+                  <div className="mt-1 space-y-1">
+                    <div className="text-xs text-green-600">
+                      ✓ Auto-detected: {meetingType.replace('_', ' ')}
+                    </div>
+                    {meetingType === 'google_meet' && !meetingLink.match(/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}/) && (
+                      <div className="text-xs text-orange-600">
+                        ⚠️ For Google Meet, use format: https://meet.google.com/abc-defg-hij
+                      </div>
+                    )}
+                    {meetingType === 'zoom' && !meetingLink.match(/zoom\.us\/j\/\d+/) && (
+                      <div className="text-xs text-orange-600">
+                        ⚠️ For Zoom, use format: https://zoom.us/j/1234567890
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -722,9 +734,12 @@ export default function EnterpriseAdmin() {
                   id="meetingNotes"
                   value={meetingNotes}
                   onChange={(e) => setMeetingNotes(e.target.value)}
-                  placeholder="Add notes about the meeting agenda..."
+                  placeholder="Add notes about the meeting agenda, preparation instructions, or what to expect..."
                   className="h-20"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Tip: Include any preparation instructions or what the client should bring to the meeting
+                </p>
               </div>
               
               <div className="flex space-x-2">
