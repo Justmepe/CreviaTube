@@ -1497,8 +1497,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         totalEvents = eventStats?.count || 0;
         
-        // Calculate revenue based on enterprise commission rate
-        const commissionRate = (account.pricingConfig as any)?.commissionRate || 0.15;
+        // Calculate revenue based on standard enterprise commission rate (15%)
+        const commissionRate = 0.15;
         totalRevenue = enterpriseCampaigns.reduce((sum, campaign) => 
           sum + (campaign.budgetUsed * commissionRate), 0
         );
@@ -1510,18 +1510,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue: Math.round(totalRevenue),
         totalEvents,
         account: {
-          company: account.companyName,
-          domain: account.customDomain,
-          status: account.status,
-          commissionRate: (account.pricingConfig as any)?.commissionRate || 0.15,
-          features: account.features
+          company: req.user.fullName || req.user.username,
+          domain: `${req.user.username}.creocash.app`,
+          status: "active",
+          commissionRate: 0.15,
+          features: ["white_label", "custom_domain", "advanced_analytics", "priority_support"]
         }
       };
 
       res.json({
         stats,
         campaigns: enterpriseCampaigns,
-        account
+        user: req.user
       });
     } catch (error: any) {
       console.error("Error fetching enterprise dashboard:", error);

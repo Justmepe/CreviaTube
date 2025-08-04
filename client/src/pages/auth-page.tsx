@@ -43,8 +43,9 @@ export default function AuthPage() {
     setRegisterData(prev => ({
       ...prev,
       userType: userType as any,
-      // Enterprise, trading educators, influencers, and entrepreneurs are creators
-      // Only regular users without specific types are clippers
+      // Enterprise users get creator role (they white-label the platform)
+      // Creator types (influencer, trader, business) get creator role
+      // Regular users without specific types are clippers
       role: userType === "enterprise" || userType === "trader_creator" || userType === "influencer" || userType === "entrepreneur" ? "creator" : "clipper"
     }));
   };
@@ -418,19 +419,19 @@ export default function AuthPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="userType" className="text-slate-700 font-medium">Creator Type</Label>
+                        <Label htmlFor="userType" className="text-slate-700 font-medium">Account Type</Label>
                         <Select 
                           value={registerData.userType} 
                           onValueChange={handleUserTypeChange}
                         >
                           <SelectTrigger className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl">
-                            <SelectValue placeholder="Select your creator type" />
+                            <SelectValue placeholder="Select your account type" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="trader_creator">Trading Educator</SelectItem>
                             <SelectItem value="influencer">Social Influencer</SelectItem>
-                            <SelectItem value="entrepreneur">Business Entrepreneur</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                            <SelectItem value="entrepreneur">Business Creator</SelectItem>
+                            <SelectItem value="enterprise">Enterprise (White-Label)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
