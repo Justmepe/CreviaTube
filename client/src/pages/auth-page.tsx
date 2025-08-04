@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,35 +54,22 @@ export default function AuthPage() {
     registerMutation.mutate(registerData);
   };
 
-  const features = [
-    {
-      icon: TrendingUp,
-      title: "Global Creator Network",
-      description: "Connect with 10,000+ creators worldwide across trading, social media, and business sectors"
-    },
-    {
-      icon: DollarSign,
-      title: "Automated Escrow System",
-      description: "Secure payments with automatic goal completion and instant payouts via M-Pesa, PayPal & more"
-    },
-    {
-      icon: Shield,
-      title: "AI-Powered Content Protection",
-      description: "Advanced bot detection and AI content filtering ensures authentic user-generated content only"
-    },
-    {
-      icon: Globe,
-      title: "Multi-Platform Integration",
-      description: "Track performance across Instagram, TikTok, YouTube, Twitter, and 25+ trading brokers"
-    }
-  ];
+  // Fetch platform features and stats from API
+  const { data: features } = useQuery({
+    queryKey: ["/api/platform/features"],
+  });
 
-  const stats = [
-    { value: "$2.5M+", label: "Paid to Creators" },
-    { value: "50K+", label: "Campaigns Completed" },
-    { value: "180+", label: "Countries Supported" },
-    { value: "99.8%", label: "Uptime Guarantee" }
-  ];
+  const { data: stats } = useQuery({
+    queryKey: ["/api/platform/stats"],
+  });
+
+  // Icon mapping for dynamic features
+  const iconMap = {
+    TrendingUp,
+    DollarSign,
+    Shield,
+    Globe,
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
@@ -227,24 +215,27 @@ export default function AuthPage() {
 
             {/* Feature Grid */}
             <div className="grid grid-cols-2 gap-6 mb-12">
-              {features.map((feature, index) => (
-                <div key={index} className="group">
-                  <div className="flex items-start space-x-3 p-4 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                      <feature.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-800 mb-1">{feature.title}</h3>
-                      <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
+              {features?.map((feature, index) => {
+                const Icon = iconMap[feature.icon as keyof typeof iconMap];
+                return (
+                  <div key={index} className="group">
+                    <div className="flex items-start space-x-3 p-4 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                        {Icon && <Icon className="w-5 h-5 text-white" />}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-800 mb-1">{feature.title}</h3>
+                        <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-4 gap-8">
-              {stats.map((stat, index) => (
+              {stats?.map((stat, index) => (
                 <div key={index} className="text-center">
                   <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     {stat.value}

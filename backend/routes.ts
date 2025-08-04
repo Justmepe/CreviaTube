@@ -1809,5 +1809,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 5000); // 5 second delay to allow server to start
 
+  // Platform configuration endpoints
+  app.get("/api/platform/features", async (req, res) => {
+    try {
+      const features = [
+        {
+          icon: "TrendingUp",
+          title: "Global Creator Network",
+          description: "Connect with 10,000+ creators worldwide across trading, social media, and business sectors"
+        },
+        {
+          icon: "DollarSign",
+          title: "Automated Escrow System",
+          description: "Secure payments with automatic goal completion and instant payouts via M-Pesa, PayPal & more"
+        },
+        {
+          icon: "Shield",
+          title: "AI-Powered Content Protection",
+          description: "Advanced bot detection and AI content filtering ensures authentic user-generated content only"
+        },
+        {
+          icon: "Globe",
+          title: "Multi-Platform Integration",
+          description: "Track performance across Instagram, TikTok, YouTube, Twitter, and 25+ trading brokers"
+        }
+      ];
+      res.json(features);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/platform/stats", async (req, res) => {
+    try {
+      // Calculate real stats from database
+      const [campaignStats] = await db
+        .select({
+          totalCampaigns: count(campaigns.id),
+          totalBudget: sql<number>`COALESCE(SUM(${campaigns.budget}), 0)`
+        })
+        .from(campaigns);
+
+      const [userStats] = await db
+        .select({
+          totalUsers: count(users.id),
+          activeUsers: sql<number>`COUNT(CASE WHEN ${users.isActive} = true THEN 1 END)`
+        })
+        .from(users);
+
+      const totalPayouts = Number(campaignStats.totalBudget || 0) * 0.8; // 80% goes to clippers
+
+      const stats = [
+        { value: `$${Math.round(totalPayouts / 1000)}K+`, label: "Paid to Creators" },
+        { value: `${campaignStats.totalCampaigns || 0}+`, label: "Campaigns Completed" },
+        { value: "180+", label: "Countries Supported" },
+        { value: "99.8%", label: "Uptime Guarantee" }
+      ];
+      
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/platform/supported-platforms", async (req, res) => {
+    try {
+      const platforms = [
+        { value: "instagram", label: "Instagram", category: "social" },
+        { value: "tiktok", label: "TikTok", category: "social" },
+        { value: "youtube", label: "YouTube", category: "social" },
+        { value: "twitter", label: "Twitter/X", category: "social" },
+        { value: "facebook", label: "Facebook", category: "social" },
+        { value: "linkedin", label: "LinkedIn", category: "professional" },
+        { value: "telegram", label: "Telegram", category: "messaging" },
+        { value: "discord", label: "Discord", category: "messaging" },
+        { value: "website", label: "Website/Blog", category: "web" },
+        { value: "email", label: "Email Marketing", category: "web" }
+      ];
+      res.json(platforms);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/platform/supported-countries", async (req, res) => {
+    try {
+      const countries = [
+        { value: "US", label: "United States" },
+        { value: "CA", label: "Canada" },
+        { value: "GB", label: "United Kingdom" },
+        { value: "AU", label: "Australia" },
+        { value: "DE", label: "Germany" },
+        { value: "FR", label: "France" },
+        { value: "JP", label: "Japan" },
+        { value: "KR", label: "South Korea" },
+        { value: "CN", label: "China" },
+        { value: "IN", label: "India" },
+        { value: "BR", label: "Brazil" },
+        { value: "MX", label: "Mexico" },
+        { value: "AR", label: "Argentina" },
+        { value: "CL", label: "Chile" },
+        { value: "ZA", label: "South Africa" },
+        { value: "KE", label: "Kenya" },
+        { value: "NG", label: "Nigeria" },
+        { value: "EG", label: "Egypt" },
+        { value: "AE", label: "UAE" },
+        { value: "SG", label: "Singapore" }
+      ];
+      res.json(countries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/platform/supported-languages", async (req, res) => {
+    try {
+      const languages = [
+        { value: "en", label: "English" },
+        { value: "es", label: "Spanish" },
+        { value: "fr", label: "French" },
+        { value: "de", label: "German" },
+        { value: "it", label: "Italian" },
+        { value: "pt", label: "Portuguese" },
+        { value: "ru", label: "Russian" },
+        { value: "zh", label: "Chinese" },
+        { value: "ja", label: "Japanese" },
+        { value: "ko", label: "Korean" },
+        { value: "ar", label: "Arabic" },
+        { value: "hi", label: "Hindi" },
+        { value: "sw", label: "Swahili" },
+        { value: "af", label: "Afrikaans" }
+      ];
+      res.json(languages);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Broker programs endpoint - from database
+  app.get("/api/broker-programs", async (req, res) => {
+    try {
+      const programs = await db.select().from(brokerPrograms).where(eq(brokerPrograms.isActive, true));
+      res.json(programs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

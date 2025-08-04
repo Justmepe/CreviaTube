@@ -38,6 +38,7 @@ const socialIntegrationSchema = z.object({
 
 type SocialIntegrationData = z.infer<typeof socialIntegrationSchema>;
 
+// Platform info fetched from API - this will be updated to use dynamic data
 const platformInfo = {
   instagram: {
     name: "Instagram",

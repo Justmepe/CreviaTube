@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,25 +37,19 @@ const campaignSchema = z.object({
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
 
-const platforms = [
-  { id: "instagram", name: "Instagram", icon: "📱" },
-  { id: "youtube", name: "YouTube", icon: "📺" },
-  { id: "tiktok", name: "TikTok", icon: "🎵" },
-  { id: "twitter", name: "Twitter/X", icon: "🐦" },
-  { id: "linkedin", name: "LinkedIn", icon: "💼" },
-  { id: "facebook", name: "Facebook", icon: "👥" },
-];
-
-const countries = [
-  "United States", "United Kingdom", "Canada", "Australia", "Germany", 
-  "France", "Spain", "Italy", "Netherlands", "Brazil", "Mexico", "India", 
-  "Japan", "South Korea", "Nigeria", "South Africa", "Kenya", "Global"
-];
-
-const languages = [
-  "English", "Spanish", "French", "German", "Portuguese", "Italian", 
-  "Dutch", "Japanese", "Korean", "Hindi", "Swahili", "Arabic"
-];
+// Platform icons mapping
+const platformIcons: Record<string, string> = {
+  "instagram": "📱",
+  "youtube": "📺",
+  "tiktok": "🎵",
+  "twitter": "🐦",
+  "linkedin": "💼",
+  "facebook": "👥",
+  "telegram": "💬",
+  "discord": "🎮",
+  "website": "🌐",
+  "email": "📧"
+};
 
 export default function CampaignCreation() {
   const { user } = useAuth();
@@ -63,6 +57,19 @@ export default function CampaignCreation() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+
+  // Fetch dynamic data from API
+  const { data: platforms } = useQuery({
+    queryKey: ["/api/platform/supported-platforms"],
+  });
+
+  const { data: countries } = useQuery({
+    queryKey: ["/api/platform/supported-countries"],
+  });
+
+  const { data: languages } = useQuery({
+    queryKey: ["/api/platform/supported-languages"],
+  });
 
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),
@@ -264,16 +271,16 @@ export default function CampaignCreation() {
                     Select which platforms clippers should promote your content on
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {platforms.map((platform) => (
+                    {platforms?.map((platform) => (
                       <Button
-                        key={platform.id}
+                        key={platform.value}
                         type="button"
-                        variant={selectedPlatforms.includes(platform.id) ? "default" : "outline"}
+                        variant={selectedPlatforms.includes(platform.value) ? "default" : "outline"}
                         className="justify-start h-auto p-3"
-                        onClick={() => togglePlatform(platform.id)}
+                        onClick={() => togglePlatform(platform.value)}
                       >
-                        <span className="mr-2">{platform.icon}</span>
-                        {platform.name}
+                        <span className="mr-2">{platformIcons[platform.value] || "📱"}</span>
+                        {platform.label}
                       </Button>
                     ))}
                   </div>
@@ -432,8 +439,8 @@ export default function CampaignCreation() {
                           <SelectValue placeholder="Add target countries" />
                         </SelectTrigger>
                         <SelectContent>
-                          {countries.filter(c => !selectedCountries.includes(c)).map((country) => (
-                            <SelectItem key={country} value={country}>{country}</SelectItem>
+                          {countries?.filter(c => !selectedCountries.includes(c.label)).map((country) => (
+                            <SelectItem key={country.value} value={country.label}>{country.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -453,8 +460,8 @@ export default function CampaignCreation() {
                           <SelectValue placeholder="Add required languages" />
                         </SelectTrigger>
                         <SelectContent>
-                          {languages.filter(l => !selectedLanguages.includes(l)).map((language) => (
-                            <SelectItem key={language} value={language}>{language}</SelectItem>
+                          {languages?.filter(l => !selectedLanguages.includes(l.label)).map((language) => (
+                            <SelectItem key={language.value} value={language.label}>{language.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

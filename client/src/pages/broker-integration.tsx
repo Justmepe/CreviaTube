@@ -357,38 +357,7 @@ const BrokerCard = ({ broker, formatCurrency, toast }: {
   </Card>
 );
 
-const SUPPORTED_BROKERS = [
-  {
-    name: "MetaTrader 4",
-    platform: "mt4",
-    description: "Connect your MT4 trading account",
-    fields: ["apiKey", "accountId", "serverUrl"]
-  },
-  {
-    name: "MetaTrader 5", 
-    platform: "mt5",
-    description: "Connect your MT5 trading account",
-    fields: ["apiKey", "accountId", "serverUrl"]
-  },
-  {
-    name: "OANDA",
-    platform: "proprietary", 
-    description: "Connect your OANDA trading account",
-    fields: ["apiKey", "accountId"]
-  },
-  {
-    name: "Alpaca",
-    platform: "proprietary",
-    description: "Connect your Alpaca trading account", 
-    fields: ["apiKey", "accountId"]
-  },
-  {
-    name: "Interactive Brokers",
-    platform: "proprietary",
-    description: "Connect your Interactive Brokers account",
-    fields: ["apiKey", "accountId"]
-  },
-];
+// This will be replaced with API data from /api/broker-programs
 
 export default function BrokerIntegration() {
   const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
@@ -409,6 +378,11 @@ export default function BrokerIntegration() {
   const { data: tradingAccounts, isLoading } = useQuery<{ brokers: TradingAccount[] }>({
     queryKey: ["/api/user/trading-accounts"],
     queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  // Fetch available broker programs from API
+  const { data: brokerPrograms } = useQuery({
+    queryKey: ["/api/broker-programs"],
   });
 
   const addBrokerMutation = useMutation({
@@ -834,30 +808,46 @@ export default function BrokerIntegration() {
 
           <TabsContent value="supported" className="space-y-6">
             <div className="grid gap-4">
-              {SUPPORTED_BROKERS.map((broker) => (
-                <Card key={broker.name}>
+              {brokerPrograms?.map((broker: any) => (
+                <Card key={broker.id}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle>{broker.name}</CardTitle>
-                        <CardDescription>{broker.description}</CardDescription>
+                        <CardDescription>{broker.description || `Trade with ${broker.name} - ${broker.category} broker`}</CardDescription>
                       </div>
-                      <Badge variant="outline">Supported</Badge>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">{broker.region}</Badge>
+                        <Badge variant="outline">{broker.category}</Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Required fields:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {broker.fields.map((field) => (
-                          <Badge key={field} variant="secondary">
-                            {field === "apiKey" ? "API Key" : 
-                             field === "accountId" ? "Account ID" : 
-                             field === "serverUrl" ? "Server URL" : field}
-                          </Badge>
-                        ))}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="font-medium">Signup Bonus</div>
+                          <div className="text-muted-foreground">${broker.signupBonus}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Deposit Bonus</div>
+                          <div className="text-muted-foreground">${broker.depositBonus}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Volume Rate</div>
+                          <div className="text-muted-foreground">{(broker.volumeRate * 100).toFixed(2)}%</div>
+                        </div>
                       </div>
-                    </div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-muted-foreground">
+                          Base Affiliate Link: {broker.baseAffiliateLink}
+                        </div>
+                        <Button size="sm" asChild>
+                          <a href={broker.baseAffiliateLink} target="_blank" rel="noopener noreferrer">
+                            Visit {broker.name}
+                          </a>
+                        </Button>
+                      </div>
                   </CardContent>
                 </Card>
               ))}
