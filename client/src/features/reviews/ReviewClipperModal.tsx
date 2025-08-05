@@ -113,9 +113,9 @@ export function ReviewClipperModal({ open, onOpenChange, clipperCampaign }: Revi
         method: 'POST',
         body: JSON.stringify({
           ...data,
-          clipperCampaignId: clipperCampaign.id,
-          clipperId: clipperCampaign.clipperId,
-          campaignId: clipperCampaign.campaignId,
+          clipperCampaignId: clipperCampaign?.id,
+          clipperId: clipperCampaign?.clipperId,
+          campaignId: clipperCampaign?.campaignId,
           tags: selectedTags,
         }),
       });
@@ -152,7 +152,7 @@ export function ReviewClipperModal({ open, onOpenChange, clipperCampaign }: Revi
     );
   };
 
-  if (!clipperCampaign.isCompleted) {
+  if (!clipperCampaign?.isCompleted) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -181,10 +181,10 @@ export function ReviewClipperModal({ open, onOpenChange, clipperCampaign }: Revi
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-500" />
-            Review {clipperCampaign.clipperName}
+            Review {clipperCampaign?.clipperName}
           </DialogTitle>
           <p className="text-sm text-gray-600">
-            Campaign: {clipperCampaign.campaignName}
+            Campaign: {clipperCampaign?.campaignName}
           </p>
         </DialogHeader>
 
