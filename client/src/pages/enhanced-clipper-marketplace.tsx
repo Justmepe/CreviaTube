@@ -258,7 +258,7 @@ export default function EnhancedClipperMarketplace() {
                   <SelectValue placeholder="Creator Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Creators</SelectItem>
+                  <SelectItem value="all">All Clippers</SelectItem>
                   <SelectItem value="trader_creator">Trading Educators</SelectItem>
                   <SelectItem value="influencer">Social Influencers</SelectItem>
                   <SelectItem value="entrepreneur">Entrepreneurs</SelectItem>
