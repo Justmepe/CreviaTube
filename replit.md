@@ -11,7 +11,7 @@ Project Structure: Scalable, well-organized modular architecture with separate c
 
 ## System Architecture
 
-### Project Structure (UPDATED 2025-01-03)
+### Project Structure (UPDATED 2025-01-05)
 ```
 CreoCash/
 ├── client/                # React frontend application
@@ -62,6 +62,7 @@ The database uses a multi-entity relational design supporting users (creators/cl
 - **Authentication System**: Session-based authentication with secure password hashing and role-based access control.
 - **Enhanced Campaign Management**: Comprehensive campaign creation wizard with multi-step flows for different creator types (trader, entrepreneur, enterprise, influencer).
 - **Enterprise White-Label Platform**: Complete white-label access for enterprise users with custom branding, domain, color schemes, custom pricing (no standard 20% fees), and full platform control. Enterprise Portal active with TechStartup Inc account (15% commission rate).
+- **Cold Outreach Add-On Service**: Optional premium B2B lead generation service for entrepreneurs and enterprise users with conditional premium commission rates (25-30% vs standard 20%) that only apply when using cold outreach campaigns. Includes multi-channel support (email, LinkedIn, phone, DMs), professional compliance features, and lead quality verification.
 - **Advanced Budget Tracking**: Real-time budget allocation, escrow monitoring, automatic payout calculations with 20/80 platform/clipper split, and detailed spending analytics.
 - **Goal-Based Completion System**: Individual clipper participation tracked separately with automatic completion detection when primary goals (views, clicks, signups, deposits, trades, conversions) are reached and immediate payout processing.
 - **Comprehensive Analytics**: Real-time campaign performance tracking, goal progress monitoring, conversion analytics with comprehensive metrics dashboard and interactive visualizations.

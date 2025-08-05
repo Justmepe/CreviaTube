@@ -168,10 +168,8 @@ export default function ColdOutreachCampaign() {
         <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
-            Cold Outreach campaigns are available exclusively for Entrepreneur and Enterprise accounts.
-            <Button variant="link" className="pl-1 text-amber-800" onClick={() => setLocation("/profile-settings")}>
-              Upgrade your account
-            </Button>
+            Cold Outreach is a premium add-on service available for Entrepreneur and Enterprise users. 
+            Standard campaigns use the regular 20% commission rate.
           </AlertDescription>
         </Alert>
       </DashboardLayout>
@@ -201,12 +199,22 @@ export default function ColdOutreachCampaign() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Crown className="h-6 w-6 text-amber-500" />
-            <h1 className="text-2xl font-bold">Premium Cold Outreach</h1>
+            <h1 className="text-2xl font-bold">Cold Outreach Add-On</h1>
           </div>
           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-            {premiumRate} Commission
+            Premium Service: {premiumRate} Commission
           </Badge>
         </div>
+
+        {/* Service Explanation */}
+        <Alert className="border-blue-200 bg-blue-50">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Optional Premium Service:</strong> Cold outreach campaigns use higher commission rates ({premiumRate}) 
+            to cover professional lead generation, verification, and compliance services. 
+            Your regular campaigns continue using the standard 20% rate.
+          </AlertDescription>
+        </Alert>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form */}
@@ -218,7 +226,7 @@ export default function ColdOutreachCampaign() {
                   <CardHeader>
                     <CardTitle>Campaign Details</CardTitle>
                     <CardDescription>
-                      Set up your professional lead generation campaign
+                      Set up your professional B2B lead generation add-on campaign
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -583,7 +591,7 @@ export default function ColdOutreachCampaign() {
                   </div>
                   <Separator />
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Platform Fee ({premiumRate})</span>
+                    <span className="text-sm text-gray-600">Add-On Service Fee ({premiumRate})</span>
                     <span className="font-semibold text-amber-600">
                       ${Math.round((form.watch("budget") || 0) * (user?.userType === "enterprise" ? 0.25 : 0.30))}
                     </span>
@@ -592,12 +600,12 @@ export default function ColdOutreachCampaign() {
               </CardContent>
             </Card>
 
-            {/* Premium Features */}
+            {/* Add-On Features */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Crown className="h-5 w-5 text-amber-500" />
-                  Premium Features
+                  Add-On Service Features
                 </CardTitle>
               </CardHeader>
               <CardContent>

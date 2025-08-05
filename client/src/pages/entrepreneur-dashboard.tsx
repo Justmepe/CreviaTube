@@ -81,7 +81,7 @@ export default function EntrepreneurDashboard() {
                 onClick={() => window.location.href = "/cold-outreach-campaign"}
               >
                 <Crown className="w-5 h-5 mr-2" />
-                Cold Outreach
+                Cold Outreach Add-On
               </Button>
               <Button size="lg" className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg">
                 <Plus className="w-5 h-5 mr-2" />
