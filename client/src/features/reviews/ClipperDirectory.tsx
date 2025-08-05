@@ -161,9 +161,9 @@ function ClipperCard({ clipper }: { clipper: ClipperProfile }) {
 
 export function ClipperDirectory() {
   const [filters, setFilters] = useState({
-    minRating: '',
-    tier: '',
-    minCompletions: '',
+    minRating: 'all',
+    tier: 'all',
+    minCompletions: 'all',
     search: '',
   });
 
@@ -176,13 +176,13 @@ export function ClipperDirectory() {
     if (filters.search && !clipper.clipperName.toLowerCase().includes(filters.search.toLowerCase())) {
       return false;
     }
-    if (filters.minRating && parseFloat(clipper.averageRating) < parseFloat(filters.minRating)) {
+    if (filters.minRating && filters.minRating !== 'all' && parseFloat(clipper.averageRating) < parseFloat(filters.minRating)) {
       return false;
     }
-    if (filters.tier && clipper.tier !== filters.tier) {
+    if (filters.tier && filters.tier !== 'all' && clipper.tier !== filters.tier) {
       return false;
     }
-    if (filters.minCompletions && clipper.totalCampaignsCompleted < parseInt(filters.minCompletions)) {
+    if (filters.minCompletions && filters.minCompletions !== 'all' && clipper.totalCampaignsCompleted < parseInt(filters.minCompletions)) {
       return false;
     }
     return true;
@@ -226,7 +226,7 @@ export function ClipperDirectory() {
                   <SelectValue placeholder="Any rating" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any rating</SelectItem>
+                  <SelectItem value="all">Any rating</SelectItem>
                   <SelectItem value="4.5">4.5+ stars</SelectItem>
                   <SelectItem value="4.0">4.0+ stars</SelectItem>
                   <SelectItem value="3.5">3.5+ stars</SelectItem>
@@ -245,7 +245,7 @@ export function ClipperDirectory() {
                   <SelectValue placeholder="Any tier" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any tier</SelectItem>
+                  <SelectItem value="all">Any tier</SelectItem>
                   <SelectItem value="diamond">💫 Diamond</SelectItem>
                   <SelectItem value="platinum">💎 Platinum</SelectItem>
                   <SelectItem value="gold">🥇 Gold</SelectItem>
@@ -265,7 +265,7 @@ export function ClipperDirectory() {
                   <SelectValue placeholder="Any amount" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any amount</SelectItem>
+                  <SelectItem value="all">Any amount</SelectItem>
                   <SelectItem value="20">20+ campaigns</SelectItem>
                   <SelectItem value="10">10+ campaigns</SelectItem>
                   <SelectItem value="5">5+ campaigns</SelectItem>
