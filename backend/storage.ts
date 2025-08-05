@@ -42,6 +42,11 @@ export interface IStorage {
   getPendingApplicationsByCreator(creatorId: string): Promise<any[]>;
   reviewClipperApplication(applicationId: string, action: 'approve' | 'reject', notes: string, creatorId: string): Promise<ClipperCampaign>;
   
+  // Additional campaign methods for marketplace interface
+  getClipperApplications(clipperId: string): Promise<any[]>;
+  getCampaignsWithPendingApplications(creatorId: string): Promise<any[]>;
+  getCampaignsWithClippers(creatorId: string): Promise<any[]>;
+  
   // Tracking operations
   createTrackingEvent(event: InsertTrackingEvent): Promise<TrackingEvent>;
   getTrackingEventsByClipper(clipperId: string): Promise<TrackingEvent[]>;
@@ -703,6 +708,76 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updated;
+  }
+
+  // Additional marketplace interface methods
+  async getClipperApplications(clipperId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: clipperCampaigns.id,
+        campaignId: clipperCampaigns.campaignId,
+        campaignTitle: campaigns.name,
+        campaignDescription: campaigns.description,
+        status: campaigns.status,
+        isApproved: clipperCampaigns.isApproved,
+        applicationStatus: clipperCampaigns.applicationStatus,
+        appliedAt: clipperCampaigns.joinedAt,
+        trackingCode: clipperCampaigns.trackingCode,
+        campaign: {
+          id: campaigns.id,
+          title: campaigns.name,
+          description: campaigns.description,
+          status: campaigns.status,
+          rewardRates: campaigns.rewardRates,
+          campaignType: campaigns.campaignType,
+        }
+      })
+      .from(clipperCampaigns)
+      .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+      .where(eq(clipperCampaigns.clipperId, clipperId))
+      .orderBy(desc(clipperCampaigns.joinedAt));
+
+    return results;
+  }
+
+  async getCampaignsWithPendingApplications(creatorId: string): Promise<any[]> {
+    // This is the same as getPendingApplicationsByCreator, just renamed for clarity
+    return this.getPendingApplicationsByCreator(creatorId);
+  }
+
+  async getCampaignsWithClippers(creatorId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: campaigns.id,
+        name: campaigns.name,
+        description: campaigns.description,
+        status: campaigns.status,
+        budget: campaigns.budget,
+        budgetUsed: campaigns.budgetUsed,
+        campaignType: campaigns.campaignType,
+        createdAt: campaigns.createdAt,
+        clippers: sql`
+          json_agg(
+            json_build_object(
+              'id', ${clipperCampaigns.id},
+              'clipperId', ${clipperCampaigns.clipperId},
+              'username', ${users.username},
+              'isApproved', ${clipperCampaigns.isApproved},
+              'applicationStatus', ${clipperCampaigns.applicationStatus},
+              'joinedAt', ${clipperCampaigns.joinedAt},
+              'trackingCode', ${clipperCampaigns.trackingCode}
+            )
+          )
+        `
+      })
+      .from(campaigns)
+      .leftJoin(clipperCampaigns, eq(campaigns.id, clipperCampaigns.campaignId))
+      .leftJoin(users, eq(clipperCampaigns.clipperId, users.id))
+      .where(eq(campaigns.creatorId, creatorId))
+      .groupBy(campaigns.id)
+      .orderBy(desc(campaigns.createdAt));
+
+    return results;
   }
 }
 

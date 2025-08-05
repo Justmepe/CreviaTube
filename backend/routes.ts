@@ -112,6 +112,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Specific campaign routes for clipper marketplace
+  app.get("/api/campaigns/available", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const campaigns = await storage.getAvailableCampaigns();
+      // Filter for standard campaigns (not cold outreach)
+      const standardCampaigns = campaigns.filter(c => c.campaignType !== "cold_outreach");
+      res.json(standardCampaigns);
+    } catch (error: any) {
+      console.error('Available campaigns fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch available campaigns", error: error.message });
+    }
+  });
+
+  app.get("/api/campaigns/cold-outreach", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const campaigns = await storage.getAvailableCampaigns();
+      // Filter for cold outreach campaigns only
+      const coldOutreachCampaigns = campaigns.filter(c => c.campaignType === "cold_outreach");
+      res.json(coldOutreachCampaigns);
+    } catch (error: any) {
+      console.error('Cold outreach campaigns fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch cold outreach campaigns", error: error.message });
+    }
+  });
+
+  app.get("/api/campaigns/my-campaigns", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      if (req.user.role === "clipper") {
+        // For clippers: get their applications
+        const applications = await storage.getClipperApplications(req.user.id);
+        res.json(applications);
+      } else if (req.user.role === "creator") {
+        // For creators: get campaigns with clipper applications waiting for approval
+        const campaignsWithApplications = await storage.getCampaignsWithPendingApplications(req.user.id);
+        res.json(campaignsWithApplications);
+      } else {
+        res.status(403).json({ message: "Access denied" });
+      }
+    } catch (error: any) {
+      console.error('My campaigns fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch campaigns", error: error.message });
+    }
+  });
+
+  app.get("/api/campaigns/with-clippers", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Only creators can view campaigns with clippers" });
+    }
+
+    try {
+      const campaignsWithClippers = await storage.getCampaignsWithClippers(req.user.id);
+      res.json(campaignsWithClippers);
+    } catch (error: any) {
+      console.error('Campaigns with clippers fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch campaigns with clippers", error: error.message });
+    }
+  });
+
   app.post("/api/campaigns", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user.role !== "creator") {
