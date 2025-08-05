@@ -120,13 +120,16 @@ export default function ColdOutreachCampaign() {
       const escrowAmount = data.budget - platformFee;
       
       const campaignData = {
-        ...data,
+        name: data.name,
+        description: data.description,
         creatorId: user?.id,
-        status: "draft",
-        budgetUsed: 0,
-        escrowBalance: escrowAmount,
-        platformFee: platformFee,
-        fundingStatus: "pending",
+        status: "draft" as const,
+        budget: data.budget.toFixed(2),
+        escrowBalance: escrowAmount.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        fundingStatus: "pending" as const,
+        duration: data.duration,
+        campaignType: data.campaignType,
         targetPlatforms: JSON.stringify([data.outreachType]),
         rewardRates: JSON.stringify({
           outreach_contact: data.contactReward,
@@ -135,7 +138,7 @@ export default function ColdOutreachCampaign() {
         campaignGoals: {
           outreachContactsGoal: data.contactsGoal,
           outreachResponsesGoal: data.responsesGoal,
-          primaryGoal: "outreach_contacts",
+          primaryGoal: "outreach_contacts" as const,
         },
         outreachConfig: {
           type: data.outreachType,
