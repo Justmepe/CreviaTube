@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Search,
   Filter,
@@ -29,7 +30,9 @@ import {
   Heart,
   Eye,
   Share2,
-  AlertTriangle
+  AlertTriangle,
+  Info,
+  Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -463,7 +466,10 @@ export default function EnhancedClipperMarketplace() {
                   <Target className="h-12 w-12 text-amber-400 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No cold outreach campaigns available</h3>
                   <p className="text-gray-600 mb-4">Check back later for B2B lead generation opportunities, or browse standard campaigns.</p>
-                  <Button variant="outline" onClick={() => document.querySelector('[value="available"]')?.click()}>
+                  <Button variant="outline" onClick={() => {
+                    const availableTab = document.querySelector('[value="available"]') as HTMLButtonElement;
+                    availableTab?.click();
+                  }}>
                     View Standard Campaigns
                   </Button>
                 </CardContent>
@@ -562,7 +568,10 @@ export default function EnhancedClipperMarketplace() {
                   <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No applications yet</h3>
                   <p className="text-gray-600 mb-4">Start by browsing available campaigns and applying to ones that match your audience.</p>
-                  <Button onClick={() => document.querySelector('[value="available"]')?.click()}>
+                  <Button onClick={() => {
+                    const availableTab = document.querySelector('[value="available"]') as HTMLButtonElement;
+                    availableTab?.click();
+                  }}>
                     Browse Campaigns
                   </Button>
                 </CardContent>
