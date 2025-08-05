@@ -73,6 +73,9 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   updateUserStatus(userId: string, status: string): Promise<User | undefined>;
+
+  // Cold outreach campaign access
+  getAvailableColdOutreachCampaigns(): Promise<Campaign[]>;
   deleteUser(userId: string): Promise<boolean>;
   
   // Trading account operations
@@ -158,7 +161,21 @@ export class DatabaseStorage implements IStorage {
 
   async getAvailableCampaigns(): Promise<Campaign[]> {
     return await db.select().from(campaigns)
-      .where(eq(campaigns.status, "active"))
+      .where(and(
+        eq(campaigns.status, "active"),
+        // Exclude cold outreach campaigns from general clipper marketplace
+        sql`(${campaigns.campaignType} IS NULL OR ${campaigns.campaignType} != 'cold_outreach')`
+      ))
+      .orderBy(desc(campaigns.createdAt));
+  }
+
+  // Separate method for cold outreach campaigns - for specialized clippers
+  async getAvailableColdOutreachCampaigns(): Promise<Campaign[]> {
+    return await db.select().from(campaigns)
+      .where(and(
+        eq(campaigns.status, "active"),
+        eq(campaigns.campaignType, "cold_outreach")
+      ))
       .orderBy(desc(campaigns.createdAt));
   }
 

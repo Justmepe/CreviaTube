@@ -114,6 +114,11 @@ export default function EnhancedClipperMarketplace() {
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
+  const { data: coldOutreachCampaigns = [], isLoading: coldOutreachLoading } = useQuery<Campaign[]>({
+    queryKey: ["/api/campaigns/cold-outreach"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
   const { data: myApplications = [], isLoading: applicationsLoading } = useQuery<ClipperCampaign[]>({
     queryKey: ["/api/clipper-campaigns"],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -194,6 +199,17 @@ export default function EnhancedClipperMarketplace() {
     });
 
   const appliedCampaignIds = new Set(myApplications.map(app => app.campaignId));
+
+  // Filter cold outreach campaigns
+  const filteredColdOutreachCampaigns = coldOutreachCampaigns
+    .filter(campaign => {
+      if (searchTerm && !campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
+          !campaign.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;    
+      }
+      return campaign.fundingStatus === "funded" && campaign.status === "active";
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   if (campaignsLoading || applicationsLoading) {
     return (
@@ -283,12 +299,26 @@ export default function EnhancedClipperMarketplace() {
 
         {/* Tabs */}
         <Tabs defaultValue="available" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="available">Available Campaigns</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="available">Standard Campaigns</TabsTrigger>
+            <TabsTrigger value="cold-outreach">
+              <div className="flex items-center gap-2">
+                B2B Cold Outreach
+                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                  Premium
+                </Badge>
+              </div>
+            </TabsTrigger>
             <TabsTrigger value="my-campaigns">My Applications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="available" className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold">Standard Affiliate Campaigns</h3>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                20% Commission
+              </Badge>
+            </div>
             {filteredCampaigns.length === 0 ? (
               <Card>
                 <CardContent className="p-12 text-center">
@@ -399,6 +429,122 @@ export default function EnhancedClipperMarketplace() {
                             className="w-full bg-teal-600 hover:bg-teal-700"
                           >
                             {applyToCampaignMutation.isPending ? "Applying..." : "Apply Now"}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="cold-outreach" className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-semibold">B2B Cold Outreach Campaigns</h3>
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                  Premium Service - Higher Rates
+                </Badge>
+              </div>
+              
+             <Alert className="border-amber-200 bg-amber-50">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  <strong>Specialized Service:</strong> Cold outreach campaigns require professional B2B lead generation skills, 
+                  compliance knowledge, and higher engagement quality. Premium rates apply (25-30% vs standard 20%).
+                </AlertDescription>
+              </Alert>
+            </div>
+
+            {filteredColdOutreachCampaigns.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Target className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No cold outreach campaigns available</h3>
+                  <p className="text-gray-600 mb-4">Check back later for B2B lead generation opportunities, or browse standard campaigns.</p>
+                  <Button variant="outline" onClick={() => document.querySelector('[value="available"]')?.click()}>
+                    View Standard Campaigns
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredColdOutreachCampaigns.map((campaign) => (
+                  <Card key={campaign.id} className="hover:shadow-lg transition-shadow border-amber-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg line-clamp-2">{campaign.title}</CardTitle>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge className="bg-amber-100 text-amber-800">
+                              Cold Outreach
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              by @{campaign.creator.username}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="pt-0 space-y-4">
+                      <p className="text-gray-600 text-sm line-clamp-2">{campaign.description}</p>
+                      
+                      {/* Outreach Specific Details */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="h-4 w-4 text-amber-600" />
+                          <span>B2B Lead Generation</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className="h-4 w-4 text-amber-600" />
+                          <span>Professional Outreach Required</span>
+                        </div>
+                      </div>
+
+                      {/* Premium Reward Rates */}
+                      <div className="bg-amber-50 rounded-lg p-3">
+                        <h4 className="font-medium text-amber-800 mb-2">Premium Rewards</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center justify-between p-2 bg-white rounded">
+                            <span>Per Contact</span>
+                            <span className="font-semibold text-amber-700">
+                              ${(campaign.rewardRates as any)?.outreach_contact || 3}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-white rounded">
+                            <span>Per Response</span>
+                            <span className="font-semibold text-amber-700">
+                              ${(campaign.rewardRates as any)?.outreach_response || 10}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Budget and Stats */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Budget Used</span>
+                          <span>${campaign.budgetUsed} / ${campaign.budget}</span>
+                        </div>
+                        <Progress value={(campaign.budgetUsed / campaign.budget) * 100} className="h-2" />
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="pt-2">
+                        {appliedCampaignIds.has(campaign.id) ? (
+                          <Button disabled className="w-full">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Applied
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={() => applyToCampaignMutation.mutate(campaign.id)}
+                            disabled={applyToCampaignMutation.isPending}
+                            className="w-full bg-amber-600 hover:bg-amber-700"
+                          >
+                            {applyToCampaignMutation.isPending ? "Applying..." : "Apply for Cold Outreach"}
                           </Button>
                         )}
                       </div>

@@ -302,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Available campaigns for clippers
+  // Available campaigns for clippers (excludes cold outreach)
   app.get("/api/campaigns/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user.role !== "clipper") {
@@ -322,6 +322,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(filteredCampaigns);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch available campaigns" });
+    }
+  });
+
+  // Cold outreach campaigns - specialized marketplace for B2B lead generation
+  app.get("/api/campaigns/cold-outreach", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "clipper") {
+      return res.status(403).json({ message: "Only clippers can view cold outreach campaigns" });
+    }
+
+    try {
+      const coldOutreachCampaigns = await storage.getAvailableColdOutreachCampaigns();
+      // Filter out campaigns this clipper has already joined
+      const filteredCampaigns: typeof coldOutreachCampaigns = [];
+      for (const campaign of coldOutreachCampaigns) {
+        const existing = await storage.getClipperCampaign(req.user.id, campaign.id);
+        if (!existing) {
+          filteredCampaigns.push(campaign);
+        }
+      }
+      res.json(filteredCampaigns);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch cold outreach campaigns" });
     }
   });
 
