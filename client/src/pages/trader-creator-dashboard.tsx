@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, UserCheck, DollarSign, Activity } from "lucide-react";
+import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, UserCheck, DollarSign, Activity, Star, Folder } from "lucide-react";
 
 export default function TraderCreatorDashboard() {
   const { user } = useAuth();
@@ -42,7 +42,9 @@ export default function TraderCreatorDashboard() {
     { name: "Dashboard", href: "/", icon: BarChart3, current: true },
     { name: "Metrics", href: "/metrics", icon: Activity },
     { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+    { name: "My Campaigns", href: "/my-campaigns", icon: Folder },
     { name: "Clippers", href: "/clippers", icon: Users },
+    { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
     { name: "Broker Integration", href: "/broker", icon: Wallet },
     { name: "Payouts", href: "/payouts", icon: DollarSign },
   ];

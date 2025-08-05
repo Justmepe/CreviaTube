@@ -14,7 +14,9 @@ import {
   LogOut,
   User,
   Settings,
-  Building
+  Building,
+  Star,
+  Folder
 } from "lucide-react";
 
 interface NavigationItem {
@@ -42,6 +44,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+        { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
         { name: "Enterprise", href: "/enterprise", icon: Building },
         { name: "Enterprise Accounts", href: "/enterprise-accounts", icon: Building },
         { name: "Payouts", href: "/payouts", icon: DollarSign },
@@ -54,6 +57,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Marketplace", href: "/marketplace", icon: TrendingUp },
         { name: "My Campaigns", href: "/campaigns", icon: Users },
+        { name: "Top Clippers", href: "/clipper-directory", icon: Star },
         { name: "Payouts", href: "/payouts", icon: Wallet },
       ];
     }
@@ -63,7 +67,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       { name: "Dashboard", href: "/", icon: BarChart3 },
       { name: "Metrics", href: "/metrics", icon: Activity },
       { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+      { name: "My Campaigns", href: "/my-campaigns", icon: Folder },
       { name: "Clippers", href: "/clippers", icon: Users },
+      { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
     ];
 
     // Add specific items based on creator type

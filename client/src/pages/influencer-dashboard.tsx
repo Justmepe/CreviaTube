@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, Heart, Share2, Play, Instagram, Youtube, MessageSquare } from "lucide-react";
+import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, Heart, Share2, Play, Instagram, Youtube, MessageSquare, Star, Folder } from "lucide-react";
 
 export default function InfluencerDashboard() {
   const { user } = useAuth();
@@ -41,7 +41,9 @@ export default function InfluencerDashboard() {
   const navigation = [
     { name: "Dashboard", href: "/", icon: BarChart3, current: true },
     { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+    { name: "My Campaigns", href: "/my-campaigns", icon: Folder },
     { name: "Content Clippers", href: "/clippers", icon: Users },
+    { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
     { name: "Social Analytics", href: "/analytics", icon: Eye },
     { name: "Payouts", href: "/payouts", icon: Wallet },
   ];
