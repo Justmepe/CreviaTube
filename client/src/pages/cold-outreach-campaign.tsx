@@ -417,51 +417,65 @@ export default function ColdOutreachCampaign() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
-                      <FormLabel>Target Industries</FormLabel>
-                      <div className="grid grid-cols-3 gap-2 mt-2">
-                        {industries.map((industry) => (
-                          <Button
-                            key={industry}
-                            type="button"
-                            variant={selectedIndustries.includes(industry) ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              const updated = selectedIndustries.includes(industry)
-                                ? selectedIndustries.filter(i => i !== industry)
-                                : [...selectedIndustries, industry];
-                              setSelectedIndustries(updated);
-                              form.setValue("targetIndustries", updated);
-                            }}
-                          >
-                            {industry}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="targetIndustries"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Target Industries</FormLabel>
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            {industries.map((industry) => (
+                              <Button
+                                key={industry}
+                                type="button"
+                                variant={selectedIndustries.includes(industry) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  const updated = selectedIndustries.includes(industry)
+                                    ? selectedIndustries.filter(i => i !== industry)
+                                    : [...selectedIndustries, industry];
+                                  setSelectedIndustries(updated);
+                                  field.onChange(updated);
+                                }}
+                              >
+                                {industry}
+                              </Button>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                    <div>
-                      <FormLabel>Target Job Titles</FormLabel>
-                      <div className="grid grid-cols-3 gap-2 mt-2">
-                        {jobTitles.map((title) => (
-                          <Button
-                            key={title}
-                            type="button"
-                            variant={selectedJobTitles.includes(title) ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              const updated = selectedJobTitles.includes(title)
-                                ? selectedJobTitles.filter(t => t !== title)
-                                : [...selectedJobTitles, title];
-                              setSelectedJobTitles(updated);
-                              form.setValue("targetJobTitles", updated);
-                            }}
-                          >
-                            {title}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="targetJobTitles"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Target Job Titles</FormLabel>
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            {jobTitles.map((title) => (
+                              <Button
+                                key={title}
+                                type="button"
+                                variant={selectedJobTitles.includes(title) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  const updated = selectedJobTitles.includes(title)
+                                    ? selectedJobTitles.filter(t => t !== title)
+                                    : [...selectedJobTitles, title];
+                                  setSelectedJobTitles(updated);
+                                  field.onChange(updated);
+                                }}
+                              >
+                                {title}
+                              </Button>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </CardContent>
                 </Card>
 
