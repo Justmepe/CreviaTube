@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, MousePointer, ShoppingCart, Target, Globe, Zap, Star, Folder } from "lucide-react";
+import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, MousePointer, ShoppingCart, Target, Globe, Zap, Star, Folder, Mail, Crown } from "lucide-react";
 
 export default function EntrepreneurDashboard() {
   const { user } = useAuth();
@@ -58,7 +58,7 @@ export default function EntrepreneurDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-400/10 to-amber-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-red-400/10 to-orange-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout navigation={navigation} user={user}>
+      <DashboardLayout title="Business Growth Hub">
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">
@@ -73,16 +73,22 @@ export default function EntrepreneurDashboard() {
               </div>
               <p className="text-slate-600 text-lg font-medium">Track clicks, leads, and sales conversions</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 shadow-lg">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                <span className="text-slate-700 font-medium">Business Active</span>
-              </div>
-              <Button className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 shadow-lg">
-                <Plus className="w-4 h-4 mr-2" />
-                New Business Campaign
+            <div className="flex items-center space-x-4">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700"
+                onClick={() => window.location.href = "/cold-outreach-campaign"}
+              >
+                <Crown className="w-5 h-5 mr-2" />
+                Cold Outreach
+              </Button>
+              <Button size="lg" className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg">
+                <Plus className="w-5 h-5 mr-2" />
+                Create Campaign
               </Button>
             </div>
+
           </div>
 
           {/* Modern Business Stats Cards */}

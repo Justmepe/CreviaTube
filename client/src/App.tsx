@@ -39,6 +39,7 @@ import EnterprisePortal from "@/pages/enterprise-portal";
 import EnterpriseDashboard from "@/pages/enterprise-dashboard";
 import ClipperDirectoryPage from "@/pages/clipper-directory";
 import MyCampaignsPage from "@/pages/my-campaigns";
+import ColdOutreachCampaign from "@/pages/cold-outreach-campaign";
 
 function Router() {
   return (
@@ -52,6 +53,7 @@ function Router() {
       <ProtectedRoute path="/campaigns/create" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/create-enhanced" component={EnhancedCampaignCreation} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
+      <ProtectedRoute path="/cold-outreach-campaign" component={ColdOutreachCampaign} />
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
       <ProtectedRoute path="/campaigns/:id/apply" component={ClipperApplication} />
       <ProtectedRoute path="/creator/applications" component={CreatorApplicationReview} />

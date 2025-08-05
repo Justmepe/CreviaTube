@@ -9,7 +9,8 @@ export const userRoleEnum = pgEnum("user_role", ["creator", "clipper", "admin"])
 export const userTypeEnum = pgEnum("user_type", ["trader_creator", "influencer", "entrepreneur", "enterprise"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "inactive", "suspended"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["active", "paused", "completed", "draft"]);
-export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "deposit", "trade", "view", "conversion"]);
+export const campaignTypeEnum = pgEnum("campaign_type", ["content_promotion", "cold_outreach"]);
+export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "deposit", "trade", "view", "conversion", "outreach_contact", "outreach_response"]);
 export const eventStatusEnum = pgEnum("event_status", ["pending", "verified", "paid", "rejected"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 export const brokerTypeEnum = pgEnum("broker_type", ["forex", "crypto", "stocks", "futures", "options", "cfds"]);
@@ -208,7 +209,8 @@ export const campaigns = pgTable("campaigns", {
   requirements: text("requirements"),
   duration: integer("duration").notNull().default(30), // campaign duration in days
   
-  // Campaign goals for individual clipper completion
+  // Campaign type and goals for individual clipper completion
+  campaignType: text("campaign_type").notNull().default("content_promotion"), // content_promotion, cold_outreach
   campaignGoals: json("campaign_goals").$type<{
     viewsGoal?: number;
     clicksGoal?: number;
@@ -216,7 +218,21 @@ export const campaigns = pgTable("campaigns", {
     depositsGoal?: number;
     tradesGoal?: number;
     conversionsGoal?: number;
-    primaryGoal?: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions';
+    outreachContactsGoal?: number; // For cold outreach campaigns
+    outreachResponsesGoal?: number; // For cold outreach campaigns
+    primaryGoal?: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions' | 'outreach_contacts' | 'outreach_responses';
+  }>(),
+  
+  // Cold outreach specific configuration
+  outreachConfig: json("outreach_config").$type<{
+    type?: 'email' | 'linkedin' | 'phone' | 'instagram_dm' | 'twitter_dm' | 'mixed';
+    targetAudience?: string;
+    messageTemplate?: string;
+    targetIndustries?: string[];
+    targetJobTitles?: string[];
+    responseRequirements?: string;
+    complianceNotes?: string;
+    premiumCommissionRate?: number; // Higher rate for outreach (e.g., 0.25-0.30)
   }>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -241,8 +257,10 @@ export const clipperCampaigns = pgTable("clipper_campaigns", {
     totalDeposits?: number;
     totalTrades?: number;
     totalConversions?: number;
+    totalOutreachContacts?: number; // For cold outreach campaigns
+    totalOutreachResponses?: number; // For cold outreach campaigns
     goalReached?: {
-      type: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions';
+      type: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions' | 'outreach_contacts' | 'outreach_responses';
       target: number;
       achieved: number;
       reachedAt: string;
@@ -292,6 +310,43 @@ export const trackingEvents = pgTable("tracking_events", {
   flaggedAsBot: boolean("flagged_as_bot").default(false),
   deviceFingerprint: text("device_fingerprint"), // JSON string for device info
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Cold outreach tracking table for business campaigns
+export const outreachContacts = pgTable("outreach_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clipperId: varchar("clipper_id").notNull().references(() => users.id),
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
+  clipperCampaignId: varchar("clipper_campaign_id").notNull().references(() => clipperCampaigns.id),
+  
+  // Contact details
+  contactMethod: text("contact_method").notNull(), // email, linkedin, phone, instagram_dm, twitter_dm
+  contactTarget: text("contact_target").notNull(), // email address, linkedin profile, phone number, etc.
+  contactName: text("contact_name"), // Name of the person contacted
+  contactCompany: text("contact_company"), // Company they work for
+  contactJobTitle: text("contact_job_title"), // Their job title
+  
+  // Outreach content
+  messageSubject: text("message_subject"),
+  messageContent: text("message_content").notNull(),
+  
+  // Response tracking
+  hasResponse: boolean("has_response").notNull().default(false),
+  responseContent: text("response_content"), // Response received
+  responseAt: timestamp("response_at"),
+  leadQuality: text("lead_quality"), // hot, warm, cold, no_interest
+  
+  // Reward calculation
+  contactReward: decimal("contact_reward", { precision: 10, scale: 2 }), // Payment for making contact
+  responseReward: decimal("response_reward", { precision: 10, scale: 2 }), // Bonus for getting response
+  
+  // Compliance and verification
+  isVerified: boolean("is_verified").notNull().default(false),
+  verificationProof: text("verification_proof"), // Screenshot or proof of outreach
+  complianceNotes: text("compliance_notes"), // GDPR, CAN-SPAM compliance notes
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Clipper ratings and reviews table
@@ -481,6 +536,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   clipperReviewsAsClippper: many(clipperReviews, { relationName: "clipperReviews" }),
   clipperReviewsAsCreator: many(clipperReviews, { relationName: "creatorReviews" }),
   clipperStats: many(clipperStats),
+  outreachContacts: many(outreachContacts),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -491,6 +547,7 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   clipperCampaigns: many(clipperCampaigns),
   trackingEvents: many(trackingEvents),
   clipperReviews: many(clipperReviews),
+  outreachContacts: many(outreachContacts),
 }));
 
 export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, many }) => ({
@@ -504,6 +561,22 @@ export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, man
   }),
   trackingEvents: many(trackingEvents),
   clipperReviews: many(clipperReviews),
+  outreachContacts: many(outreachContacts),
+}));
+
+export const outreachContactsRelations = relations(outreachContacts, ({ one }) => ({
+  clipper: one(users, {
+    fields: [outreachContacts.clipperId],
+    references: [users.id],
+  }),
+  campaign: one(campaigns, {
+    fields: [outreachContacts.campaignId],
+    references: [campaigns.id],
+  }),
+  clipperCampaign: one(clipperCampaigns, {
+    fields: [outreachContacts.clipperCampaignId],
+    references: [clipperCampaigns.id],
+  }),
 }));
 
 // Clipper reviews relations
@@ -730,7 +803,16 @@ export type InsertPersonalizedBrokerLink = z.infer<typeof insertPersonalizedBrok
 export type ClipperReview = typeof clipperReviews.$inferSelect;
 export type InsertClipperReview = z.infer<typeof insertClipperReviewSchema>;
 export type ClipperStats = typeof clipperStats.$inferSelect;
+export type OutreachContact = typeof outreachContacts.$inferSelect;
 export type InsertClipperStats = z.infer<typeof insertClipperStatsSchema>;
+
+export const insertOutreachContactSchema = createInsertSchema(outreachContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOutreachContact = z.infer<typeof insertOutreachContactSchema>;
 
 // Insert schemas for new tables
 export const insertBrokerProgramSchema = createInsertSchema(brokerPrograms).omit({
