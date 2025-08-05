@@ -91,9 +91,15 @@ export default function ColdOutreachCampaign() {
   const form = useForm<OutreachCampaignForm>({
     resolver: zodResolver(outreachCampaignSchema),
     defaultValues: {
+      name: "",
+      description: "",
       campaignType: "cold_outreach",
       duration: 30,
       budget: 200,
+      outreachType: "email",
+      targetAudience: "",
+      messageTemplate: "",
+      responseRequirements: "",
       contactsGoal: 50,
       responsesGoal: 10,
       contactReward: 3,
@@ -561,6 +567,16 @@ export default function ColdOutreachCampaign() {
                 >
                   {createCampaignMutation.isPending ? "Creating Campaign..." : "Create Outreach Campaign"}
                 </Button>
+                
+                {/* Debug form errors in development */}
+                {process.env.NODE_ENV === 'development' && Object.keys(form.formState.errors).length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded p-3 text-sm">
+                    <strong>Form Errors:</strong>
+                    <pre className="mt-2 text-xs overflow-auto">
+                      {JSON.stringify(form.formState.errors, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </form>
             </Form>
           </div>
