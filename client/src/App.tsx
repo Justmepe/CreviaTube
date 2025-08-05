@@ -37,6 +37,8 @@ import EnterpriseAdmin from "@/pages/enterprise-admin";
 import EnterpriseAccounts from "@/pages/enterprise-accounts";
 import EnterprisePortal from "@/pages/enterprise-portal";
 import EnterpriseDashboard from "@/pages/enterprise-dashboard";
+import ClipperDirectoryPage from "@/pages/clipper-directory";
+import MyCampaignsPage from "@/pages/my-campaigns";
 
 function Router() {
   return (
@@ -73,6 +75,8 @@ function Router() {
       <ProtectedRoute path="/enterprise" component={EnterpriseAdmin} />
       <ProtectedRoute path="/enterprise-accounts" component={EnterpriseAccounts} />
       <ProtectedRoute path="/enterprise-portal" component={EnterprisePortal} />
+      <ProtectedRoute path="/clipper-directory" component={ClipperDirectoryPage} />
+      <ProtectedRoute path="/my-campaigns" component={MyCampaignsPage} />
       <ProtectedRoute path="/admin" component={RealRevenueAnalytics} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

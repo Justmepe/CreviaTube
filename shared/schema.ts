@@ -294,6 +294,100 @@ export const trackingEvents = pgTable("tracking_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Clipper ratings and reviews table
+export const clipperReviews = pgTable("clipper_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clipperId: varchar("clipper_id").notNull().references(() => users.id),
+  creatorId: varchar("creator_id").notNull().references(() => users.id),
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
+  clipperCampaignId: varchar("clipper_campaign_id").notNull().references(() => clipperCampaigns.id),
+  
+  // Rating scores (1-5 stars)
+  overallRating: decimal("overall_rating", { precision: 2, scale: 1 }).notNull(), // 1.0 to 5.0
+  qualityRating: decimal("quality_rating", { precision: 2, scale: 1 }).notNull(), // Content quality
+  communicationRating: decimal("communication_rating", { precision: 2, scale: 1 }).notNull(), // Communication
+  timeliness: decimal("timeliness", { precision: 2, scale: 1 }).notNull(), // Meeting deadlines
+  creativity: decimal("creativity", { precision: 2, scale: 1 }).notNull(), // Creative approach
+  professionalism: decimal("professionalism", { precision: 2, scale: 1 }).notNull(), // Professional behavior
+  
+  // Written review
+  reviewTitle: text("review_title").notNull(),
+  reviewText: text("review_text").notNull(),
+  
+  // Performance metrics at time of review
+  metricsAchieved: json("metrics_achieved").$type<{
+    views: number;
+    clicks: number;
+    signups: number;
+    deposits: number;
+    trades: number;
+    conversions: number;
+    goalCompleted: boolean;
+    completionPercentage: number;
+  }>(),
+  
+  // Creator recommendations
+  wouldHireAgain: boolean("would_hire_again").notNull(),
+  recommendToOthers: boolean("recommend_to_others").notNull(),
+  
+  // Review tags for filtering
+  tags: json("tags").$type<string[]>(), // ["reliable", "creative", "fast", "poor-communication", etc.]
+  
+  // Response from clipper
+  clipperResponse: text("clipper_response"),
+  clipperRespondedAt: timestamp("clipper_responded_at"),
+  
+  // Verification
+  isVerified: boolean("is_verified").notNull().default(true), // Reviews from completed campaigns are auto-verified
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Clipper profile stats (aggregated from reviews and performance)
+export const clipperStats = pgTable("clipper_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clipperId: varchar("clipper_id").notNull().references(() => users.id).unique(),
+  
+  // Overall ratings (averages)
+  averageRating: decimal("average_rating", { precision: 2, scale: 1 }).notNull().default("0.0"),
+  totalReviews: integer("total_reviews").notNull().default(0),
+  
+  // Individual rating breakdowns
+  qualityAverage: decimal("quality_average", { precision: 2, scale: 1 }).notNull().default("0.0"),
+  communicationAverage: decimal("communication_average", { precision: 2, scale: 1 }).notNull().default("0.0"),
+  timelinessAverage: decimal("timeliness_average", { precision: 2, scale: 1 }).notNull().default("0.0"),
+  creativityAverage: decimal("creativity_average", { precision: 2, scale: 1 }).notNull().default("0.0"),
+  professionalismAverage: decimal("professionalism_average", { precision: 2, scale: 1 }).notNull().default("0.0"),
+  
+  // Performance metrics
+  totalCampaignsCompleted: integer("total_campaigns_completed").notNull().default(0),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }).notNull().default("0.00"), // Percentage of goals achieved
+  averageCompletionTime: integer("average_completion_time").notNull().default(0), // Days
+  
+  // Engagement metrics
+  totalViewsGenerated: integer("total_views_generated").notNull().default(0),
+  totalClicksGenerated: integer("total_clicks_generated").notNull().default(0),
+  totalSignupsGenerated: integer("total_signups_generated").notNull().default(0),
+  totalDepositsGenerated: integer("total_deposits_generated").notNull().default(0),
+  totalTradesGenerated: integer("total_trades_generated").notNull().default(0),
+  totalConversionsGenerated: integer("total_conversions_generated").notNull().default(0),
+  
+  // Reputation metrics
+  positiveRecommendations: integer("positive_recommendations").notNull().default(0), // Would hire again count
+  responseRate: decimal("response_rate", { precision: 5, scale: 2 }).notNull().default("0.00"), // Response to messages %
+  
+  // Platform rankings
+  rankingScore: decimal("ranking_score", { precision: 8, scale: 2 }).notNull().default("0.00"), // Weighted ranking
+  tier: text("tier").notNull().default("bronze"), // bronze, silver, gold, platinum, diamond
+  
+  // Activity tracking
+  lastActiveAt: timestamp("last_active_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Payouts table
 export const payouts = pgTable("payouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -384,6 +478,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   tradingMetrics: many(tradingMetrics),
   websiteMetrics: many(websiteMetrics),
   personalizedBrokerLinks: many(personalizedBrokerLinks),
+  clipperReviewsAsClippper: many(clipperReviews, { relationName: "clipperReviews" }),
+  clipperReviewsAsCreator: many(clipperReviews, { relationName: "creatorReviews" }),
+  clipperStats: many(clipperStats),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -393,6 +490,7 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   }),
   clipperCampaigns: many(clipperCampaigns),
   trackingEvents: many(trackingEvents),
+  clipperReviews: many(clipperReviews),
 }));
 
 export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, many }) => ({
@@ -405,6 +503,37 @@ export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, man
     references: [campaigns.id],
   }),
   trackingEvents: many(trackingEvents),
+  clipperReviews: many(clipperReviews),
+}));
+
+// Clipper reviews relations
+export const clipperReviewsRelations = relations(clipperReviews, ({ one }) => ({
+  clipper: one(users, {
+    fields: [clipperReviews.clipperId],
+    references: [users.id],
+    relationName: "clipperReviews",
+  }),
+  creator: one(users, {
+    fields: [clipperReviews.creatorId],
+    references: [users.id],
+    relationName: "creatorReviews",
+  }),
+  campaign: one(campaigns, {
+    fields: [clipperReviews.campaignId],
+    references: [campaigns.id],
+  }),
+  clipperCampaign: one(clipperCampaigns, {
+    fields: [clipperReviews.clipperCampaignId],
+    references: [clipperCampaigns.id],
+  }),
+}));
+
+// Clipper stats relations  
+export const clipperStatsRelations = relations(clipperStats, ({ one }) => ({
+  clipper: one(users, {
+    fields: [clipperStats.clipperId],
+    references: [users.id],
+  }),
 }));
 
 export const trackingEventsRelations = relations(trackingEvents, ({ one }) => ({
@@ -494,6 +623,29 @@ export const insertPayoutSchema = createInsertSchema(payouts).omit({
   ]),
 });
 
+// Clipper review insert schema
+export const insertClipperReviewSchema = createInsertSchema(clipperReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  clipperRespondedAt: true,
+}).extend({
+  overallRating: z.number().min(1).max(5),
+  qualityRating: z.number().min(1).max(5),
+  communicationRating: z.number().min(1).max(5),
+  timeliness: z.number().min(1).max(5),
+  creativity: z.number().min(1).max(5),
+  professionalism: z.number().min(1).max(5),
+  reviewTitle: z.string().min(5, "Title must be at least 5 characters").max(100, "Title too long"),
+  reviewText: z.string().min(20, "Review must be at least 20 characters").max(1000, "Review too long"),
+});
+
+// Clipper stats insert schema
+export const insertClipperStatsSchema = createInsertSchema(clipperStats).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types
 // Budget escrow transactions table  
 export const budgetEscrow = pgTable("budget_escrow", {
@@ -573,6 +725,12 @@ export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
 export type AutoPayment = typeof autoPayments.$inferSelect;
 export type PersonalizedBrokerLink = typeof personalizedBrokerLinks.$inferSelect;
 export type InsertPersonalizedBrokerLink = z.infer<typeof insertPersonalizedBrokerLinkSchema>;
+
+// New review system types
+export type ClipperReview = typeof clipperReviews.$inferSelect;
+export type InsertClipperReview = z.infer<typeof insertClipperReviewSchema>;
+export type ClipperStats = typeof clipperStats.$inferSelect;
+export type InsertClipperStats = z.infer<typeof insertClipperStatsSchema>;
 
 // Insert schemas for new tables
 export const insertBrokerProgramSchema = createInsertSchema(brokerPrograms).omit({

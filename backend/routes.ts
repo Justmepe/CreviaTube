@@ -52,6 +52,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup payments routes for testing PesaPal integration
   app.use("/api/payments", paymentsRoutes);
+  
+  // Setup review system routes
+  const reviewRoutes = await import("./modules/reviews/routes");
+  app.use("/api", reviewRoutes.default);
 
   // Campaign routes
   
