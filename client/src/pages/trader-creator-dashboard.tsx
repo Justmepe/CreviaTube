@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, UserCheck, DollarSign, Activity, Star, Folder } from "lucide-react";
+import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, UserCheck, DollarSign, Activity, Star, Folder, MessageSquare, Quote } from "lucide-react";
 
 export default function TraderCreatorDashboard() {
   const { user } = useAuth();
@@ -52,6 +52,11 @@ export default function TraderCreatorDashboard() {
   // Get REAL trading activities and clippers from system-calculated data
   const recentTraderActivities = (traderMetrics as any)?.recentActivities || [];
   const topTradingClippers = (traderMetrics as any)?.topClippers || [];
+
+  // Fetch featured platform reviews for homepage
+  const { data: featuredReviews = [] } = useQuery({
+    queryKey: ["/api/platform-reviews", { status: "published", limit: 3 }],
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative">
@@ -157,6 +162,63 @@ export default function TraderCreatorDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Featured Customer Reviews Section */}
+          {featuredReviews.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-lg rounded-3xl border border-white/20 shadow-xl p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                  What Our Users Say
+                </h2>
+                <p className="text-slate-600">Real feedback from creators and clippers using CreoCash</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {featuredReviews.slice(0, 3).map((review: any) => (
+                  <div key={review.id} className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-6 border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star 
+                            key={i} 
+                            className={`w-4 h-4 ${
+                              i < Math.floor(parseFloat(review.overallRating)) 
+                                ? "fill-yellow-400 text-yellow-400" 
+                                : "fill-gray-200 text-gray-200"
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                      <Quote className="w-5 h-5 text-blue-400" />
+                    </div>
+                    
+                    <h3 className="font-semibold text-gray-900 mb-2">{review.reviewTitle}</h3>
+                    <p className="text-gray-700 text-sm mb-3 line-clamp-3">
+                      {review.reviewText}
+                    </p>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{review.user?.fullName || "Anonymous"}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {review.user?.role === "creator" ? "Creator" : "Clipper"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-center mt-8">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.href = "/reviews"}
+                  className="bg-white/80 hover:bg-white transition-all duration-300"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  View All Reviews
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </div>
