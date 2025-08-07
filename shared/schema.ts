@@ -502,6 +502,82 @@ export const tradingMetrics = pgTable("trading_metrics", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Platform Reviews table - Users rating CreoCash platform itself
+export const platformReviews = pgTable("platform_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Overall platform rating
+  overallRating: decimal("overall_rating", { precision: 2, scale: 1 }).notNull(), // 1.0 to 5.0
+  
+  // Category-specific ratings
+  easeOfUse: decimal("ease_of_use", { precision: 2, scale: 1 }).notNull(),
+  paymentReliability: decimal("payment_reliability", { precision: 2, scale: 1 }).notNull(),
+  campaignQuality: decimal("campaign_quality", { precision: 2, scale: 1 }).notNull(), // For clippers
+  clipperQuality: decimal("clipper_quality", { precision: 2, scale: 1 }), // For creators
+  customerSupport: decimal("customer_support", { precision: 2, scale: 1 }).notNull(),
+  platformFeatures: decimal("platform_features", { precision: 2, scale: 1 }).notNull(),
+  
+  // Written review
+  reviewTitle: text("review_title").notNull(),
+  reviewText: text("review_text").notNull(),
+  
+  // Review context - what triggered this review
+  reviewTrigger: text("review_trigger").notNull(), // first_payout, milestone_reached, campaign_completed, voluntary, exit_survey
+  userExperience: json("user_experience").$type<{
+    daysSinceJoined: number;
+    campaignsCompleted: number;
+    totalEarnings: number;
+    payoutsReceived: number;
+    userRole: 'creator' | 'clipper';
+    userType?: string;
+  }>(),
+  
+  // Improvement suggestions
+  improvementSuggestions: text("improvement_suggestions"),
+  featuresRequested: json("features_requested").$type<string[]>(),
+  
+  // NPS Score
+  npsScore: integer("nps_score").notNull(), // 0-10 (Net Promoter Score)
+  wouldRecommend: boolean("would_recommend").notNull(),
+  
+  // Review status and moderation
+  status: text("status").notNull().default("published"), // published, pending, hidden
+  isVerified: boolean("is_verified").notNull().default(true), // Auto-verified for active users
+  moderationNotes: text("moderation_notes"),
+  
+  // Response from CreoCash team
+  adminResponse: text("admin_response"),
+  adminRespondedAt: timestamp("admin_responded_at"),
+  adminResponseBy: varchar("admin_response_by").references(() => users.id),
+  
+  // Helpful votes from other users
+  helpfulVotes: integer("helpful_votes").notNull().default(0),
+  totalVotes: integer("total_votes").notNull().default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Review prompts tracking - when users were prompted to review
+export const reviewPrompts = pgTable("review_prompts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  triggerType: text("trigger_type").notNull(), // first_payout, earnings_milestone, campaign_milestone, time_milestone
+  triggerValue: text("trigger_value").notNull(), // The milestone value (e.g., "$100", "30_days", "5_campaigns")
+  promptedAt: timestamp("prompted_at").defaultNow().notNull(),
+  
+  // User response to prompt
+  userResponse: text("user_response"), // reviewed, dismissed, later
+  reviewId: varchar("review_id").references(() => platformReviews.id), // If they left a review
+  dismissedAt: timestamp("dismissed_at"),
+  
+  // Follow-up tracking
+  followUpSent: boolean("follow_up_sent").notNull().default(false),
+  followUpAt: timestamp("follow_up_at"),
+});
+
 // Website Analytics table
 export const websiteMetrics = pgTable("website_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -840,3 +916,36 @@ export type PayoutRecord = typeof payoutRecords.$inferSelect;
 export type InsertPayoutRecord = z.infer<typeof insertPayoutRecordSchema>;
 export type SystemHealthMetric = typeof systemHealthMetrics.$inferSelect;
 export type InsertSystemHealthMetric = z.infer<typeof insertSystemHealthMetricSchema>;
+
+// Platform Reviews schemas
+export const insertPlatformReviewSchema = createInsertSchema(platformReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  helpfulVotes: true,
+  totalVotes: true,
+  status: true,
+  isVerified: true,
+}).extend({
+  overallRating: z.number().min(1).max(5),
+  easeOfUse: z.number().min(1).max(5),
+  paymentReliability: z.number().min(1).max(5),
+  campaignQuality: z.number().min(1).max(5),
+  clipperQuality: z.number().min(1).max(5).optional(),
+  customerSupport: z.number().min(1).max(5),
+  platformFeatures: z.number().min(1).max(5),
+  npsScore: z.number().min(0).max(10),
+  reviewTitle: z.string().min(5).max(100),
+  reviewText: z.string().min(20).max(2000),
+});
+
+export type InsertPlatformReview = z.infer<typeof insertPlatformReviewSchema>;
+export type SelectPlatformReview = typeof platformReviews.$inferSelect;
+
+export const insertReviewPromptSchema = createInsertSchema(reviewPrompts).omit({
+  id: true,
+  promptedAt: true,
+});
+
+export type InsertReviewPrompt = z.infer<typeof insertReviewPromptSchema>;
+export type SelectReviewPrompt = typeof reviewPrompts.$inferSelect;

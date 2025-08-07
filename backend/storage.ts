@@ -1,5 +1,6 @@
 import { 
   users, campaigns, clipperCampaigns, trackingEvents, payouts, socialMetrics, tradingMetrics, websiteMetrics,
+  platformReviews, reviewPrompts,
   type User, type InsertUser, type Campaign, type InsertCampaign,
   type ClipperCampaign, type InsertClipperCampaign,
   type TrackingEvent, type InsertTrackingEvent,
@@ -82,6 +83,28 @@ export interface IStorage {
   // Cold outreach campaign access
   getAvailableColdOutreachCampaigns(): Promise<Campaign[]>;
   deleteUser(userId: string): Promise<boolean>;
+  
+  // Platform review system
+  createPlatformReview(review: any): Promise<any>;
+  getPlatformReviews(filters?: { userId?: string; status?: string; limit?: number }): Promise<any[]>;
+  getPlatformReviewStats(): Promise<{ averageRating: number; totalReviews: number; ratingBreakdown: Record<number, number> }>;
+  
+  // Review prompts tracking
+  createReviewPrompt(prompt: any): Promise<any>;
+  getReviewPrompts(userId: string): Promise<any[]>;
+  shouldPromptForReview(userId: string): Promise<{ shouldPrompt: boolean; triggerType?: string; triggerValue?: string }>;
+  markReviewPromptResponded(promptId: string, response: string, reviewId?: string): Promise<void>;
+  
+  // User milestones for review triggers
+  getUserReviewMilestones(userId: string): Promise<{
+    daysSinceJoined: number;
+    totalEarnings: number;
+    payoutsReceived: number;
+    campaignsCompleted: number;
+    userRole: string;
+    userType: string;
+    lastPromptedAt?: Date;
+  }>;
   
   // Trading account operations
   addTradingAccount(userId: string, account: {
@@ -778,6 +801,231 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(campaigns.createdAt));
 
     return results;
+  }
+  
+  // Platform Reviews Implementation
+  async createPlatformReview(review: any): Promise<any> {
+    const [newReview] = await db
+      .insert(platformReviews)
+      .values([review])
+      .returning();
+    return newReview;
+  }
+  
+  async getPlatformReviews(filters: { userId?: string; status?: string; limit?: number } = {}): Promise<any[]> {
+    let query = db
+      .select({
+        id: platformReviews.id,
+        userId: platformReviews.userId,
+        overallRating: platformReviews.overallRating,
+        easeOfUse: platformReviews.easeOfUse,
+        paymentReliability: platformReviews.paymentReliability,
+        campaignQuality: platformReviews.campaignQuality,
+        clipperQuality: platformReviews.clipperQuality,
+        customerSupport: platformReviews.customerSupport,
+        platformFeatures: platformReviews.platformFeatures,
+        reviewTitle: platformReviews.reviewTitle,
+        reviewText: platformReviews.reviewText,
+        reviewTrigger: platformReviews.reviewTrigger,
+        userExperience: platformReviews.userExperience,
+        improvementSuggestions: platformReviews.improvementSuggestions,
+        featuresRequested: platformReviews.featuresRequested,
+        npsScore: platformReviews.npsScore,
+        wouldRecommend: platformReviews.wouldRecommend,
+        status: platformReviews.status,
+        isVerified: platformReviews.isVerified,
+        adminResponse: platformReviews.adminResponse,
+        adminRespondedAt: platformReviews.adminRespondedAt,
+        helpfulVotes: platformReviews.helpfulVotes,
+        totalVotes: platformReviews.totalVotes,
+        createdAt: platformReviews.createdAt,
+        updatedAt: platformReviews.updatedAt,
+        // User info
+        user: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          role: users.role,
+          userType: users.userType,
+        }
+      })
+      .from(platformReviews)
+      .leftJoin(users, eq(platformReviews.userId, users.id))
+      .orderBy(desc(platformReviews.createdAt));
+
+    if (filters.userId) {
+      query = query.where(eq(platformReviews.userId, filters.userId));
+    }
+
+    if (filters.status) {
+      query = query.where(eq(platformReviews.status, filters.status));
+    }
+
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    return await query;
+  }
+  
+  async getPlatformReviewStats(): Promise<{ averageRating: number; totalReviews: number; ratingBreakdown: Record<number, number> }> {
+    const publishedReviews = await db
+      .select({
+        overallRating: platformReviews.overallRating
+      })
+      .from(platformReviews)
+      .where(eq(platformReviews.status, 'published'));
+      
+    const totalReviews = publishedReviews.length;
+    
+    if (totalReviews === 0) {
+      return { averageRating: 0, totalReviews: 0, ratingBreakdown: {} };
+    }
+    
+    const averageRating = publishedReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0) / totalReviews;
+    
+    const ratingBreakdown: Record<number, number> = {};
+    for (let i = 1; i <= 5; i++) {
+      ratingBreakdown[i] = publishedReviews.filter(r => Math.floor(parseFloat(r.overallRating)) === i).length;
+    }
+    
+    return { averageRating: Math.round(averageRating * 10) / 10, totalReviews, ratingBreakdown };
+  }
+  
+  // Review Prompts Implementation
+  async createReviewPrompt(prompt: any): Promise<any> {
+    const [newPrompt] = await db
+      .insert(reviewPrompts)
+      .values([prompt])
+      .returning();
+    return newPrompt;
+  }
+  
+  async getReviewPrompts(userId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(reviewPrompts)
+      .where(eq(reviewPrompts.userId, userId))
+      .orderBy(desc(reviewPrompts.promptedAt));
+  }
+  
+  async shouldPromptForReview(userId: string): Promise<{ shouldPrompt: boolean; triggerType?: string; triggerValue?: string }> {
+    const user = await this.getUser(userId);
+    if (!user) return { shouldPrompt: false };
+    
+    // Check if user has already left a review
+    const existingReview = await db
+      .select({ id: platformReviews.id })
+      .from(platformReviews)
+      .where(eq(platformReviews.userId, userId))
+      .limit(1);
+      
+    if (existingReview.length > 0) return { shouldPrompt: false };
+    
+    // Get user milestones
+    const milestones = await this.getUserReviewMilestones(userId);
+    
+    // Get recent prompts
+    const recentPrompts = await this.getReviewPrompts(userId);
+    
+    // Don't prompt more than once per 30 days
+    const lastPrompt = recentPrompts[0];
+    if (lastPrompt) {
+      const daysSinceLastPrompt = Math.floor((Date.now() - new Date(lastPrompt.promptedAt).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceLastPrompt < 30) return { shouldPrompt: false };
+    }
+    
+    // Check milestone-based triggers
+    const triggers = {
+      first_payout: milestones.payoutsReceived === 1 && !recentPrompts.some(p => p.triggerType === 'first_payout'),
+      earnings_50: milestones.totalEarnings >= 50 && milestones.totalEarnings < 100 && !recentPrompts.some(p => p.triggerType === 'earnings_milestone' && p.triggerValue === '$50'),
+      earnings_100: milestones.totalEarnings >= 100 && milestones.totalEarnings < 250 && !recentPrompts.some(p => p.triggerType === 'earnings_milestone' && p.triggerValue === '$100'),
+      earnings_250: milestones.totalEarnings >= 250 && milestones.totalEarnings < 500 && !recentPrompts.some(p => p.triggerType === 'earnings_milestone' && p.triggerValue === '$250'),
+      campaigns_3: milestones.campaignsCompleted >= 3 && milestones.campaignsCompleted < 5 && !recentPrompts.some(p => p.triggerType === 'campaign_milestone' && p.triggerValue === '3_campaigns'),
+      campaigns_5: milestones.campaignsCompleted >= 5 && milestones.campaignsCompleted < 10 && !recentPrompts.some(p => p.triggerType === 'campaign_milestone' && p.triggerValue === '5_campaigns'),
+      days_30: milestones.daysSinceJoined >= 30 && milestones.daysSinceJoined < 60 && !recentPrompts.some(p => p.triggerType === 'time_milestone' && p.triggerValue === '30_days'),
+      days_60: milestones.daysSinceJoined >= 60 && milestones.daysSinceJoined < 180 && !recentPrompts.some(p => p.triggerType === 'time_milestone' && p.triggerValue === '60_days'),
+    };
+    
+    // Return first matching trigger
+    for (const [triggerKey, shouldTrigger] of Object.entries(triggers)) {
+      if (shouldTrigger) {
+        const triggerMapping: Record<string, { type: string; value: string }> = {
+          first_payout: { type: 'first_payout', value: 'first_payout' },
+          earnings_50: { type: 'earnings_milestone', value: '$50' },
+          earnings_100: { type: 'earnings_milestone', value: '$100' },
+          earnings_250: { type: 'earnings_milestone', value: '$250' },
+          campaigns_3: { type: 'campaign_milestone', value: '3_campaigns' },
+          campaigns_5: { type: 'campaign_milestone', value: '5_campaigns' },
+          days_30: { type: 'time_milestone', value: '30_days' },
+          days_60: { type: 'time_milestone', value: '60_days' },
+        };
+        
+        const trigger = triggerMapping[triggerKey];
+        return { shouldPrompt: true, triggerType: trigger.type, triggerValue: trigger.value };
+      }
+    }
+    
+    return { shouldPrompt: false };
+  }
+  
+  async markReviewPromptResponded(promptId: string, response: string, reviewId?: string): Promise<void> {
+    await db
+      .update(reviewPrompts)
+      .set({
+        userResponse: response,
+        reviewId: reviewId || null,
+        dismissedAt: response === 'dismissed' ? new Date() : null,
+      })
+      .where(eq(reviewPrompts.id, promptId));
+  }
+  
+  async getUserReviewMilestones(userId: string): Promise<{
+    daysSinceJoined: number;
+    totalEarnings: number;
+    payoutsReceived: number;
+    campaignsCompleted: number;
+    userRole: string;
+    userType: string;
+    lastPromptedAt?: Date;
+  }> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error('User not found');
+    
+    // Get user's clipper campaigns
+    const userCampaigns = await db
+      .select()
+      .from(clipperCampaigns)
+      .where(eq(clipperCampaigns.clipperId, userId));
+      
+    const completedCampaigns = userCampaigns.filter(cc => cc.isCompleted);
+    
+    // Get user's payouts
+    const userPayouts = await db
+      .select()
+      .from(payouts)
+      .where(and(
+        eq(payouts.clipperId, userId),
+        eq(payouts.status, 'completed')
+      ));
+      
+    const totalEarnings = userPayouts.reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
+    
+    const daysSinceJoined = Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Get last prompt
+    const lastPrompts = await this.getReviewPrompts(userId);
+    const lastPrompt = lastPrompts[0];
+    
+    return {
+      daysSinceJoined,
+      totalEarnings,
+      payoutsReceived: userPayouts.length,
+      campaignsCompleted: completedCampaigns.length,
+      userRole: user.role,
+      userType: user.userType || 'unknown',
+      lastPromptedAt: lastPrompt ? new Date(lastPrompt.promptedAt) : undefined,
+    };
   }
 }
 

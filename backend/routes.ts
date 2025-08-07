@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./services/escrow-service";
 import { trackingService } from "./services/tracking-service";
 import { campaignCompletionService } from "./services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts, insertPlatformReviewSchema } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { db } from "./db";
@@ -2496,6 +2496,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(requests);
     } catch (error: any) {
       console.error('Error fetching enterprise contact requests:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Platform Reviews API Routes
+  
+  // Submit a platform review
+  app.post("/api/platform-reviews", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const userId = req.user.id;
+      
+      // Check if user has already submitted a review
+      const existingReviews = await storage.getPlatformReviews({ userId });
+      if (existingReviews.length > 0) {
+        return res.status(400).json({ error: "You have already submitted a review" });
+      }
+      
+      // Validate review data
+      const validatedReview = insertPlatformReviewSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      // Get user experience context for the review
+      const userMilestones = await storage.getUserReviewMilestones(userId);
+      
+      const reviewData = {
+        ...validatedReview,
+        userExperience: {
+          daysSinceJoined: userMilestones.daysSinceJoined,
+          campaignsCompleted: userMilestones.campaignsCompleted,
+          totalEarnings: userMilestones.totalEarnings,
+          payoutsReceived: userMilestones.payoutsReceived,
+          userRole: userMilestones.userRole,
+          userType: userMilestones.userType,
+        },
+        status: 'published',
+        isVerified: true,
+      };
+      
+      const newReview = await storage.createPlatformReview(reviewData);
+      
+      res.status(201).json({ success: true, review: newReview });
+    } catch (error: any) {
+      console.error('Error creating platform review:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Invalid review data', details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get platform reviews (public endpoint with filtering)
+  app.get("/api/platform-reviews", async (req, res) => {
+    try {
+      const { status = 'published', limit = 20, userId } = req.query;
+      
+      const filters: any = { 
+        status: status as string, 
+        limit: parseInt(limit as string) 
+      };
+      
+      if (userId && typeof userId === 'string') {
+        filters.userId = userId;
+      }
+      
+      const reviews = await storage.getPlatformReviews(filters);
+      res.json(reviews);
+    } catch (error: any) {
+      console.error('Error fetching platform reviews:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get platform review statistics
+  app.get("/api/platform-reviews/stats", async (req, res) => {
+    try {
+      const stats = await storage.getPlatformReviewStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error('Error fetching review stats:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Check if user should be prompted for review
+  app.get("/api/review-prompts/check", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const userId = req.user.id;
+      const shouldPrompt = await storage.shouldPromptForReview(userId);
+      res.json(shouldPrompt);
+    } catch (error: any) {
+      console.error('Error checking review prompt:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create a review prompt (when showing review modal to user)
+  app.post("/api/review-prompts", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const userId = req.user.id;
+      const { triggerType, triggerValue } = req.body;
+      
+      if (!triggerType || !triggerValue) {
+        return res.status(400).json({ error: 'triggerType and triggerValue are required' });
+      }
+      
+      const promptData = {
+        userId,
+        triggerType,
+        triggerValue,
+      };
+      
+      const newPrompt = await storage.createReviewPrompt(promptData);
+      res.status(201).json({ success: true, prompt: newPrompt });
+    } catch (error: any) {
+      console.error('Error creating review prompt:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Mark review prompt as responded
+  app.patch("/api/review-prompts/:promptId/respond", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { promptId } = req.params;
+      const { response, reviewId } = req.body;
+      
+      if (!response || !['reviewed', 'dismissed', 'later'].includes(response)) {
+        return res.status(400).json({ error: 'Invalid response. Must be: reviewed, dismissed, or later' });
+      }
+      
+      await storage.markReviewPromptResponded(promptId, response, reviewId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error updating review prompt:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get user's review prompts history
+  app.get("/api/review-prompts/history", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const userId = req.user.id;
+      const prompts = await storage.getReviewPrompts(userId);
+      res.json(prompts);
+    } catch (error: any) {
+      console.error('Error fetching review prompts:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get user's review milestones (for admin/debugging)
+  app.get("/api/user/review-milestones", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const userId = req.user.id;
+      const milestones = await storage.getUserReviewMilestones(userId);
+      res.json(milestones);
+    } catch (error: any) {
+      console.error('Error fetching user milestones:', error);
       res.status(500).json({ error: error.message });
     }
   });
