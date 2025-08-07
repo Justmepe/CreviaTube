@@ -20,7 +20,9 @@ import {
   Star,
   ArrowRight,
   Play,
-  Sparkles
+  Sparkles,
+  Quote,
+  MessageSquare
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -57,6 +59,11 @@ export default function AuthPage() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/platform/stats"],
+  });
+
+  // Fetch featured platform reviews for landing page
+  const { data: featuredReviews = [] } = useQuery({
+    queryKey: ["/api/platform-reviews", { status: "published", limit: 3 }],
   });
 
   // Redirect if user is already logged in (after all hooks)
@@ -264,6 +271,62 @@ export default function AuthPage() {
                 </div>
               ))}
             </div>
+
+            {/* Customer Reviews Section */}
+            {featuredReviews.length > 0 && (
+              <div className="mt-12">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                    What Our Users Say
+                  </h2>
+                  <p className="text-slate-600">Real feedback from creators and clippers worldwide</p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {featuredReviews.slice(0, 2).map((review: any) => (
+                    <div key={review.id} className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/70 transition-all duration-300">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star 
+                              key={i} 
+                              className={`w-4 h-4 ${
+                                i < Math.floor(parseFloat(review.overallRating)) 
+                                  ? "fill-yellow-400 text-yellow-400" 
+                                  : "fill-gray-200 text-gray-200"
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                        <Quote className="w-4 h-4 text-blue-400" />
+                      </div>
+                      
+                      <h3 className="font-semibold text-gray-900 text-sm mb-2">{review.reviewTitle}</h3>
+                      <p className="text-gray-700 text-xs mb-3 line-clamp-2">
+                        {review.reviewText}
+                      </p>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{review.user?.fullName || "Anonymous"}</span>
+                        <span className="text-blue-600 font-medium">
+                          {review.user?.role === "creator" ? "Creator" : "Clipper"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="text-center mt-6">
+                  <button 
+                    onClick={() => window.open("/reviews", "_blank")}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center transition-colors"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-1" />
+                    View All Reviews
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
