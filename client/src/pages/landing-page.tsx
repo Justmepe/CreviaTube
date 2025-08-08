@@ -35,8 +35,17 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-  const { user } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Safely access auth context with error handling
+  let user = null;
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+  } catch (error) {
+    // Handle case where AuthProvider is not available
+    console.warn('Auth context not available, rendering landing page without authentication');
+  }
   const [newReviewIds, setNewReviewIds] = useState<Set<string>>(new Set());
   const [reviewsUpdateTime, setReviewsUpdateTime] = useState<Date>(new Date());
 
