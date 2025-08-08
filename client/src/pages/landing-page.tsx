@@ -244,7 +244,7 @@ export default function LandingPage() {
           <div>
             {/* Platform Description */}
             <div className="mb-8">
-              <p className="text-base text-slate-600 font-medium">Global Creator Economy Platform</p>
+              <p className="text-lg text-slate-600 font-medium">Global Creator Economy Platform</p>
             </div>
 
             {/* Hero Content */}
