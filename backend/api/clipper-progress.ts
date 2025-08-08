@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { campaignCompletionService } from "../services/campaign-completion";
+import { campaignCompletionService } from "../core/services/campaign-completion";
 
 export function setupClipperProgressRoutes(app: Express) {
   // Get clipper's progress for a specific campaign

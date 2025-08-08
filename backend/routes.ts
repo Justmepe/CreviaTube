@@ -2,16 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { escrowService } from "./services/escrow-service";
-import { trackingService } from "./services/tracking-service";
-import { campaignCompletionService } from "./services/campaign-completion";
+import { escrowService } from "./core/services/escrow-service";
+import { trackingService } from "./core/services/tracking-service";
+import { campaignCompletionService } from "./core/services/campaign-completion";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts, insertPlatformReviewSchema } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte, count, desc } from "drizzle-orm";
 import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
-import { aiContentDetection } from "./services/ai-content-detection";
+import { aiContentDetection } from "./core/services/ai-content-detection";
 import { setupClipperProgressRoutes } from "./api/clipper-progress";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
 // PesaPal configuration for African payments
@@ -809,7 +809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { escrowService } = await import("./services/escrow-service");
+      const { escrowService } = await import("./core/services/escrow-service");
       const result = await escrowService.processPayout(req.params.id);
       res.json(result);
     } catch (error: any) {
@@ -878,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      const { metricsSyncService } = await import("./services/metrics-sync");
+      const { metricsSyncService } = await import("./core/services/metrics-sync");
       const metrics = await metricsSyncService.getUserMetrics(req.user.id);
       res.json(metrics);
     } catch (error) {
@@ -890,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      const { metricsSyncService } = await import("./services/metrics-sync");
+      const { metricsSyncService } = await import("./core/services/metrics-sync");
       const result = await metricsSyncService.syncUserMetrics(req.user.id);
       res.json(result);
     } catch (error) {
@@ -905,7 +905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { metricsSyncService } = await import("./services/metrics-sync");
+      const { metricsSyncService } = await import("./core/services/metrics-sync");
       const result = await metricsSyncService.syncAllUsersMetrics();
       res.json(result);
     } catch (error) {
@@ -2324,7 +2324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize automatic metrics synchronization
   setTimeout(async () => {
     try {
-      const { autoSyncService } = await import("./services/auto-sync");
+      const { autoSyncService } = await import("./core/services/auto-sync");
       await autoSyncService.initialize();
     } catch (error) {
       console.error("Failed to initialize auto-sync service:", error);

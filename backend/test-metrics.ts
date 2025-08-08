@@ -1,5 +1,5 @@
 // Test Metrics API Integration
-import { metricsSyncService } from "./services/metrics-sync";
+import { metricsSyncService } from "./core/services/metrics-sync";
 import { storage } from "./storage";
 
 async function testMetricsIntegration() {
@@ -111,9 +111,9 @@ async function testMetricsIntegration() {
 
     // Test 6: Test API service availability
     console.log("6️⃣ Testing API service imports...");
-    const { SocialMediaAggregator } = await import("./services/social-media-apis");
-    const { TradingMetricsAggregator } = await import("./services/trading-apis");
-    const { WebAnalyticsAggregator } = await import("./services/analytics-apis");
+    const { SocialMediaAggregator } = await import("./core/services/social-media-apis");
+    const { TradingMetricsAggregator } = await import("./core/services/trading-apis");
+    const { WebAnalyticsAggregator } = await import("./core/services/analytics-apis");
 
     const socialAgg = new SocialMediaAggregator();
     const tradingAgg = new TradingMetricsAggregator();

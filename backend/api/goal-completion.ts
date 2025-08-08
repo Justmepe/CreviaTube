@@ -1,5 +1,5 @@
 import { Express } from "express";
-import { GoalCompletionService } from "../services/goal-completion.service";
+import { GoalCompletionService } from "../core/services/goal-completion.service";
 
 export function setupGoalCompletionAPI(app: Express) {
   const goalCompletionService = new GoalCompletionService();

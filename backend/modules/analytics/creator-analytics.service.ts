@@ -1,9 +1,9 @@
 import { db } from "../../db";
 import { trackingEvents, clipperCampaigns, campaigns, users, socialMetrics, tradingMetrics } from "../../../shared/schema";
 import { eq, and, gte, count, sum, desc } from "drizzle-orm";
-import { SocialMediaAggregator } from "../../services/social-media-apis";
-import { TradingMetricsAggregator } from "../../services/trading-apis";
-import { WebAnalyticsAggregator } from "../../services/analytics-apis";
+import { SocialMediaAggregator } from "../../core/services/social-media-apis";
+import { TradingMetricsAggregator } from "../../core/services/trading-apis";
+import { WebAnalyticsAggregator } from "../../core/services/analytics-apis";
 
 export class CreatorAnalyticsService {
   private socialMediaAggregator = new SocialMediaAggregator();

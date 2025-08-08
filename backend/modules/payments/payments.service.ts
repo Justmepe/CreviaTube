@@ -1,4 +1,4 @@
-import { EscrowService } from "../../services/escrow-service";
+import { EscrowService } from "../../core/services/escrow-service";
 
 export class PaymentsService {
   private escrowService: EscrowService;

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { antiBotService } from "../services/anti-bot-service";
+import { antiBotService } from "../core/services/anti-bot-service";
 
 interface DeviceFingerprint {
   userAgent: string;

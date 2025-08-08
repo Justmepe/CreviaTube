@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { users, campaigns } from "../shared/schema.js";
-import { EscrowService } from "./services/escrow-service";
+import { EscrowService } from "./core/services/escrow-service";
 
 async function testPaymentSystem() {
   console.log("🧪 Testing CreoCash Payment & Escrow System");
