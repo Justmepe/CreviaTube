@@ -105,7 +105,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       {/* Top Navigation */}
-      <div className="relative z-20 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-sm">
+      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
