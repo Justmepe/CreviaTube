@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values([userData])
       .returning();
     return user;
   }
@@ -816,7 +816,7 @@ export class DatabaseStorage implements IStorage {
   
   async getPlatformReviews(filters: { userId?: string; status?: string; limit?: number } = {}): Promise<any[]> {
     // Build where conditions
-    const whereConditions = [];
+    const whereConditions: any[] = [];
     if (filters.userId) {
       whereConditions.push(eq(platformReviews.userId, filters.userId));
     }
@@ -824,7 +824,8 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(eq(platformReviews.status, filters.status));
     }
 
-    let query = db
+    // Build the base query
+    let baseQuery = db
       .select({
         id: platformReviews.id,
         userId: platformReviews.userId,
@@ -865,17 +866,18 @@ export class DatabaseStorage implements IStorage {
 
     // Apply where conditions if any
     if (whereConditions.length > 0) {
-      query = query.where(and(...whereConditions));
+      baseQuery = baseQuery.where(and(...whereConditions));
     }
 
-    query = query.orderBy(desc(platformReviews.createdAt));
+    // Apply ordering
+    baseQuery = baseQuery.orderBy(desc(platformReviews.createdAt));
 
     // Apply limit if specified
     if (filters.limit) {
-      query = query.limit(filters.limit);
+      baseQuery = baseQuery.limit(filters.limit);
     }
 
-    return await query;
+    return await baseQuery;
   }
   
   async getPlatformReviewStats(): Promise<{ averageRating: number; totalReviews: number; ratingBreakdown: Record<number, number> }> {
