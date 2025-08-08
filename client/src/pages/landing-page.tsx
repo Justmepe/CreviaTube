@@ -229,8 +229,8 @@ export default function LandingPage() {
       {/* Main Content - Starts from top so navigation floats over it */}
       <div className="relative z-10 min-h-screen flex pt-20">
         {/* Full Width Hero Section */}
-        <div className="flex-1 flex flex-col justify-center px-12 py-16 max-w-6xl mx-auto">
-          <div className="max-w-4xl">
+        <div className="flex-1 flex flex-col justify-center max-w-6xl mx-auto px-12 py-16">
+          <div>
             {/* Platform Description */}
             <div className="mb-8">
               <p className="text-lg text-slate-600 font-medium">Global Creator Economy Platform</p>
