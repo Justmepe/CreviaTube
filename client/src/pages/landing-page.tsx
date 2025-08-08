@@ -78,10 +78,10 @@ export default function LandingPage() {
         setLocation('/auth');
         break;
       case 'creators':
-        scrollToSection('features');
+        setLocation('/auth');
         break;
       case 'clippers':
-        setLocation('/clipper-directory');
+        setLocation('/auth');
         break;
       case 'enterprise':
         setLocation('/auth');
