@@ -4,7 +4,10 @@ import ws from "ws";
 import * as schema from "../../../shared/schema";
 import type { Express } from "express";
 
-neonConfig.webSocketConstructor = ws;
+// Only setup WebSocket for Neon databases (not local PostgreSQL)
+if (process.env.DATABASE_URL?.includes('neon.tech') || process.env.DATABASE_URL?.includes('neondb.org')) {
+  neonConfig.webSocketConstructor = ws;
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
