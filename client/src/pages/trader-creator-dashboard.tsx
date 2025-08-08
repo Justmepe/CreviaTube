@@ -54,7 +54,7 @@ export default function TraderCreatorDashboard() {
   const topTradingClippers = (traderMetrics as any)?.topClippers || [];
 
   // Fetch featured platform reviews for homepage
-  const { data: featuredReviews = [] } = useQuery({
+  const { data: featuredReviews = [] } = useQuery<any[]>({
     queryKey: ["/api/platform-reviews", { status: "published", limit: 3 }],
   });
 
@@ -65,7 +65,7 @@ export default function TraderCreatorDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-green-400/10 to-blue-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout navigation={navigation} user={user}>
+      <DashboardLayout navigation={navigation}>
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">
@@ -85,7 +85,10 @@ export default function TraderCreatorDashboard() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                 <span className="text-slate-700 font-medium">Trading Active</span>
               </div>
-              <Button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg">
+              <Button 
+                onClick={() => window.location.href = '/campaign-creation'}
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 New Trading Campaign
               </Button>
