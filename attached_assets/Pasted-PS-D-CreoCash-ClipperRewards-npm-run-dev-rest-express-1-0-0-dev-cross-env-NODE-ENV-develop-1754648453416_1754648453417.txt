@@ -1,0 +1,34 @@
+PS D:\CreoCash\ClipperRewards> npm run dev
+
+> rest-express@1.0.0 dev
+> cross-env NODE_ENV=development tsx backend/index.ts
+
+Re-optimizing dependencies because lockfile has changed
+1:18:06 PM [express] serving on 0.0.0.0:5000
+1:18:06 PM [express] environment: development
+1:18:06 PM [express] database: connected
+🔄 Initializing CreoCash Auto-Sync Service...
+Environment: Development
+Platform: External Hosting
+🔧 Development mode: Auto-sync disabled. Use manual sync endpoints.
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+1:19:01 PM [express] GET /api/user 401 in 5ms
+1:19:01 PM [express] GET /api/platform/features 304 in 3ms :: [{"icon":"TrendingUp","title":"Global …
+1:19:01 PM [express] GET /api/platform-reviews/[object%20Object] 200 in 42ms
+1:19:01 PM [express] GET /api/platform/stats 200 in 218ms :: [{"value":"$0K+","label":"Paid to Creat…
+1:19:12 PM [express] POST /api/login 401 in 17ms
+1:20:01 PM [express] POST /api/register 201 in 435ms :: {"id":"04965eb8-1c5f-473a-88a2-4526e1b284f1"…
+1:20:01 PM [express] GET /api/platform/features 304 in 23ms :: [{"icon":"TrendingUp","title":"Global…
+1:20:01 PM [express] GET /api/platform/stats 304 in 14ms :: [{"value":"$0K+","label":"Paid to Creato…
+User peternj (creator, trader_creator) requesting campaigns
+Found 0 campaigns for creator peternj
+1:20:01 PM [express] GET /api/campaigns 200 in 23ms :: []
+1:20:01 PM [express] GET /api/clipper-campaigns 200 in 9ms :: []
+1:20:01 PM [express] GET /api/tracking-events 200 in 10ms :: []
+1:20:01 PM [express] GET /api/analytics/trader 200 in 43ms
+1:20:01 PM [express] GET /api/platform-reviews/[object%20Object] 200 in 26ms
+1:20:13 PM [express] GET /api/metrics 200 in 150ms :: {"social":{},"trading":{},"website":{}}
+1:20:15 PM [express] GET /api/campaigns/my-campaigns 404 in 46ms :: {"message":"Campaign not found"}
+1:20:17 PM [express] GET /api/campaigns/with-clippers 404 in 15ms :: {"message":"Campaign not found"}
