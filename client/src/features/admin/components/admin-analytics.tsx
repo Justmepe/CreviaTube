@@ -9,17 +9,50 @@ import {
   Activity
 } from "lucide-react";
 
+// Type definitions for admin analytics data
+interface AdminStats {
+  totalUsers: number;
+  newUsersThisWeek: number;
+  activeCampaigns: number;
+  totalRevenue: string;
+  totalEvents: number;
+  eventsToday: number;
+  systemHealth: string;
+  uptime: number;
+  monthlyStats?: MonthlyStats[];
+  userDistribution?: UserDistribution[];
+}
+
+interface MonthlyStats {
+  month: string;
+  users: number;
+  revenue: string;
+  campaigns: number;
+}
+
+interface UserDistribution {
+  role: string;
+  count: number;
+}
+
+interface Transaction {
+  type: string;
+  user: string;
+  amount: string;
+  status: 'completed' | 'pending' | 'failed';
+}
+
 export default function AdminAnalytics() {
   // Fetch admin statistics with real data
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
   });
 
-  const { data: transactions } = useQuery({
+  const { data: transactions } = useQuery<Transaction[]>({
     queryKey: ["/api/admin/transactions"],
   });
 
-  const { data: users } = useQuery({
+  const { data: users } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
   });
 
@@ -121,7 +154,7 @@ export default function AdminAnalytics() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {stats?.monthlyStats ? stats.monthlyStats.map((month: any, index: number) => (
+                {Array.isArray(stats?.monthlyStats) && stats.monthlyStats.length > 0 ? stats.monthlyStats.map((month: MonthlyStats, index: number) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{month.month}</div>
@@ -154,7 +187,7 @@ export default function AdminAnalytics() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {stats?.userDistribution ? stats.userDistribution.map((userRole: any, index: number) => (
+                {Array.isArray(stats?.userDistribution) && stats.userDistribution.length > 0 ? stats.userDistribution.map((userRole: UserDistribution, index: number) => (
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 capitalize">{userRole.role}s</span>
@@ -186,7 +219,7 @@ export default function AdminAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {transactions?.slice(0, 5).map((transaction: any, index: number) => (
+              {Array.isArray(transactions) && transactions.length > 0 ? transactions.slice(0, 5).map((transaction: Transaction, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{transaction.type}</div>
@@ -203,7 +236,7 @@ export default function AdminAnalytics() {
                     </div>
                   </div>
                 </div>
-              )) || (
+              )) : (
                 <div className="text-center py-8 text-gray-500">
                   <DollarSign className="w-12 h-12 mx-auto mb-2" />
                   <p>Transaction history will appear here</p>
