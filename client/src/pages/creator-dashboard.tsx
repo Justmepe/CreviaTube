@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import TraderCreatorDashboard from "./trader-creator-dashboard";
 import InfluencerDashboard from "./influencer-dashboard";
 import EntrepreneurDashboard from "./entrepreneur-dashboard";
