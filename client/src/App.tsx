@@ -46,8 +46,11 @@ import PlatformReviews from "@/pages/platform-reviews";
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={() => {
+        const { user } = useAuth();
+        return user ? <DashboardRouter /> : <LandingPage />;
+      }} />
       <Route path="/landing" component={LandingPage} />
-      <ProtectedRoute path="/" component={() => <DashboardRouter />} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
       <ProtectedRoute path="/campaigns" component={() => {
         const { user } = useAuth();
