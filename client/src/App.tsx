@@ -42,6 +42,15 @@ import ClipperDirectoryPage from "@/pages/clipper-directory";
 import MyCampaignsPage from "@/pages/my-campaigns";
 import ColdOutreachCampaign from "@/pages/cold-outreach-campaign";
 import PlatformReviews from "@/pages/platform-reviews";
+import AboutUs from "@/pages/about-us";
+import Status from "@/pages/status";
+import TermsOfService from "@/pages/terms-of-service";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import HelpCenter from "@/pages/help-center";
+import Contact from "@/pages/contact";
+import Careers from "@/pages/careers";
+import CommunityGuidelines from "@/pages/community-guidelines";
+import Events from "@/pages/events";
 
 function Router() {
   return (
@@ -89,6 +98,15 @@ function Router() {
       <ProtectedRoute path="/platform-reviews" component={PlatformReviews} />
       <ProtectedRoute path="/admin" component={RealRevenueAnalytics} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/about-us" component={AboutUs} />
+      <Route path="/status" component={Status} />
+      <Route path="/terms-of-service" component={TermsOfService} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/help-center" component={HelpCenter} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/careers" component={Careers} />
+      <Route path="/community-guidelines" component={CommunityGuidelines} />
+      <Route path="/events" component={Events} />
       <Route component={NotFound} />
     </Switch>
   );

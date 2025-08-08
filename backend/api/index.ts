@@ -6,6 +6,7 @@ import { adminAPI } from "./admin";
 import { metricsAPI } from "./metrics";
 import { paymentsAPI } from "./payments";
 import { usersAPI } from "./users";
+import { pagesAPI } from "./pages";
 
 export function setupAPIs(app: Express): void {
   // Authentication API
@@ -28,6 +29,9 @@ export function setupAPIs(app: Express): void {
   
   // Users API
   app.use("/api/users", usersAPI);
+  
+  // Static Pages API
+  app.use("/api/pages", pagesAPI);
   
   // Health check
   app.get("/api/health", (req, res) => {
