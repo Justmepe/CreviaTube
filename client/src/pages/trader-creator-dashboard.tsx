@@ -86,7 +86,7 @@ export default function TraderCreatorDashboard() {
                 <span className="text-slate-700 font-medium">Trading Active</span>
               </div>
               <Button 
-                onClick={() => window.location.href = '/campaign-creation'}
+                onClick={() => window.location.href = '/campaigns/create-enhanced'}
                 className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
