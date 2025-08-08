@@ -11,11 +11,6 @@ export default function AboutUs() {
     queryKey: ["/api/pages/about-us"],
   });
 
-  // Debug logging
-  console.log("About Data:", aboutData);
-  console.log("Mission:", aboutData?.content?.mission);
-  console.log("Story:", aboutData?.content?.story);
-  console.log("Values:", aboutData?.content?.values);
 
   if (isLoading) {
     return (
@@ -53,22 +48,12 @@ export default function AboutUs() {
           </div>
         </div>
 
-        {/* Debug Info */}
-        {aboutData && (
-          <Card className="mb-8 bg-yellow-50 border-yellow-200">
-            <CardContent className="p-4">
-              <h3 className="font-bold mb-2">Debug Info:</h3>
-              <p className="text-sm">Mission: {aboutData?.content?.mission || "NOT FOUND"}</p>
-              <p className="text-sm">Values count: {aboutData?.content?.values?.length || "0"}</p>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Mission */}
         <Card className="mb-8">
           <CardContent className="p-8 text-center">
             <h2 className="text-2xl font-bold text-slate-800 mb-4">Our Mission</h2>
-            <p className="text-lg text-slate-600">{aboutData?.content?.mission}</p>
+            <p className="text-lg text-gray-800 font-medium">{aboutData?.content?.mission}</p>
           </CardContent>
         </Card>
 
@@ -76,7 +61,7 @@ export default function AboutUs() {
         <Card className="mb-8">
           <CardContent className="p-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-4">Our Story</h2>
-            <p className="text-slate-600 leading-relaxed">{aboutData?.content?.story}</p>
+            <p className="text-gray-800 leading-relaxed">{aboutData?.content?.story}</p>
           </CardContent>
         </Card>
 
@@ -95,7 +80,7 @@ export default function AboutUs() {
                       </div>
                       <h3 className="font-semibold text-slate-800">{value.title}</h3>
                     </div>
-                    <p className="text-slate-600 text-sm">{value.description}</p>
+                    <p className="text-gray-700 text-sm">{value.description}</p>
                   </div>
                 );
               })}
@@ -113,7 +98,7 @@ export default function AboutUs() {
                   <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
                     {stat.value}
                   </div>
-                  <div className="text-sm text-slate-600">{stat.label}</div>
+                  <div className="text-sm text-gray-700 font-medium">{stat.label}</div>
                 </div>
               ))}
             </div>
