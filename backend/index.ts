@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import http from "http";
 import { setupVite, serveStatic, log } from "./vite";

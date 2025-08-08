@@ -2,18 +2,21 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from "../shared/schema.js";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+// Database connection is optional for static pages
+let pool: Pool | null = null;
+let db: any = null;
+
+if (process.env.DATABASE_URL) {
+  console.log("🗄️ Database: Connected");
+  pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+  db = drizzle({ client: pool, schema });
+} else {
+  console.log("⚠️ Database: Not configured (static pages only)");
 }
 
-// Use standard PostgreSQL driver for local databases
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-
-export const db = drizzle({ client: pool, schema });
+export { pool, db };
