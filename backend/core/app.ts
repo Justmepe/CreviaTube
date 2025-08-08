@@ -15,7 +15,7 @@ export async function createApp(): Promise<express.Application> {
       : ["http://localhost:5173", "http://localhost:5000"],
     credentials: true
   }));
-  
+
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
 

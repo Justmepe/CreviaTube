@@ -15,6 +15,18 @@ export class AutoSyncService {
     console.log(`Environment: ${isProduction ? 'Production' : 'Development'}`);
     console.log(`Platform: ${isReplit ? 'Replit' : 'External Hosting'}`);
 
+    // Check if required API keys are present for sync services
+    const hasRequiredKeys = process.env.INSTAGRAM_ACCESS_TOKEN || 
+                           process.env.YOUTUBE_API_KEY || 
+                           process.env.TWITTER_API_KEY ||
+                           process.env.MT4_API_URL;
+
+    if (!hasRequiredKeys && isProduction && !isReplit) {
+      console.log('⚠️  Auto-sync disabled: Missing required API keys for external services.');
+      console.log('   To enable auto-sync, configure social media and trading API credentials.');
+      return;
+    }
+
     // Different sync strategies based on environment
     if (isProduction && !isReplit) {
       // External production - full auto sync
