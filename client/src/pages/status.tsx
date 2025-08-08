@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function Status() {
   const [, setLocation] = useLocation();
 
-  const { data: statusData, isLoading } = useQuery({
+  const { data: statusData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/status"],
   });
 

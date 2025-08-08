@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function TermsOfService() {
   const [, setLocation] = useLocation();
 
-  const { data: termsData, isLoading } = useQuery({
+  const { data: termsData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/terms-of-service"],
   });
 

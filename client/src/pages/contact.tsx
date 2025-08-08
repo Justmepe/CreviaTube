@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 export default function Contact() {
   const [, setLocation] = useLocation();
 
-  const { data: contactData, isLoading } = useQuery({
+  const { data: contactData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/contact"],
-  }) as { data: any, isLoading: boolean };
+  });
 
   if (isLoading) {
     return (

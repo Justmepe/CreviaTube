@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function HelpCenter() {
   const [, setLocation] = useLocation();
 
-  const { data: helpData, isLoading } = useQuery({
+  const { data: helpData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/help-center"],
   });
 

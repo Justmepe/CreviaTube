@@ -8,9 +8,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function CommunityGuidelines() {
   const [, setLocation] = useLocation();
 
-  const { data: guidelinesData, isLoading } = useQuery({
+  const { data: guidelinesData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/community-guidelines"],
-  }) as { data: any, isLoading: boolean };
+  });
 
   if (isLoading) {
     return (

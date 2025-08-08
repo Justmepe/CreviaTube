@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 export default function Events() {
   const [, setLocation] = useLocation();
 
-  const { data: eventsData, isLoading } = useQuery({
+  const { data: eventsData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/events"],
-  }) as { data: any, isLoading: boolean };
+  });
 
   if (isLoading) {
     return (

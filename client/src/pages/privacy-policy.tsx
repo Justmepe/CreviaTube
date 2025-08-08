@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function PrivacyPolicy() {
   const [, setLocation] = useLocation();
 
-  const { data: policyData, isLoading } = useQuery({
+  const { data: policyData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/privacy-policy"],
   });
 

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function AboutUs() {
   const [, setLocation] = useLocation();
 
-  const { data: aboutData, isLoading } = useQuery({
+  const { data: aboutData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/about-us"],
   });
 

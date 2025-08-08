@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 export default function Careers() {
   const [, setLocation] = useLocation();
 
-  const { data: careersData, isLoading } = useQuery({
+  const { data: careersData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/careers"],
-  }) as { data: any, isLoading: boolean };
+  });
 
   if (isLoading) {
     return (
