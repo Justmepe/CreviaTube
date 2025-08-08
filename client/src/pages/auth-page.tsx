@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +39,8 @@ export default function AuthPage() {
     userType: undefined as "trader_creator" | "influencer" | "entrepreneur" | "enterprise" | undefined,
     phoneNumber: "",
   });
+  const [activeTab, setActiveTab] = useState("login");
+  const authSectionRef = useRef<HTMLDivElement>(null);
 
   // Update role automatically based on user type selection
   const handleUserTypeChange = (userType: string) => {
@@ -50,6 +52,15 @@ export default function AuthPage() {
       // Regular users without specific types are clippers
       role: userType === "enterprise" || userType === "trader_creator" || userType === "influencer" || userType === "entrepreneur" ? "creator" : "clipper"
     }));
+  };
+
+  // Handle Get Started button click
+  const handleGetStarted = () => {
+    setActiveTab("register");
+    authSectionRef.current?.scrollIntoView({ 
+      behavior: "smooth", 
+      block: "center" 
+    });
   };
 
   // Fetch platform features and stats from API (must be before any conditional returns)
@@ -238,6 +249,23 @@ export default function AuthPage() {
                 Join the world's most advanced affiliate marketing platform designed for creators. 
                 Track performance, complete goals, and get paid automatically with our intelligent escrow system.
               </p>
+              
+              {/* Call-to-Action Button */}
+              <div className="flex items-center space-x-4 pt-4">
+                <Button 
+                  onClick={handleGetStarted}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 text-lg"
+                >
+                  <span>Get Started Free</span>
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+                <div className="text-sm text-slate-500">
+                  <span className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+                    No setup fees
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Feature Grid */}
@@ -331,7 +359,7 @@ export default function AuthPage() {
         </div>
 
         {/* Right Column - Auth Forms */}
-        <div className="flex-1 lg:max-w-lg flex items-center justify-center p-8">
+        <div ref={authSectionRef} className="flex-1 lg:max-w-lg flex items-center justify-center p-8">
           <div className="w-full max-w-md">
             {/* Mobile Logo */}
             <div className="lg:hidden text-center mb-8">
@@ -341,11 +369,21 @@ export default function AuthPage() {
                 </div>
                 <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CreoCash</span>
               </div>
-              <p className="text-slate-600 text-lg">Global Creator Economy Platform</p>
+              <p className="text-slate-600 text-lg mb-4">Global Creator Economy Platform</p>
+              <p className="text-slate-600 text-sm mb-6">Monetize your creative content with intelligent affiliate marketing</p>
+              
+              {/* Mobile Get Started Button */}
+              <Button 
+                onClick={handleGetStarted}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 mb-4"
+              >
+                <span>Get Started Free</span>
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </div>
 
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8">
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-xl">
                   <TabsTrigger 
                     value="login" 
