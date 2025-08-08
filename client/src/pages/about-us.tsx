@@ -11,6 +11,12 @@ export default function AboutUs() {
     queryKey: ["/api/pages/about-us"],
   });
 
+  // Debug logging
+  console.log("About Data:", aboutData);
+  console.log("Mission:", aboutData?.content?.mission);
+  console.log("Story:", aboutData?.content?.story);
+  console.log("Values:", aboutData?.content?.values);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -46,6 +52,17 @@ export default function AboutUs() {
             <h1 className="text-4xl font-bold text-slate-800">About CreoCash</h1>
           </div>
         </div>
+
+        {/* Debug Info */}
+        {aboutData && (
+          <Card className="mb-8 bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4">
+              <h3 className="font-bold mb-2">Debug Info:</h3>
+              <p className="text-sm">Mission: {aboutData?.content?.mission || "NOT FOUND"}</p>
+              <p className="text-sm">Values count: {aboutData?.content?.values?.length || "0"}</p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Mission */}
         <Card className="mb-8">
