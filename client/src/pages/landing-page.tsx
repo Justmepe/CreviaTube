@@ -93,6 +93,61 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Top Navigation */}
+      <div className="relative z-20 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <button
+              onClick={() => handleNavigation('creators')}
+              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
+            >
+              <TrendingUp className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+              <span className="font-medium text-sm">For Creators</span>
+            </button>
+            
+            <button
+              onClick={() => handleNavigation('clippers')}
+              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
+            >
+              <Users className="w-4 h-4 text-purple-500 group-hover:scale-110 transition-transform" />
+              <span className="font-medium text-sm">For Clippers</span>
+            </button>
+            
+            <button
+              onClick={() => handleNavigation('features')}
+              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
+            >
+              <Zap className="w-4 h-4 text-teal-500 group-hover:scale-110 transition-transform" />
+              <span className="font-medium text-sm">Features</span>
+            </button>
+            
+            <button
+              onClick={() => handleNavigation('enterprise')}
+              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
+            >
+              <Building2 className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+              <span className="font-medium text-sm">Enterprise</span>
+            </button>
+            
+            <button
+              onClick={() => handleNavigation('how-it-works')}
+              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
+            >
+              <PlayCircle className="w-4 h-4 text-green-500 group-hover:scale-110 transition-transform" />
+              <span className="font-medium text-sm">How It Works</span>
+            </button>
+            
+            <button
+              onClick={() => handleNavigation('pricing')}
+              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
+            >
+              <CreditCard className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" />
+              <span className="font-medium text-sm">Pricing</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]"></div>
       
@@ -181,63 +236,6 @@ export default function LandingPage() {
                 Join the world's most advanced affiliate marketing platform designed for creators. 
                 Track performance, complete goals, and get paid automatically with our intelligent escrow system.
               </p>
-              
-              {/* Hero Navigation Buttons */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 my-8">
-                <Button
-                  variant="outline"
-                  onClick={() => handleNavigation('creators')}
-                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
-                >
-                  <TrendingUp className="w-5 h-5 text-blue-500" />
-                  <span className="font-medium">For Creators</span>
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => handleNavigation('clippers')}
-                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
-                >
-                  <Users className="w-5 h-5 text-purple-500" />
-                  <span className="font-medium">For Clippers</span>
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => handleNavigation('features')}
-                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
-                >
-                  <Zap className="w-5 h-5 text-teal-500" />
-                  <span className="font-medium">Features</span>
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => handleNavigation('enterprise')}
-                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
-                >
-                  <Building2 className="w-5 h-5 text-indigo-500" />
-                  <span className="font-medium">Enterprise</span>
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => handleNavigation('how-it-works')}
-                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
-                >
-                  <PlayCircle className="w-5 h-5 text-green-500" />
-                  <span className="font-medium">How It Works</span>
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => handleNavigation('pricing')}
-                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
-                >
-                  <CreditCard className="w-5 h-5 text-orange-500" />
-                  <span className="font-medium">Pricing</span>
-                </Button>
-              </div>
               
               {/* Call-to-Action Button */}
               <div className="flex items-center space-x-4 pt-4">
