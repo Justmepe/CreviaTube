@@ -35,7 +35,7 @@ export default function AuthPage() {
     email: "",
     password: "",
     fullName: "",
-    role: "clipper" as const,
+    role: "clipper" as "creator" | "clipper",
     userType: undefined as "trader_creator" | "influencer" | "entrepreneur" | "enterprise" | undefined,
     phoneNumber: "",
   });
@@ -53,11 +53,11 @@ export default function AuthPage() {
   };
 
   // Fetch platform features and stats from API (must be before any conditional returns)
-  const { data: features } = useQuery({
+  const { data: features = [] } = useQuery({
     queryKey: ["/api/platform/features"],
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats = [] } = useQuery({
     queryKey: ["/api/platform/stats"],
   });
 
@@ -242,7 +242,7 @@ export default function AuthPage() {
 
             {/* Feature Grid */}
             <div className="grid grid-cols-2 gap-6 mb-12">
-              {features?.map((feature, index) => {
+              {Array.isArray(features) && features?.map((feature: any, index: number) => {
                 const Icon = iconMap[feature.icon as keyof typeof iconMap];
                 return (
                   <div key={index} className="group">
@@ -262,7 +262,7 @@ export default function AuthPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-4 gap-8">
-              {stats?.map((stat, index) => (
+              {Array.isArray(stats) && stats?.map((stat: any, index: number) => (
                 <div key={index} className="text-center">
                   <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     {stat.value}
@@ -273,7 +273,7 @@ export default function AuthPage() {
             </div>
 
             {/* Customer Reviews Section */}
-            {featuredReviews.length > 0 && (
+            {Array.isArray(featuredReviews) && featuredReviews.length > 0 && (
               <div className="mt-12">
                 <div className="text-center mb-8">
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
@@ -283,7 +283,7 @@ export default function AuthPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4">
-                  {featuredReviews.slice(0, 2).map((review: any) => (
+                  {Array.isArray(featuredReviews) && featuredReviews.slice(0, 2).map((review: any) => (
                     <div key={review.id} className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/70 transition-all duration-300">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-1">
