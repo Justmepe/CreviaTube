@@ -610,8 +610,8 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20"></div>
         <div className="absolute inset-0 bg-grid-slate-800 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))] opacity-20"></div>
         
-        <div className="relative z-10 max-w-6xl mx-auto px-12 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        <div className="relative z-10 max-w-6xl mx-auto px-12 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Company Info */}
             <div className="lg:col-span-1">
               <div className="flex items-center space-x-3 mb-6">
@@ -620,123 +620,73 @@ export default function LandingPage() {
                 </div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent">CreoCash</span>
               </div>
-              <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                The world's most advanced affiliate marketing platform designed for the global creator economy. Empowering creators and clippers worldwide.
+              <p className="text-slate-300 text-sm leading-relaxed mb-4">
+                Advanced affiliate marketing platform for the global creator economy.
               </p>
-              <div className="flex items-center space-x-4">
-                <button className="w-10 h-10 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Twitter className="w-5 h-5" />
+              <div className="flex items-center space-x-3">
+                <button className="w-8 h-8 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors duration-200">
+                  <Twitter className="w-4 h-4" />
                 </button>
-                <button className="w-10 h-10 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Facebook className="w-5 h-5" />
+                <button className="w-8 h-8 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors duration-200">
+                  <Facebook className="w-4 h-4" />
                 </button>
-                <button className="w-10 h-10 bg-slate-800 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Instagram className="w-5 h-5" />
+                <button className="w-8 h-8 bg-slate-800 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors duration-200">
+                  <Instagram className="w-4 h-4" />
                 </button>
-                <button className="w-10 h-10 bg-slate-800 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Linkedin className="w-5 h-5" />
-                </button>
-                <button className="w-10 h-10 bg-slate-800 hover:bg-red-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Youtube className="w-5 h-5" />
+                <button className="w-8 h-8 bg-slate-800 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-colors duration-200">
+                  <Linkedin className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {/* Platform */}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Platform</h3>
-              <ul className="space-y-3">
+              <h3 className="text-base font-semibold text-white mb-3">Platform</h3>
+              <ul className="space-y-2">
                 <li><button onClick={() => handleNavigation('features')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Features</button></li>
                 <li><button onClick={() => handleNavigation('how-it-works')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">How It Works</button></li>
                 <li><button onClick={() => setLocation('/auth')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">For Creators</button></li>
                 <li><button onClick={() => setLocation('/auth')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">For Clippers</button></li>
-                <li><button onClick={() => setLocation('/auth')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Enterprise</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">API Documentation</button></li>
               </ul>
             </div>
 
             {/* Company */}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Company</h3>
-              <ul className="space-y-3">
+              <h3 className="text-base font-semibold text-white mb-3">Company</h3>
+              <ul className="space-y-2">
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">About Us</button></li>
                 <li><button onClick={() => handleNavigation('reviews')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Reviews</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Careers</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Blog</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Press Kit</button></li>
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Contact</button></li>
+                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Careers</button></li>
               </ul>
             </div>
 
             {/* Support & Legal */}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Support</h3>
-              <ul className="space-y-3 mb-6">
+              <h3 className="text-base font-semibold text-white mb-3">Support</h3>
+              <ul className="space-y-2">
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Help Center</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Community</button></li>
+                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Privacy Policy</button></li>
+                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Terms of Service</button></li>
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Status</button></li>
               </ul>
-              
-              <h4 className="text-sm font-semibold text-white mb-3">Legal</h4>
-              <ul className="space-y-2">
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-xs">Privacy Policy</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-xs">Terms of Service</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-xs">Cookie Policy</button></li>
-              </ul>
             </div>
           </div>
 
-          {/* Newsletter Signup */}
-          <div className="border-t border-slate-700 pt-8 mb-8">
-            <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="mb-4 md:mb-0">
-                <h3 className="text-lg font-semibold text-white mb-2">Stay Updated</h3>
-                <p className="text-slate-300 text-sm">Get the latest updates, tips, and exclusive offers delivered to your inbox.</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center bg-slate-800 rounded-lg overflow-hidden">
-                  <Mail className="w-5 h-5 text-slate-400 ml-3" />
-                  <input 
-                    type="email" 
-                    placeholder="Enter your email"
-                    className="bg-transparent text-white placeholder-slate-400 px-3 py-3 focus:outline-none text-sm w-64"
-                  />
-                </div>
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-lg font-medium transition-all duration-200">
-                  <Send className="w-4 h-4 mr-2" />
-                  Subscribe
-                </Button>
-              </div>
-            </div>
-          </div>
 
           {/* Bottom Bar */}
-          <div className="border-t border-slate-700 pt-8">
+          <div className="border-t border-slate-700 pt-6">
             <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="flex items-center space-x-6 mb-4 md:mb-0">
-                <p className="text-slate-400 text-sm">
-                  © 2025 CreoCash. All rights reserved.
-                </p>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2 text-slate-400 text-xs">
-                    <MapPin className="w-3 h-3" />
-                    <span>Global Platform</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-slate-400 text-xs">
-                    <Phone className="w-3 h-3" />
-                    <span>24/7 Support</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-6 mb-3 md:mb-0">
+                <p className="text-slate-400 text-sm">© 2025 CreoCash. All rights reserved.</p>
+                <div className="flex items-center space-x-2 text-slate-400 text-xs">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-slate-400 text-xs">All systems operational</span>
+                  <span>All systems operational</span>
                 </div>
-                <button onClick={() => handleNavigation('home')} className="text-slate-300 hover:text-white transition-colors duration-200 text-xs font-medium">
-                  Back to Top ↑
-                </button>
               </div>
+              <button onClick={() => handleNavigation('home')} className="text-slate-300 hover:text-white transition-colors duration-200 text-xs font-medium">
+                Back to Top ↑
+              </button>
             </div>
           </div>
         </div>
