@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ChevronLeft, ChevronRight, Target, DollarSign, Settings, TrendingUp, Users, Calendar, Globe, Zap, ExternalLink, Plus } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getQueryFn } from "@/lib/queryClient";
 
 // Step schemas

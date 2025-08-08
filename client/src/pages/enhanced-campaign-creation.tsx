@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -11,9 +11,18 @@ import { CampaignWizard } from "@/features/campaigns/components/campaign-wizard"
 import { ChevronLeft, Zap, AlertTriangle, CheckCircle } from "lucide-react";
 
 export default function EnhancedCampaignCreation() {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  // Safely access auth context with error handling
+  let user = null;
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+  } catch (error) {
+    // Handle case where AuthProvider is not available
+    console.warn('Auth context not available in enhanced campaign creation');
+  }
 
   const createCampaignMutation = useMutation({
     mutationFn: async (data: any) => {
