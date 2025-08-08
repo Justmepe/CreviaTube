@@ -1,0 +1,286 @@
+PS D:\CreoCash\ClipperRewards> npm run dev
+
+> rest-express@1.0.0 dev
+> cross-env NODE_ENV=development tsx backend/index.ts
+
+1:10:11 PM [express] serving on 0.0.0.0:5000
+1:10:11 PM [express] environment: development
+1:10:11 PM [express] database: connected
+🔄 Initializing CreoCash Auto-Sync Service...
+Environment: Development
+Platform: External Hosting
+🔧 Development mode: Auto-sync disabled. Use manual sync endpoints.
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+1:10:40 PM [express] GET /api/platform/features 304 in 6ms :: [{"icon":"TrendingUp","title":"Global …
+1:10:40 PM [express] GET /api/user 401 in 5ms
+1:10:40 PM [express] GET /api/platform/stats 500 in 341ms :: {"message":"Received network error or n…
+1:10:40 PM [express] GET /api/platform-reviews/[object%20Object] 200 in 29ms
+
+file:///D:/CreoCash/ClipperRewards/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+ErrorEvent {
+  [Symbol(type)]: 'error',
+  [Symbol(kTarget)]: WebSocket {
+    [Symbol(kEvents)]: SafeMap(4) [Map] {
+      'error' => <ref *1> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *1],
+          listener: [Function (anonymous)],
+          flags: 0,
+          callback: [Function (anonymous)]
+        },
+        resistStopPropagation: false
+      },
+      'message' => <ref *2> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *2],
+          listener: [Function (anonymous)],
+          flags: 0,
+          callback: [Function (anonymous)]
+        },
+        resistStopPropagation: false
+      },
+      'close' => <ref *3> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *3],
+          listener: [Function (anonymous)],
+          flags: 0,
+          callback: [Function (anonymous)]
+        },
+        resistStopPropagation: false
+      },
+      'open' => <ref *4> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *4],
+          listener: [Function: handleWebSocketOpen],
+          flags: 0,
+          callback: [Function: handleWebSocketOpen]
+        },
+        resistStopPropagation: false
+      }
+    },
+    [Symbol(events.maxEventTargetListeners)]: 10,
+    [Symbol(events.maxEventTargetListenersWarned)]: false,
+    [Symbol(kHandlers)]: SafeMap(0) [Map] {},
+    [Symbol(url)]: wss://127.0.0.1/v2,
+    [Symbol(controller)]: Fetch {
+      _events: [Object: null prototype] {},
+      _eventsCount: 0,
+      _maxListeners: undefined,
+      dispatcher: Agent {
+        _events: [Object: null prototype] {},
+        _eventsCount: 0,
+        _maxListeners: undefined,
+        [Symbol(shapeMode)]: false,
+        [Symbol(kCapture)]: false,
+        [Symbol(nodejs.stream.destroyed)]: false,
+        [Symbol(onDestroyed)]: null,
+        [Symbol(closed)]: false,
+        [Symbol(onClosed)]: [],
+        [Symbol(dispatch interceptors)]: [ [Function (anonymous)] ],
+        [Symbol(options)]: { connect: undefined, interceptors: undefined },
+        [Symbol(maxRedirections)]: 0,
+        [Symbol(factory)]: [Function: defaultFactory],
+        [Symbol(clients)]: Map(1) {
+          'https://127.0.0.1' => Pool {
+            _events: [Object: null prototype],
+            _eventsCount: 4,
+            _maxListeners: undefined,
+            [Symbol(shapeMode)]: false,
+            [Symbol(kCapture)]: false,
+            [Symbol(nodejs.stream.destroyed)]: false,
+            [Symbol(onDestroyed)]: null,
+            [Symbol(closed)]: false,
+            [Symbol(onClosed)]: [],
+            [Symbol(queue)]: [FixedQueue],
+            [Symbol(clients)]: [Array],
+            [Symbol(queued)]: 0,
+            [Symbol(onDrain)]: [Function: onDrain],
+            [Symbol(onConnect)]: [Function (anonymous)],
+            [Symbol(onDisconnect)]: [Function (anonymous)],
+            [Symbol(onConnectionError)]: [Function (anonymous)],
+            [Symbol(stats)]: [PoolStats],
+            [Symbol(dispatch interceptors)]: [],
+            [Symbol(connections)]: null,
+            [Symbol(url)]: URL {},
+            [Symbol(options)]: [Object],
+            [Symbol(factory)]: [Function: defaultFactory],
+            [Symbol(Intercepted Dispatch)]: [Function: [dispatch]],
+            [Symbol(needDrain)]: false
+          }
+        },
+        [Symbol(onDrain)]: [Function (anonymous)],
+        [Symbol(onConnect)]: [Function (anonymous)],
+        [Symbol(onDisconnect)]: [Function (anonymous)],
+        [Symbol(onConnectionError)]: [Function (anonymous)],
+        [Symbol(Intercepted Dispatch)]: [Function: Intercept]
+      },
+      connection: { abort: null, destroyed: true, destroy: [Function: destroy] },
+      dump: false,
+      state: 'terminated',
+      reportTimingSteps: [Function (anonymous)],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false
+    },
+    [Symbol(ready state)]: 0,
+    [Symbol(binary type)]: 'arraybuffer'
+  },
+  [Symbol(kIsBeingDispatched)]: false
+}
+
+Node.js v22.16.0
+PS D:\CreoCash\ClipperRewards> npm run dev
+
+> rest-express@1.0.0 dev
+> cross-env NODE_ENV=development tsx backend/index.ts
+
+1:11:30 PM [express] serving on 0.0.0.0:5000
+1:11:30 PM [express] environment: development
+1:11:30 PM [express] database: connected
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+🔄 Initializing CreoCash Auto-Sync Service...
+Environment: Development
+Platform: External Hosting
+🔧 Development mode: Auto-sync disabled. Use manual sync endpoints.
+1:11:42 PM [express] GET /api/platform/features 304 in 5ms :: [{"icon":"TrendingUp","title":"Global …
+1:11:42 PM [express] GET /api/user 401 in 1ms
+1:11:42 PM [express] GET /api/platform/stats 500 in 196ms :: {"message":"Received network error or n…
+1:11:42 PM [express] GET /api/platform-reviews/[object%20Object] 200 in 94ms
+
+file:///D:/CreoCash/ClipperRewards/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+ErrorEvent {
+  [Symbol(type)]: 'error',
+  [Symbol(kTarget)]: WebSocket {
+    [Symbol(kEvents)]: SafeMap(4) [Map] {
+      'error' => <ref *1> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *1],
+          listener: [Function (anonymous)],
+          flags: 0,
+          callback: [Function (anonymous)]
+        },
+        resistStopPropagation: false
+      },
+      'message' => <ref *2> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *2],
+          listener: [Function (anonymous)],
+          flags: 0,
+          callback: [Function (anonymous)]
+        },
+        resistStopPropagation: false
+      },
+      'close' => <ref *3> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *3],
+          listener: [Function (anonymous)],
+          flags: 0,
+          callback: [Function (anonymous)]
+        },
+        resistStopPropagation: false
+      },
+      'open' => <ref *4> {
+        size: 1,
+        next: Listener {
+          next: undefined,
+          previous: [Circular *4],
+          listener: [Function: handleWebSocketOpen],
+          flags: 0,
+          callback: [Function: handleWebSocketOpen]
+        },
+        resistStopPropagation: false
+      }
+    },
+    [Symbol(events.maxEventTargetListeners)]: 10,
+    [Symbol(events.maxEventTargetListenersWarned)]: false,
+    [Symbol(kHandlers)]: SafeMap(0) [Map] {},
+    [Symbol(url)]: wss://127.0.0.1/v2,
+    [Symbol(controller)]: Fetch {
+      _events: [Object: null prototype] {},
+      _eventsCount: 0,
+      _maxListeners: undefined,
+      dispatcher: Agent {
+        _events: [Object: null prototype] {},
+        _eventsCount: 0,
+        _maxListeners: undefined,
+        [Symbol(shapeMode)]: false,
+        [Symbol(kCapture)]: false,
+        [Symbol(nodejs.stream.destroyed)]: false,
+        [Symbol(onDestroyed)]: null,
+        [Symbol(closed)]: false,
+        [Symbol(onClosed)]: [],
+        [Symbol(dispatch interceptors)]: [ [Function (anonymous)] ],
+        [Symbol(options)]: { connect: undefined, interceptors: undefined },
+        [Symbol(maxRedirections)]: 0,
+        [Symbol(factory)]: [Function: defaultFactory],
+        [Symbol(clients)]: Map(1) {
+          'https://127.0.0.1' => Pool {
+            _events: [Object: null prototype],
+            _eventsCount: 4,
+            _maxListeners: undefined,
+            [Symbol(shapeMode)]: false,
+            [Symbol(kCapture)]: false,
+            [Symbol(nodejs.stream.destroyed)]: false,
+            [Symbol(onDestroyed)]: null,
+            [Symbol(closed)]: false,
+            [Symbol(onClosed)]: [],
+            [Symbol(queue)]: [FixedQueue],
+            [Symbol(clients)]: [Array],
+            [Symbol(queued)]: 0,
+            [Symbol(onDrain)]: [Function: onDrain],
+            [Symbol(onConnect)]: [Function (anonymous)],
+            [Symbol(onDisconnect)]: [Function (anonymous)],
+            [Symbol(onConnectionError)]: [Function (anonymous)],
+            [Symbol(stats)]: [PoolStats],
+            [Symbol(dispatch interceptors)]: [],
+            [Symbol(connections)]: null,
+            [Symbol(url)]: URL {},
+            [Symbol(options)]: [Object],
+            [Symbol(factory)]: [Function: defaultFactory],
+            [Symbol(Intercepted Dispatch)]: [Function: [dispatch]],
+            [Symbol(needDrain)]: false
+          }
+        },
+        [Symbol(onDrain)]: [Function (anonymous)],
+        [Symbol(onConnect)]: [Function (anonymous)],
+        [Symbol(onDisconnect)]: [Function (anonymous)],
+        [Symbol(onConnectionError)]: [Function (anonymous)],
+        [Symbol(Intercepted Dispatch)]: [Function: Intercept]
+      },
+      connection: { abort: null, destroyed: true, destroy: [Function: destroy] },
+      dump: false,
+      state: 'terminated',
+      reportTimingSteps: [Function (anonymous)],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false
+    },
+    [Symbol(ready state)]: 0,
+    [Symbol(sent close)]: 0,
+    [Symbol(binary type)]: 'arraybuffer'
+  },
+  [Symbol(kIsBeingDispatched)]: false
+}
+
+Node.js v22.16.0
+PS D:\CreoCash\ClipperRewards> 

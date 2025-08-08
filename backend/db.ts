@@ -1,12 +1,6 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from "../shared/schema.js";
-
-// Only setup WebSocket for Neon databases (not local PostgreSQL)
-if (process.env.DATABASE_URL?.includes('neon.tech') || process.env.DATABASE_URL?.includes('neondb.org')) {
-  neonConfig.webSocketConstructor = ws;
-}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -14,5 +8,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Use standard PostgreSQL driver for local databases
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
 export const db = drizzle({ client: pool, schema });
