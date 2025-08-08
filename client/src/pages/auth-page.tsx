@@ -74,13 +74,13 @@ export default function AuthPage() {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div className="relative">
-              <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">CreoCash</span>
+              <span className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">CreoCash</span>
               <div className="absolute -top-1 -right-2 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
                 <Star className="w-2 h-2 text-white" />
               </div>
             </div>
           </div>
-          <p className="text-slate-600 text-lg mb-2">Global Creator Economy Platform</p>
+          <p className="text-slate-600 text-base mb-2">Global Creator Economy Platform</p>
           <p className="text-slate-600 text-sm">Monetize your creative content with intelligent affiliate marketing</p>
         </div>
 
