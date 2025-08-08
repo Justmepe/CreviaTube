@@ -52,19 +52,23 @@ import Careers from "@/pages/careers";
 import CommunityGuidelines from "@/pages/community-guidelines";
 import Events from "@/pages/events";
 
+function HomeRoute() {
+  const { user } = useAuth();
+  return user ? <DashboardRouter /> : <LandingPage />;
+}
+
+function CampaignsRoute() {
+  const { user } = useAuth();
+  return user?.role === "clipper" ? <CampaignsMarketplace /> : <CampaignsEnhanced />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => {
-        const { user } = useAuth();
-        return user ? <DashboardRouter /> : <LandingPage />;
-      }} />
+      <Route path="/" component={HomeRoute} />
       <Route path="/landing" component={LandingPage} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
-      <ProtectedRoute path="/campaigns" component={() => {
-        const { user } = useAuth();
-        return user?.role === "clipper" ? <CampaignsMarketplace /> : <CampaignsEnhanced />;
-      }} />
+      <ProtectedRoute path="/campaigns" component={CampaignsRoute} />
       <ProtectedRoute path="/campaigns/create" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/create-enhanced" component={EnhancedCampaignCreation} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
