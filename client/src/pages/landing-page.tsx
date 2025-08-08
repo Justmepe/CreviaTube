@@ -645,10 +645,10 @@ export default function LandingPage() {
             <div>
               <h3 className="text-base font-semibold text-white mb-3">Company</h3>
               <ul className="space-y-2">
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">About Us</button></li>
+                <li><button onClick={() => setLocation('/about-us')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">About Us</button></li>
                 <li><button onClick={() => handleNavigation('reviews')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Reviews</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Contact</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Careers</button></li>
+                <li><button onClick={() => setLocation('/contact')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Contact</button></li>
+                <li><button onClick={() => setLocation('/careers')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Careers</button></li>
               </ul>
             </div>
 
@@ -656,10 +656,10 @@ export default function LandingPage() {
             <div>
               <h3 className="text-base font-semibold text-white mb-3">Support</h3>
               <ul className="space-y-2">
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Help Center</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Privacy Policy</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Terms of Service</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Status</button></li>
+                <li><button onClick={() => setLocation('/help-center')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Help Center</button></li>
+                <li><button onClick={() => setLocation('/privacy-policy')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Privacy Policy</button></li>
+                <li><button onClick={() => setLocation('/terms-of-service')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Terms of Service</button></li>
+                <li><button onClick={() => setLocation('/status')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Status</button></li>
               </ul>
             </div>
 
@@ -668,19 +668,19 @@ export default function LandingPage() {
               <h3 className="text-base font-semibold text-white mb-3">Community</h3>
               <ul className="space-y-2">
                 <li>
-                  <button className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
+                  <button onClick={() => window.open('/api/pages/discord', '_blank')} className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
                     <MessageCircle className="w-4 h-4 group-hover:text-purple-400" />
                     <span>Discord Community</span>
                   </button>
                 </li>
                 <li>
-                  <button className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
+                  <button onClick={() => window.open('/api/pages/whatsapp', '_blank')} className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
                     <MessageSquare className="w-4 h-4 group-hover:text-green-400" />
                     <span>WhatsApp Community</span>
                   </button>
                 </li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Community Guidelines</button></li>
-                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Events</button></li>
+                <li><button onClick={() => setLocation('/community-guidelines')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Community Guidelines</button></li>
+                <li><button onClick={() => setLocation('/events')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Events</button></li>
               </ul>
             </div>
           </div>
