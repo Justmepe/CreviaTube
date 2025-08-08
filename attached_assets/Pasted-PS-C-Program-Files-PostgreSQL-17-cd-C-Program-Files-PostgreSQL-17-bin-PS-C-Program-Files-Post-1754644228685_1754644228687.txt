@@ -1,0 +1,54 @@
+PS C:\Program Files\PostgreSQL\17> cd "C:\Program Files\PostgreSQL\17\bin"
+PS C:\Program Files\PostgreSQL\17\bin> .\psql "postgresql://CreoCash_User:Gikonyo%402025%21@127.0.0.1:5432/CreoCash_Db"
+psql (17.5)
+WARNING: Console code page (437) differs from Windows code page (1252)
+         8-bit characters might not work correctly. See psql reference
+         page "Notes for Windows users" for details.
+Type "help" for help.
+
+CreoCash_Db=> \dt
+                     List of relations
+ Schema |           Name            | Type  |     Owner
+--------+---------------------------+-------+---------------
+ public | admin_notifications       | table | CreoCash_User
+ public | auto_payments             | table | CreoCash_User
+ public | broker_programs           | table | CreoCash_User
+ public | budget_escrow             | table | CreoCash_User
+ public | campaigns                 | table | CreoCash_User
+ public | clipper_campaigns         | table | CreoCash_User
+ public | clipper_reviews           | table | CreoCash_User
+ public | clipper_stats             | table | CreoCash_User
+ public | enterprise_accounts       | table | CreoCash_User
+ public | enterprise_requests       | table | CreoCash_User
+ public | outreach_contacts         | table | CreoCash_User
+ public | payout_records            | table | CreoCash_User
+ public | payouts                   | table | CreoCash_User
+ public | personalized_broker_links | table | CreoCash_User
+ public | platform_reviews          | table | CreoCash_User
+ public | revenue_transactions      | table | CreoCash_User
+ public | review_prompts            | table | CreoCash_User
+ public | social_metrics            | table | CreoCash_User
+ public | system_health_metrics     | table | CreoCash_User
+ public | tracking_events           | table | CreoCash_User
+ public | trading_metrics           | table | CreoCash_User
+ public | users                     | table | CreoCash_User
+ public | website_metrics           | table | CreoCash_User
+(23 rows)
+
+
+CreoCash_Db=> SELECT * FROM metrics LIMIT 5;
+ERROR:  relation "metrics" does not exist
+LINE 1: SELECT * FROM metrics LIMIT 5;
+                      ^
+CreoCash_Db=> \dt *.*metrics*
+                   List of relations
+ Schema |         Name          | Type  |     Owner
+--------+-----------------------+-------+---------------
+ public | social_metrics        | table | CreoCash_User
+ public | system_health_metrics | table | CreoCash_User
+ public | trading_metrics       | table | CreoCash_User
+ public | website_metrics       | table | CreoCash_User
+(4 rows)
+
+
+CreoCash_Db=>

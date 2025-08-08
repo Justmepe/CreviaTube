@@ -148,15 +148,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Safely handle JSON fields for social accounts
+    // Safely handle JSON fields
     const userData = {
       ...insertUser,
-      socialAccounts: insertUser.socialAccounts ? JSON.parse(JSON.stringify(insertUser.socialAccounts)) : null,
+      socialAccounts: insertUser.socialAccounts || null,
+      tradingAccounts: insertUser.tradingAccounts || null,
+      businessIntegration: insertUser.businessIntegration || null,
     };
     
     const [user] = await db
       .insert(users)
-      .values([userData])
+      .values(userData)
       .returning();
     return user;
   }
@@ -813,6 +815,15 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getPlatformReviews(filters: { userId?: string; status?: string; limit?: number } = {}): Promise<any[]> {
+    // Build where conditions
+    const whereConditions = [];
+    if (filters.userId) {
+      whereConditions.push(eq(platformReviews.userId, filters.userId));
+    }
+    if (filters.status) {
+      whereConditions.push(eq(platformReviews.status, filters.status));
+    }
+
     let query = db
       .select({
         id: platformReviews.id,
@@ -850,17 +861,16 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(platformReviews)
-      .leftJoin(users, eq(platformReviews.userId, users.id))
-      .orderBy(desc(platformReviews.createdAt));
+      .leftJoin(users, eq(platformReviews.userId, users.id));
 
-    if (filters.userId) {
-      query = query.where(eq(platformReviews.userId, filters.userId));
+    // Apply where conditions if any
+    if (whereConditions.length > 0) {
+      query = query.where(and(...whereConditions));
     }
 
-    if (filters.status) {
-      query = query.where(eq(platformReviews.status, filters.status));
-    }
+    query = query.orderBy(desc(platformReviews.createdAt));
 
+    // Apply limit if specified
     if (filters.limit) {
       query = query.limit(filters.limit);
     }
