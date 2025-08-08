@@ -28,26 +28,92 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+// TypeScript interface definitions
+interface AdminStats {
+  totalUsers?: number;
+  newUsersThisWeek?: number;
+  activeCampaigns?: number;
+  campaignGrowth?: number;
+  totalRevenue?: number;
+  revenueGrowth?: number;
+  totalEvents?: number;
+  eventsToday?: number;
+  userDistribution?: Array<{
+    role: string;
+    count: number;
+    percentage: number;
+  }>;
+  creatorTypeDistribution?: Array<{
+    type: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+interface SystemHealthService {
+  name: string;
+  status: string;
+  responseTime: number;
+  lastCheck: string;
+}
+
+interface SystemHealth {
+  services?: SystemHealthService[];
+  totalUptime?: string;
+  averageResponseTime?: number;
+  lastUpdate?: string;
+}
+
+interface AdminNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  urgent?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface EnterpriseRequest {
+  id: string;
+  userId: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  companyName: string;
+  companySize: string;
+  requestType: string;
+  message: string;
+  preferredMeetingTime: string;
+  urgency: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'rejected';
+  assignedTo: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth();
 
   // Fetch real-time platform analytics
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
     refetchInterval: 30000, // Refetch every 30 seconds for real-time data
   });
 
-  const { data: systemHealth } = useQuery({
+  const { data: systemHealth } = useQuery<SystemHealth>({
     queryKey: ["/api/admin/system-health"],
     refetchInterval: 60000, // Refetch every minute
   });
 
-  const { data: notifications } = useQuery({
+  const { data: notifications } = useQuery<AdminNotification[]>({
     queryKey: ["/api/admin/notifications"],
     refetchInterval: 15000, // Refetch every 15 seconds for real-time notifications
   });
 
-  const { data: enterpriseRequests } = useQuery({
+  const { data: enterpriseRequests } = useQuery<EnterpriseRequest[]>({
     queryKey: ["/api/admin/enterprise-requests"],
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -71,7 +137,7 @@ export default function AdminDashboard() {
     { name: "Overview", href: "/", icon: BarChart3, current: true },
     { name: "Users", href: "/users", icon: Users },
     { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
-    { name: "Enterprise", href: "/enterprise", icon: Building, badge: (enterpriseRequests as any[])?.filter((req: any) => req.status === 'pending').length || 0 },
+    { name: "Enterprise", href: "/enterprise", icon: Building, badge: enterpriseRequests?.filter(req => req.status === 'pending').length || 0 },
     { name: "Payouts", href: "/payouts", icon: DollarSign },
     { name: "Security", href: "/security", icon: Shield },
   ];
@@ -100,10 +166,10 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 shadow-lg">
               <div className={`w-2 h-2 rounded-full animate-pulse ${
-                systemHealth?.services?.every(s => s.status === 'healthy') ? 'bg-green-500' : 'bg-red-500'
+                systemHealth?.services?.every((s: SystemHealthService) => s.status === 'healthy') ? 'bg-green-500' : 'bg-red-500'
               }`}></div>
               <span className="text-slate-700 font-medium">
-                {systemHealth?.services?.every(s => s.status === 'healthy') ? 'System Healthy' : 'System Issues'}
+                {systemHealth?.services?.every((s: SystemHealthService) => s.status === 'healthy') ? 'System Healthy' : 'System Issues'}
               </span>
             </div>
           </div>
@@ -200,14 +266,14 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className={`px-2 py-1 text-xs font-bold rounded-full ${
-                      (systemHealth as any)?.services?.every((s: any) => s.status === 'healthy') 
+                      systemHealth?.services?.every((s: SystemHealthService) => s.status === 'healthy') 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {(systemHealth as any)?.services?.every((s: any) => s.status === 'healthy') ? 'Healthy' : 'Issues'}
+                      {systemHealth?.services?.every((s: SystemHealthService) => s.status === 'healthy') ? 'Healthy' : 'Issues'}
                     </div>
                   </div>
-                  <p className="text-sm text-teal-600 font-medium">{(systemHealth as any)?.totalUptime || '99.8%'} uptime</p>
+                  <p className="text-sm text-teal-600 font-medium">{systemHealth?.totalUptime || '99.8%'} uptime</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Shield className="w-6 h-6 text-white" />
@@ -310,7 +376,7 @@ export default function AdminDashboard() {
             </div>
             
             {/* Enterprise Requests */}
-            {enterpriseRequests && (enterpriseRequests as any[]).length > 0 && (
+            {enterpriseRequests && enterpriseRequests.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
@@ -318,11 +384,11 @@ export default function AdminDashboard() {
                   </div>
                   <h3 className="font-semibold text-slate-800">Enterprise Contact Requests</h3>
                   <Badge variant="destructive" className="animate-pulse">
-                    {(enterpriseRequests as any[]).filter((req: any) => req.status === 'pending').length} New
+                    {enterpriseRequests.filter(req => req.status === 'pending').length} New
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(enterpriseRequests as any[]).slice(0, 4).map((request: any, index: number) => (
+                  {enterpriseRequests.slice(0, 4).map((request, index) => (
                     <div key={index} className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -368,7 +434,7 @@ export default function AdminDashboard() {
             )}
 
             {/* Admin Notifications */}
-            {notifications && (notifications as any[]).length > 0 && (
+            {notifications && notifications.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
@@ -376,11 +442,11 @@ export default function AdminDashboard() {
                   </div>
                   <h3 className="font-semibold text-slate-800">Recent Notifications</h3>
                   <Badge variant="secondary">
-                    {(notifications as any[]).filter((notif: any) => !notif.read).length} Unread
+                    {notifications.filter(notif => !notif.read).length} Unread
                   </Badge>
                 </div>
                 <div className="space-y-3">
-                  {(notifications as any[]).slice(0, 5).map((notification: any, index: number) => (
+                  {notifications.slice(0, 5).map((notification, index) => (
                     <div 
                       key={index} 
                       className={`flex items-start space-x-3 p-3 rounded-lg border ${
@@ -444,7 +510,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(stats as any)?.userDistribution?.map((userType: any, index: number) => (
+                  {stats?.userDistribution?.map((userType, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${
@@ -597,7 +663,7 @@ export default function AdminDashboard() {
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <h4 className="font-medium text-blue-900 mb-2">Average Campaign Budget</h4>
                     <p className="text-xl font-bold text-blue-700">
-                      KES {stats?.activeCampaigns > 0 
+                      KES {(stats?.activeCampaigns && stats.activeCampaigns > 0) 
                         ? Math.round(((stats?.totalRevenue || 0) / 0.2) / stats.activeCampaigns).toLocaleString()
                         : '0'}
                     </p>
@@ -606,7 +672,7 @@ export default function AdminDashboard() {
                   <div className="p-4 bg-green-50 rounded-lg">
                     <h4 className="font-medium text-green-900 mb-2">Events per User</h4>
                     <p className="text-xl font-bold text-green-700">
-                      {stats?.totalUsers > 0 
+                      {(stats?.totalUsers && stats.totalUsers > 0) 
                         ? Math.round((stats?.totalEvents || 0) / stats.totalUsers)
                         : 0}
                     </p>
@@ -615,7 +681,7 @@ export default function AdminDashboard() {
                   <div className="p-4 bg-purple-50 rounded-lg">
                     <h4 className="font-medium text-purple-900 mb-2">Growth Rate</h4>
                     <p className="text-xl font-bold text-purple-700">
-                      {stats?.totalUsers > 0 
+                      {(stats?.totalUsers && stats.totalUsers > 0) 
                         ? Math.round(((stats?.newUsersThisWeek || 0) / stats.totalUsers) * 100)
                         : 0}%
                     </p>
