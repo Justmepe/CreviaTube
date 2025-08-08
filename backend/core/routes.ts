@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { authRoutes } from "../modules/auth/auth.routes";
 import { campaignRoutes } from "../modules/campaigns/campaigns.routes";
 import { userRoutes } from "../modules/users/users.routes";
-import { adminRoutes } from "../modules/admin/admin.routes";
-import { paymentRoutes } from "../modules/payments/payments.routes";
-import { metricsRoutes } from "../modules/metrics/metrics.routes";
+// import { adminRoutes } from "../modules/admin/admin.routes";
+import { paymentsRoutes } from "../modules/payments/payments.routes";
+// import { metricsRoutes } from "../modules/metrics/metrics.routes";
 import creatorAnalyticsRoutes from "../modules/analytics/creator-analytics.routes";
 
 export function setupRoutes(app: Express): void {
@@ -18,16 +18,16 @@ export function setupRoutes(app: Express): void {
   app.use("/api/campaigns", campaignRoutes);
   
   // Payment processing routes
-  app.use("/api/payments", paymentRoutes);
+  app.use("/api/payments", paymentsRoutes);
   
   // Metrics and analytics routes
-  app.use("/api/metrics", metricsRoutes);
+  // app.use("/api/metrics", metricsRoutes);
   
   // Creator-specific analytics routes
   app.use("/api/analytics", creatorAnalyticsRoutes);
   
   // Admin routes
-  app.use("/api/admin", adminRoutes);
+  // app.use("/api/admin", adminRoutes);
 
   // Health check
   app.get("/api/health", (req, res) => {

@@ -151,9 +151,9 @@ export class DatabaseStorage implements IStorage {
     // Safely handle JSON fields
     const userData = {
       ...insertUser,
-      socialAccounts: insertUser.socialAccounts || null,
-      tradingAccounts: insertUser.tradingAccounts || null,
-      businessIntegration: insertUser.businessIntegration || null,
+      socialAccounts: insertUser.socialAccounts as any || null,
+      tradingAccounts: insertUser.tradingAccounts as any || null,
+      businessIntegration: insertUser.businessIntegration as any || null,
     };
     
     const [user] = await db
@@ -213,7 +213,8 @@ export class DatabaseStorage implements IStorage {
     // Safely handle JSON fields for campaign goals
     const campaignData = {
       ...campaign,
-      campaignGoals: campaign.campaignGoals ? JSON.parse(JSON.stringify(campaign.campaignGoals)) : null,
+      campaignGoals: campaign.campaignGoals as any || null,
+      outreachSettings: campaign.outreachSettings as any || null,
     };
     
     const [newCampaign] = await db
