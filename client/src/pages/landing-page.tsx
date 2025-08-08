@@ -12,7 +12,13 @@ import {
   Star,
   ArrowRight,
   Sparkles,
-  Quote
+  Quote,
+  Users,
+  Zap,
+  BarChart3,
+  Building2,
+  PlayCircle,
+  CreditCard
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -42,6 +48,39 @@ export default function LandingPage() {
   // Handle Get Started button click
   const handleGetStarted = () => {
     setLocation("/auth");
+  };
+
+  // Navigation handlers for hero section buttons
+  const scrollToSection = (elementId: string) => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleNavigation = (action: string) => {
+    switch (action) {
+      case 'creators':
+        scrollToSection('features');
+        break;
+      case 'clippers':
+        setLocation('/clipper-directory');
+        break;
+      case 'features':
+        scrollToSection('features');
+        break;
+      case 'enterprise':
+        setLocation('/auth'); // For now, direct to signup - can be specialized later
+        break;
+      case 'how-it-works':
+        scrollToSection('how-it-works');
+        break;
+      case 'pricing':
+        scrollToSection('trust-indicators');
+        break;
+      default:
+        break;
+    }
   };
 
   // Icon mapping for dynamic features
@@ -143,6 +182,63 @@ export default function LandingPage() {
                 Track performance, complete goals, and get paid automatically with our intelligent escrow system.
               </p>
               
+              {/* Hero Navigation Buttons */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 my-8">
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigation('creators')}
+                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
+                >
+                  <TrendingUp className="w-5 h-5 text-blue-500" />
+                  <span className="font-medium">For Creators</span>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigation('clippers')}
+                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
+                >
+                  <Users className="w-5 h-5 text-purple-500" />
+                  <span className="font-medium">For Clippers</span>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigation('features')}
+                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
+                >
+                  <Zap className="w-5 h-5 text-teal-500" />
+                  <span className="font-medium">Features</span>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigation('enterprise')}
+                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
+                >
+                  <Building2 className="w-5 h-5 text-indigo-500" />
+                  <span className="font-medium">Enterprise</span>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigation('how-it-works')}
+                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
+                >
+                  <PlayCircle className="w-5 h-5 text-green-500" />
+                  <span className="font-medium">How It Works</span>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigation('pricing')}
+                  className="flex items-center justify-center space-x-2 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 hover:bg-white/60 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900"
+                >
+                  <CreditCard className="w-5 h-5 text-orange-500" />
+                  <span className="font-medium">Pricing</span>
+                </Button>
+              </div>
+              
               {/* Call-to-Action Button */}
               <div className="flex items-center space-x-4 pt-4">
                 <Button 
@@ -162,7 +258,7 @@ export default function LandingPage() {
             </div>
 
             {/* Feature Grid */}
-            <div className="grid grid-cols-2 gap-6 mb-12">
+            <div id="features" className="grid grid-cols-2 gap-6 mb-12">
               {Array.isArray(features) && features?.map((feature: any, index: number) => {
                 const Icon = iconMap[feature.icon as keyof typeof iconMap];
                 return (
@@ -191,6 +287,80 @@ export default function LandingPage() {
                   <div className="text-sm text-slate-600 font-medium">{stat.label}</div>
                 </div>
               ))}
+            </div>
+
+            {/* How It Works Section */}
+            <div id="how-it-works" className="mt-16 mb-16">
+              <div className="text-center mb-12">
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+                  How CreoCash Works
+                </h2>
+                <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+                  Get started in minutes with our simple 3-step process designed for creators and clippers
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Step 1 */}
+                <div className="text-center group">
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-2xl font-bold text-white">1</span>
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-3">Create or Join</h3>
+                  <p className="text-slate-600 leading-relaxed">
+                    Creators set up campaigns with goals and budgets. Clippers join campaigns that match their interests and skills.
+                  </p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="text-center group">
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-2xl font-bold text-white">2</span>
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-3">Create & Track</h3>
+                  <p className="text-slate-600 leading-relaxed">
+                    Share content using unique tracking links. Our platform monitors clicks, views, signups, and conversions in real-time.
+                  </p>
+                </div>
+
+                {/* Step 3 */}
+                <div className="text-center group">
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-2xl font-bold text-white">3</span>
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-3">Get Paid</h3>
+                  <p className="text-slate-600 leading-relaxed">
+                    When goals are met, payouts are automatically processed through our secure escrow system. No delays, no hassles.
+                  </p>
+                </div>
+              </div>
+
+              {/* CTA for How It Works */}
+              <div className="text-center mt-12">
+                <Button 
+                  onClick={handleGetStarted}
+                  variant="outline"
+                  className="bg-white/60 backdrop-blur-sm border border-white/40 hover:bg-white/80 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 px-8 py-3 rounded-xl font-semibold"
+                >
+                  <span>Start Your Journey</span>
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
 
             {/* Enhanced Customer Reviews Section */}
@@ -353,7 +523,7 @@ export default function LandingPage() {
               </div>
 
               {/* Trust Indicators */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+              <div id="trust-indicators" className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                   <div>
                     <div className="text-2xl font-bold text-blue-600 mb-1">50K+</div>
