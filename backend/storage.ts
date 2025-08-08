@@ -214,7 +214,7 @@ export class DatabaseStorage implements IStorage {
     const campaignData = {
       ...campaign,
       campaignGoals: campaign.campaignGoals as any || null,
-      outreachSettings: campaign.outreachSettings as any || null,
+      outreachConfig: campaign.outreachConfig as any || null,
     };
     
     const [newCampaign] = await db
@@ -825,8 +825,8 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(eq(platformReviews.status, filters.status));
     }
 
-    // Build the base query
-    let baseQuery = db
+    // Build query with all conditions
+    let query = db
       .select({
         id: platformReviews.id,
         userId: platformReviews.userId,
@@ -865,20 +865,20 @@ export class DatabaseStorage implements IStorage {
       .from(platformReviews)
       .leftJoin(users, eq(platformReviews.userId, users.id));
 
-    // Apply where conditions if any
+    // Apply conditions directly in a single query
     if (whereConditions.length > 0) {
-      baseQuery = baseQuery.where(and(...whereConditions));
+      if (filters.limit) {
+        return await query.where(and(...whereConditions)).orderBy(desc(platformReviews.createdAt)).limit(filters.limit);
+      } else {
+        return await query.where(and(...whereConditions)).orderBy(desc(platformReviews.createdAt));
+      }
+    } else {
+      if (filters.limit) {
+        return await query.orderBy(desc(platformReviews.createdAt)).limit(filters.limit);
+      } else {
+        return await query.orderBy(desc(platformReviews.createdAt));
+      }
     }
-
-    // Apply ordering
-    baseQuery = baseQuery.orderBy(desc(platformReviews.createdAt));
-
-    // Apply limit if specified
-    if (filters.limit) {
-      baseQuery = baseQuery.limit(filters.limit);
-    }
-
-    return await baseQuery;
   }
   
   async getPlatformReviewStats(): Promise<{ averageRating: number; totalReviews: number; ratingBreakdown: Record<number, number> }> {

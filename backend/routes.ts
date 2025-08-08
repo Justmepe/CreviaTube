@@ -1592,7 +1592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate revenue based on standard enterprise commission rate (15%)
         const commissionRate = 0.15;
         totalRevenue = enterpriseCampaigns.reduce((sum, campaign) => 
-          sum + ((campaign.budgetUsed || 0) * commissionRate), 0
+          sum + (Number(campaign.budgetUsed || 0) * commissionRate), 0
         );
       }
 
