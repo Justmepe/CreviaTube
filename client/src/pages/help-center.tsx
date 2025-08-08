@@ -8,15 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function HelpCenter() {
   const [, setLocation] = useLocation();
 
-  const { data: helpData, isLoading, error } = useQuery<any>({
+  const { data: helpData, isLoading } = useQuery<any>({
     queryKey: ["/api/pages/help-center"],
   });
-
-  // Debug logging
-  console.log("Help Center - isLoading:", isLoading);
-  console.log("Help Center - error:", error);
-  console.log("Help Center - helpData:", helpData);
-  console.log("Help Center - sections:", helpData?.content?.sections);
 
   if (isLoading) {
     return (
@@ -69,13 +63,6 @@ export default function HelpCenter() {
           </div>
         </div>
 
-        {/* Debug Info */}
-        {helpData && (
-          <div className="mb-8 p-4 bg-gray-100 rounded">
-            <h3 className="font-bold mb-2">Debug Info:</h3>
-            <p>Data received: {JSON.stringify(helpData, null, 2)}</p>
-          </div>
-        )}
 
         {/* Help Sections */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
