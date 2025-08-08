@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { budgetEscrow, autoPayments, campaigns, trackingEvents, users, payouts, clipperCampaigns } from "../../shared/schema.js";
+import { db } from "../../db";
+import { budgetEscrow, autoPayments, campaigns, trackingEvents, users, payouts, clipperCampaigns } from "../../../shared/schema";
 import { eq, and, sum } from "drizzle-orm";
 interface PesaPalConfig {
   consumerKey: string;
@@ -388,12 +388,18 @@ export class EscrowService {
 
     } catch (error: any) {
       // Mark payment as failed and unlock the funds
+      const [currentPayment] = await db
+        .select()
+        .from(autoPayments)
+        .where(eq(autoPayments.id, autoPaymentId))
+        .limit(1);
+      
       await db
         .update(autoPayments)
         .set({
           status: "failed",
           failureReason: error.message,
-          retryCount: payment.retryCount + 1,
+          retryCount: (currentPayment?.retryCount || 0) + 1,
         })
         .where(eq(autoPayments.id, autoPaymentId));
 
@@ -968,7 +974,7 @@ export class EscrowService {
         .where(eq(clipperCampaigns.clipperId, payout.clipperId));
       
       let remainingAmount = payoutAmount;
-      const deductions = [];
+      const deductions: Array<{ campaignId: string; amount: number }> = [];
 
       // Deduct from available escrow balances proportionally
       for (const campaignRelation of campaignRelations) {
@@ -1054,6 +1060,110 @@ export class EscrowService {
       }
       
       throw error;
+    }
+  }
+
+  /**
+   * Get escrow balance for a campaign
+   */
+  async getEscrowBalance(campaignId: string): Promise<{ available: number; locked: number; total: number }> {
+    try {
+      const [escrow] = await db
+        .select()
+        .from(budgetEscrow)
+        .where(and(
+          eq(budgetEscrow.campaignId, campaignId),
+          eq(budgetEscrow.status, "active")
+        ))
+        .limit(1);
+
+      if (!escrow) {
+        return { available: 0, locked: 0, total: 0 };
+      }
+
+      const available = parseFloat(escrow.availableBalance);
+      const locked = parseFloat(escrow.lockedBalance);
+      const total = available + locked;
+
+      return { available, locked, total };
+    } catch (error: any) {
+      console.error('Get escrow balance error:', error);
+      throw new Error(error.message || "Failed to get escrow balance");
+    }
+  }
+
+  /**
+   * Process clipper payout
+   */
+  async processClipperPayout(
+    clipperId: string,
+    campaignId: string,
+    amount: number,
+    paymentMethod: string,
+    paymentDetails: { phoneNumber?: string; email?: string }
+  ): Promise<{ success: boolean; transactionId?: string; message: string }> {
+    try {
+      // Get escrow for the campaign
+      const [escrow] = await db
+        .select()
+        .from(budgetEscrow)
+        .where(and(
+          eq(budgetEscrow.campaignId, campaignId),
+          eq(budgetEscrow.status, "active")
+        ))
+        .limit(1);
+
+      if (!escrow) {
+        throw new Error("No active escrow found for campaign");
+      }
+
+      const availableBalance = parseFloat(escrow.availableBalance);
+      if (availableBalance < amount) {
+        throw new Error("Insufficient escrow balance for payout");
+      }
+
+      // Create auto-payment record
+      const [autoPayment] = await db
+        .insert(autoPayments)
+        .values({
+          escrowId: escrow.id,
+          clipperId,
+          campaignId,
+          amount: amount.toString(),
+          status: "pending",
+          paymentMethod,
+          paymentDetails: JSON.stringify(paymentDetails),
+          scheduledAt: new Date(),
+        })
+        .returning();
+
+      // Update escrow balance
+      const newAvailableBalance = availableBalance - amount;
+      const newLockedBalance = parseFloat(escrow.lockedBalance) + amount;
+
+      await db
+        .update(budgetEscrow)
+        .set({
+          availableBalance: newAvailableBalance.toString(),
+          lockedBalance: newLockedBalance.toString(),
+        })
+        .where(eq(budgetEscrow.id, escrow.id));
+
+      // Process the payment
+      const transactionId = await this.executePayment(autoPayment.id);
+
+      return {
+        success: true,
+        transactionId,
+        message: "Clipper payout processed successfully"
+      };
+
+    } catch (error: any) {
+      console.error('Process clipper payout error:', error);
+      return {
+        success: false,
+        message: error.message || "Failed to process clipper payout"
+      };
     }
   }
 }

@@ -181,6 +181,8 @@ export const users = pgTable("users", {
   businessIntegration: json("business_integration").$type<{
     website?: string;
     googleAnalyticsId?: string;
+    facebookPixelId?: string;
+    hubspotApiKey?: string;
     conversionGoals?: Array<{
       name: string;
       type: 'form_submission' | 'purchase' | 'signup' | 'download';
