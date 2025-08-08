@@ -12,7 +12,8 @@ if (process.env.DATABASE_URL) {
     connectionString: process.env.DATABASE_URL,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000, // Increased to 10 seconds for Neon serverless
+    statement_timeout: 15000,
   });
   db = drizzle({ client: pool, schema });
 } else {
