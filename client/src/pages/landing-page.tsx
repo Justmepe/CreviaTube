@@ -18,7 +18,9 @@ import {
   BarChart3,
   Building2,
   PlayCircle,
-  CreditCard
+  CreditCard,
+  Home,
+  LogIn
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -60,20 +62,29 @@ export default function LandingPage() {
 
   const handleNavigation = (action: string) => {
     switch (action) {
+      case 'home':
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      case 'features':
+        scrollToSection('features');
+        break;
+      case 'how-it-works':
+        scrollToSection('how-it-works');
+        break;
+      case 'reviews':
+        scrollToSection('reviews');
+        break;
+      case 'signin':
+        setLocation('/auth');
+        break;
       case 'creators':
         scrollToSection('features');
         break;
       case 'clippers':
         setLocation('/clipper-directory');
         break;
-      case 'features':
-        scrollToSection('features');
-        break;
       case 'enterprise':
-        setLocation('/auth'); // For now, direct to signup - can be specialized later
-        break;
-      case 'how-it-works':
-        scrollToSection('how-it-works');
+        setLocation('/auth');
         break;
       case 'pricing':
         scrollToSection('trust-indicators');
@@ -96,54 +107,65 @@ export default function LandingPage() {
       {/* Top Navigation */}
       <div className="relative z-20 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <button
-              onClick={() => handleNavigation('creators')}
-              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
-            >
-              <TrendingUp className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">For Creators</span>
-            </button>
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">CreoCash</span>
+            </div>
             
-            <button
-              onClick={() => handleNavigation('clippers')}
-              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
-            >
-              <Users className="w-4 h-4 text-purple-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">For Clippers</span>
-            </button>
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <button
+                onClick={() => handleNavigation('home')}
+                className="flex items-center space-x-2 text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
+              >
+                <Home className="w-4 h-4" />
+                <span>Home</span>
+              </button>
+              
+              <button
+                onClick={() => handleNavigation('features')}
+                className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
+              >
+                Features
+              </button>
+              
+              <button
+                onClick={() => handleNavigation('how-it-works')}
+                className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
+              >
+                How It Works
+              </button>
+              
+              <button
+                onClick={() => handleNavigation('reviews')}
+                className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
+              >
+                Reviews
+              </button>
+              
+              <button
+                onClick={() => handleNavigation('signin')}
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In</span>
+              </button>
+            </nav>
             
-            <button
-              onClick={() => handleNavigation('features')}
-              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
-            >
-              <Zap className="w-4 h-4 text-teal-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">Features</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavigation('enterprise')}
-              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
-            >
-              <Building2 className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">Enterprise</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavigation('how-it-works')}
-              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
-            >
-              <PlayCircle className="w-4 h-4 text-green-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">How It Works</span>
-            </button>
-            
-            <button
-              onClick={() => handleNavigation('pricing')}
-              className="flex items-center justify-center space-x-2 p-3 rounded-lg hover:bg-white/60 transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 group"
-            >
-              <CreditCard className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">Pricing</span>
-            </button>
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => handleNavigation('signin')}
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -255,8 +277,46 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Feature Grid */}
-            <div id="features" className="grid grid-cols-2 gap-6 mb-12">
+            {/* Features Section */}
+            <div id="features" className="mb-16">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                  Choose Your Path
+                </h2>
+                <p className="text-lg text-slate-600">
+                  Select what best describes you to explore relevant features
+                </p>
+              </div>
+              
+              {/* Navigation Buttons */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
+                <button
+                  onClick={() => handleNavigation('creators')}
+                  className="flex items-center justify-center space-x-3 p-6 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105 group"
+                >
+                  <TrendingUp className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-slate-800">For Creators</span>
+                </button>
+                
+                <button
+                  onClick={() => handleNavigation('clippers')}
+                  className="flex items-center justify-center space-x-3 p-6 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105 group"
+                >
+                  <Users className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-slate-800">For Clippers</span>
+                </button>
+                
+                <button
+                  onClick={() => handleNavigation('enterprise')}
+                  className="flex items-center justify-center space-x-3 p-6 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105 group"
+                >
+                  <Building2 className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-slate-800">Enterprise</span>
+                </button>
+              </div>
+              
+              {/* Feature Grid */}
+              <div className="grid grid-cols-2 gap-6">
               {Array.isArray(features) && features?.map((feature: any, index: number) => {
                 const Icon = iconMap[feature.icon as keyof typeof iconMap];
                 return (
@@ -273,6 +333,7 @@ export default function LandingPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
 
             {/* Stats */}
@@ -294,7 +355,7 @@ export default function LandingPage() {
                   How CreoCash Works
                 </h2>
                 <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-                  Get started in minutes with our simple 3-step process designed for creators and clippers
+                  Whether you're a creator or clipper, get started in minutes with our simple 3-step process
                 </p>
               </div>
 
@@ -311,7 +372,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-3">Create or Join</h3>
                   <p className="text-slate-600 leading-relaxed">
-                    Creators set up campaigns with goals and budgets. Clippers join campaigns that match their interests and skills.
+                    <strong>Creators:</strong> Set up campaigns with goals and budgets. <strong>Clippers:</strong> Join campaigns that match your interests and skills.
                   </p>
                 </div>
 
@@ -327,7 +388,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-3">Create & Track</h3>
                   <p className="text-slate-600 leading-relaxed">
-                    Share content using unique tracking links. Our platform monitors clicks, views, signups, and conversions in real-time.
+                    <strong>Creators:</strong> Monitor campaign performance. <strong>Clippers:</strong> Share content using unique tracking links. Real-time analytics for everyone.
                   </p>
                 </div>
 
@@ -343,7 +404,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-3">Get Paid</h3>
                   <p className="text-slate-600 leading-relaxed">
-                    When goals are met, payouts are automatically processed through our secure escrow system. No delays, no hassles.
+                    <strong>Everyone wins:</strong> When goals are met, payouts are automatically processed through our secure escrow system. No delays, no hassles.
                   </p>
                 </div>
               </div>
@@ -362,7 +423,7 @@ export default function LandingPage() {
             </div>
 
             {/* Enhanced Customer Reviews Section */}
-            <div className="mt-16">
+            <div id="reviews" className="mt-16">
               <div className="text-center mb-10">
                 <div className="flex items-center justify-center space-x-2 mb-4">
                   <div className="flex items-center space-x-1">
