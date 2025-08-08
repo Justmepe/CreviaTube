@@ -1,4 +1,5 @@
 import { ClipperDirectory } from '@/features/reviews/ClipperDirectory';
+import { DashboardLayout } from '@/components/dashboard-layout';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
@@ -8,7 +9,7 @@ export default function ClipperDirectoryPage() {
 
   if (!user || user.role !== 'creator') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <DashboardLayout title="Clipper Directory">
         <Card>
           <CardContent className="text-center py-12">
             <Shield className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -18,13 +19,13 @@ export default function ClipperDirectoryPage() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <DashboardLayout title="Clipper Directory">
       <ClipperDirectory />
-    </div>
+    </DashboardLayout>
   );
 }

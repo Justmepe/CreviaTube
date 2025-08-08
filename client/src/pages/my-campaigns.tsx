@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DashboardLayout } from '@/components/dashboard-layout';
 import { useAuth } from '@/hooks/use-auth';
 import { getQueryFn } from '@/lib/queryClient';
 import { ReviewClipperModal } from '@/features/reviews/ReviewClipperModal';
@@ -38,7 +39,7 @@ export default function MyCampaignsPage() {
 
   const { data: campaigns, isLoading } = useQuery<CampaignWithClippers[]>({
     queryKey: ['/api/campaigns/with-clippers'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === 'creator',
   });
 
@@ -67,7 +68,7 @@ export default function MyCampaignsPage() {
 
   if (!user || user.role !== 'creator') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <DashboardLayout title="My Campaigns">
         <Card>
           <CardContent className="text-center py-12">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -77,7 +78,7 @@ export default function MyCampaignsPage() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -219,10 +220,9 @@ export default function MyCampaignsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <DashboardLayout title="My Campaigns">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">My Campaigns</h1>
           <p className="text-gray-600">
             Manage your campaigns and review clipper performance.
           </p>
@@ -322,6 +322,6 @@ export default function MyCampaignsPage() {
         onOpenChange={(open) => setReviewModal({ open, clipperCampaign: undefined })}
         clipperCampaign={reviewModal.clipperCampaign!}
       />
-    </div>
+    </DashboardLayout>
   );
 }
