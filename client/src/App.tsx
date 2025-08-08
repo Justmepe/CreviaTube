@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import LandingPage from "@/pages/landing-page";
 import CreatorDashboard from "@/pages/creator-dashboard";
 import ClipperDashboard from "@/pages/clipper-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -45,6 +46,7 @@ import PlatformReviews from "@/pages/platform-reviews";
 function Router() {
   return (
     <Switch>
+      <Route path="/landing" component={LandingPage} />
       <ProtectedRoute path="/" component={() => <DashboardRouter />} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
       <ProtectedRoute path="/campaigns" component={() => {
