@@ -29,7 +29,9 @@ import {
   Facebook,
   Instagram,
   Linkedin,
-  Youtube
+  Youtube,
+  MessageCircle,
+  MessageSquare
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -611,7 +613,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-grid-slate-800 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))] opacity-20"></div>
         
         <div className="relative z-10 max-w-6xl mx-auto px-12 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Company Info */}
             <div className="lg:col-span-1">
               <div className="flex items-center space-x-3 mb-6">
@@ -658,6 +660,27 @@ export default function LandingPage() {
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Privacy Policy</button></li>
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Terms of Service</button></li>
                 <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Status</button></li>
+              </ul>
+            </div>
+
+            {/* Community */}
+            <div>
+              <h3 className="text-base font-semibold text-white mb-3">Community</h3>
+              <ul className="space-y-2">
+                <li>
+                  <button className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
+                    <MessageCircle className="w-4 h-4 group-hover:text-purple-400" />
+                    <span>Discord Community</span>
+                  </button>
+                </li>
+                <li>
+                  <button className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
+                    <MessageSquare className="w-4 h-4 group-hover:text-green-400" />
+                    <span>WhatsApp Community</span>
+                  </button>
+                </li>
+                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Community Guidelines</button></li>
+                <li><button className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Events</button></li>
               </ul>
             </div>
           </div>
