@@ -79,7 +79,7 @@ async function testPaymentSystem() {
       console.log("✅ Campaign funding initiated successfully!");
       console.log(`   Transaction ID: ${fundingResult.transactionId}`);
       console.log(`   Redirect URL: ${fundingResult.redirectUrl}`);
-      console.log(`   Status: ${fundingResult.status}`);
+      console.log(`   Success: ${fundingResult.success}`);
       
       // Test data shows the payment flow works
       console.log("📋 Payment Summary:");
