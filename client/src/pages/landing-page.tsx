@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -37,6 +37,8 @@ import {
 export default function LandingPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [newReviewIds, setNewReviewIds] = useState<Set<string>>(new Set());
+  const [reviewsUpdateTime, setReviewsUpdateTime] = useState<Date>(new Date());
 
   // Fetch platform features and stats from API
   const { data: features = [] } = useQuery({
@@ -47,10 +49,45 @@ export default function LandingPage() {
     queryKey: ["/api/platform/stats"],
   });
 
-  // Fetch featured platform reviews for landing page
-  const { data: featuredReviews = [] } = useQuery({
-    queryKey: ["/api/platform-reviews", { status: "published", limit: 3 }],
+  // Fetch featured platform reviews for landing page with auto-updates
+  const { data: featuredReviews = [], refetch: refetchReviews, isFetching, isRefetching } = useQuery({
+    queryKey: ["/api/platform-reviews", { status: "published", limit: 4 }],
+    refetchInterval: 30000, // Auto-refetch every 30 seconds
+    refetchIntervalInBackground: true, // Continue refetching when tab is not active
+    staleTime: 10000, // Consider data stale after 10 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
+
+  // Track new reviews for highlighting
+  useEffect(() => {
+    if (Array.isArray(featuredReviews) && featuredReviews.length > 0) {
+      const currentReviewIds = new Set(featuredReviews.map((review: any) => review.id));
+      const previousReviewIds = new Set(JSON.parse(localStorage.getItem('lastReviewIds') || '[]'));
+      
+      // Find new reviews - convert Set to Array for filtering
+      const currentIds = Array.from(currentReviewIds);
+      const newIds = new Set(currentIds.filter(id => !previousReviewIds.has(id)));
+      
+      if (newIds.size > 0 && previousReviewIds.size > 0) {
+        setNewReviewIds(newIds);
+        setReviewsUpdateTime(new Date());
+        
+        // Clear highlighting after 5 seconds
+        setTimeout(() => {
+          setNewReviewIds(new Set());
+        }, 5000);
+      }
+      
+      // Save current review ids for next comparison
+      localStorage.setItem('lastReviewIds', JSON.stringify(currentIds));
+    }
+  }, [featuredReviews]);
+
+  // Manual refresh function for reviews
+  const handleRefreshReviews = useCallback(() => {
+    refetchReviews();
+    setReviewsUpdateTime(new Date());
+  }, [refetchReviews]);
 
   // Redirect if user is already logged in
   if (user) {
@@ -432,21 +469,52 @@ export default function LandingPage() {
                   </div>
                   <span className="text-2xl font-bold text-slate-800">4.9/5</span>
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                  Trusted by Creators Worldwide
-                </h2>
+                
+                <div className="flex items-center justify-center space-x-4 mb-4">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Trusted by Creators Worldwide
+                  </h2>
+                  
+                  {/* Live Update Indicator */}
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 bg-green-100/80 backdrop-blur-sm rounded-full px-3 py-1 border border-green-200/50">
+                      <div className={`w-2 h-2 rounded-full ${isRefetching ? 'bg-blue-500 animate-pulse' : 'bg-green-500'} transition-colors duration-300`}></div>
+                      <span className="text-xs font-medium text-green-700">
+                        {isRefetching ? 'Updating...' : 'Live'}
+                      </span>
+                    </div>
+                    
+                    <button
+                      onClick={handleRefreshReviews}
+                      className="p-2 rounded-full bg-white/70 hover:bg-white/90 border border-white/40 transition-all duration-200 hover:scale-105"
+                      title="Refresh reviews"
+                    >
+                      <MessageSquare className={`w-4 h-4 text-slate-600 ${isRefetching ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+                
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                   Join thousands of successful creators who are already earning with CreoCash. 
                   See what they have to say about their experience.
+                </p>
+                
+                {/* Last updated timestamp */}
+                <p className="text-sm text-slate-500 mt-2">
+                  Reviews updated: {reviewsUpdateTime.toLocaleTimeString()}
                 </p>
               </div>
 
               {/* Reviews Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {Array.isArray(featuredReviews) && featuredReviews.length > 0 ? (
-                  featuredReviews.slice(0, 4).map((review: any) => (
-                    <div key={review.id} className="group">
-                      <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-105 h-full">
+                  featuredReviews.slice(0, 4).map((review: any) => {
+                    const isNewReview = newReviewIds.has(review.id);
+                    return (
+                      <div key={review.id} className="group">
+                        <div className={`bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-105 h-full ${
+                          isNewReview ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50/50 animate-pulse' : ''
+                        }`}>
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center space-x-1">
                             {[...Array(5)].map((_, i) => (
@@ -492,7 +560,8 @@ export default function LandingPage() {
                         </div>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 ) : (
                   // Fallback testimonials when no reviews are available
                   [
