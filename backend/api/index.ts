@@ -6,7 +6,7 @@ import { adminAPI } from "./admin";
 import { metricsAPI } from "./metrics";
 import { paymentsAPI } from "./payments";
 import { usersAPI } from "./users";
-import { pagesAPI } from "./pages";
+import { pagesAPI } from "./pages/index";
 
 export function setupAPIs(app: Express): void {
   // Authentication API
