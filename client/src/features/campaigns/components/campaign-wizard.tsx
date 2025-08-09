@@ -292,7 +292,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
 
       {/* Step Content */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <div className="space-y-6">
           {/* Step 1: Basic Information */}
           {currentStep === 1 && (
             <Card>
@@ -1117,13 +1117,22 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="button" 
+                disabled={isSubmitting}
+                onClick={() => {
+                  console.log('Create Campaign button clicked');
+                  const formData = form.getValues();
+                  console.log('Form data:', formData);
+                  handleSubmit(formData);
+                }}
+              >
                 {isSubmitting ? "Creating Campaign..." : "Create Campaign"}
                 <TrendingUp className="h-4 w-4 ml-2" />
               </Button>
             )}
           </div>
-        </form>
+        </div>
       </Form>
     </div>
   );
