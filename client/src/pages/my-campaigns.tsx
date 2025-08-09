@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Star, Users, Clock, CheckCircle, AlertCircle, Eye, MousePointer, UserPlus } from 'lucide-react';
+import { Star, Users, Clock, CheckCircle, AlertCircle, Eye, MousePointer, UserPlus, Settings, Play, DollarSign } from 'lucide-react';
+import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,8 @@ interface CampaignWithClippers {
   status: string;
   budget: string;
   createdAt: string;
-  clippers: Array<{
+  fundingStatus?: string;
+  clippers?: Array<{
     id: string;
     clipperId: string;
     clipperName: string;
@@ -131,11 +133,11 @@ export default function MyCampaignsPage() {
           </div>
 
           {/* Clippers List */}
-          {campaign.clippers.length > 0 && (
+          {(campaign.clippers?.length || 0) > 0 && (
             <div className="space-y-3">
               <h4 className="font-medium text-sm">Clippers</h4>
               <div className="space-y-2">
-                {campaign.clippers.map((clipper) => (
+                {campaign.clippers?.map((clipper) => (
                   <div 
                     key={clipper.id}
                     className="flex items-center justify-between p-3 border rounded-lg"
@@ -214,6 +216,49 @@ export default function MyCampaignsPage() {
               </div>
             </div>
           )}
+          
+          {/* Campaign Actions */}
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {campaign.status === 'draft' ? 'Draft' : 
+                 campaign.status === 'active' ? 'Active' : 
+                 campaign.status === 'completed' ? 'Completed' : campaign.status}
+              </Badge>
+              {campaign.fundingStatus && (
+                <Badge variant="secondary" className="text-xs">
+                  {campaign.fundingStatus === 'pending' ? 'Needs Funding' :
+                   campaign.fundingStatus === 'processing' ? 'Processing Payment' :
+                   campaign.fundingStatus === 'funded' ? 'Funded' : campaign.fundingStatus}
+                </Badge>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {campaign.status === 'draft' && campaign.fundingStatus === 'pending' && (
+                <Link href={`/campaign-funding/${campaign.id}`}>
+                  <Button size="sm" variant="default" className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3" />
+                    Fund Campaign
+                  </Button>
+                </Link>
+              )}
+              
+              {campaign.status === 'draft' && campaign.fundingStatus === 'funded' && (
+                <Button size="sm" variant="default" className="flex items-center gap-1">
+                  <Play className="w-3 h-3" />
+                  Activate
+                </Button>
+              )}
+              
+              <Link href={`/campaigns/${campaign.id}/manage`}>
+                <Button size="sm" variant="outline" className="flex items-center gap-1">
+                  <Settings className="w-3 h-3" />
+                  Manage
+                </Button>
+              </Link>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
