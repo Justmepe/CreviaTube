@@ -56,11 +56,11 @@ export default function MyCampaignsPage() {
         id: clipperCampaign.id,
         clipperId: clipperCampaign.clipperId,
         campaignId: clipperCampaign.campaignId || campaigns?.find(c => 
-          c.clippers.some(cl => cl.id === clipperCampaign.id)
+          c.clippers?.some(cl => cl.id === clipperCampaign.id)
         )?.id,
         clipperName: clipperCampaign.clipperName,
         campaignName: campaigns?.find(c => 
-          c.clippers.some(cl => cl.id === clipperCampaign.id)
+          c.clippers?.some(cl => cl.id === clipperCampaign.id)
         )?.name,
         isCompleted: clipperCampaign.isCompleted,
         completionMetrics: clipperCampaign.completionMetrics,
@@ -251,10 +251,10 @@ export default function MyCampaignsPage() {
                 </Button>
               )}
               
-              <Link href={`/campaigns/${campaign.id}/manage`}>
+              <Link href={`/campaigns/create-enhanced?edit=${campaign.id}`}>
                 <Button size="sm" variant="outline" className="flex items-center gap-1">
                   <Settings className="w-3 h-3" />
-                  Manage
+                  Edit
                 </Button>
               </Link>
             </div>
