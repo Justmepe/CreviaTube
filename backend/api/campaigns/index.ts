@@ -214,4 +214,32 @@ router.post("/:id/apply", async (req: Request, res: Response) => {
   }
 });
 
+// Campaign funding status endpoint
+router.get("/:id/funding-status", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const { id } = req.params;
+    const campaign = await storage.getCampaign(id);
+    
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found" });
+    }
+    
+    // Check permissions
+    if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    res.json({
+      status: campaign.fundingStatus,
+      budget: campaign.budget,
+      funded: campaign.fundingStatus === "funded"
+    });
+  } catch (error: any) {
+    console.error('Funding status fetch error:', error);
+    res.status(500).json({ message: "Failed to fetch funding status", error: error.message });
+  }
+});
+
 export { router as campaignsAPI };

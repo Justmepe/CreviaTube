@@ -33,6 +33,37 @@ export function setupAPIs(app: Express): void {
   // Static Pages API
   app.use("/api/pages", pagesAPI);
   
+  // Payment methods endpoint (for campaign funding)
+  app.get("/api/payment-methods", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    res.json({
+      availableMethods: [
+        {
+          id: "mpesa",
+          name: "M-Pesa",
+          description: "Mobile Money Transfer",
+          icon: "smartphone",
+          requires: ["phoneNumber"]
+        },
+        {
+          id: "paypal", 
+          name: "PayPal",
+          description: "Secure online payments",
+          icon: "credit-card",
+          requires: ["email"]
+        },
+        {
+          id: "bank",
+          name: "Bank Transfer", 
+          description: "Direct bank transfer",
+          icon: "building",
+          requires: ["email"]
+        }
+      ]
+    });
+  });
+
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ 
