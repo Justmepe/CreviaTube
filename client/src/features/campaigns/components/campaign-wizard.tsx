@@ -58,16 +58,16 @@ const targetingSchema = z.object({
 });
 
 const brokerLinkSchema = z.object({
-  selectedBrokerLinks: z.array(z.string()).min(1, "Select at least one broker link for trading campaigns"),
+  selectedBrokerLinks: z.array(z.string()).optional(),
 });
 
-// Combined schema for final submission - conditionally include broker links for traders
+// Combined schema for final submission - make broker links optional initially
 const baseCampaignWizardSchema = basicInfoSchema
   .merge(budgetSchema)
   .merge(goalsSchema)
   .merge(targetingSchema);
 
-const campaignWizardSchema = baseCampaignWizardSchema.merge(brokerLinkSchema.partial());
+const campaignWizardSchema = baseCampaignWizardSchema.merge(brokerLinkSchema);
 
 type CampaignWizardData = z.infer<typeof campaignWizardSchema>;
 
@@ -183,13 +183,8 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
         break;
       case 3: // Goals & Metrics
         fieldsToValidate = ["primaryGoal"];
-        const primaryGoal = form.getValues("primaryGoal");
-        if (primaryGoal === "views") fieldsToValidate.push("viewsGoal");
-        if (primaryGoal === "clicks") fieldsToValidate.push("clicksGoal");
-        if (primaryGoal === "signups") fieldsToValidate.push("signupsGoal");
-        if (primaryGoal === "deposits") fieldsToValidate.push("depositsGoal");
-        if (primaryGoal === "trades") fieldsToValidate.push("tradesGoal");
-        if (primaryGoal === "conversions") fieldsToValidate.push("conversionsGoal");
+        // Note: Goal values are optional in schema, so we don't need to validate them here
+        // Users can set them but they're not required for progression
         break;
       case 4: // Targeting & Requirements
         fieldsToValidate = ["targetPlatforms", "targetCountries", "targetLanguages", "minFollowers", "ageRange.min", "ageRange.max"];
@@ -215,8 +210,28 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
     }
   };
 
-  const handleSubmit = (data: CampaignWizardData) => {
-    onSubmit(data);
+  const handleSubmit = async (data: CampaignWizardData) => {
+    // Perform final validation before submission
+    try {
+      // Validate all fields for final submission
+      const isValid = await form.trigger();
+      if (!isValid) {
+        console.error('Form validation failed:', form.formState.errors);
+        return;
+      }
+      
+      // Additional validation for trader creators
+      if (user?.userType === "trader_creator" && (!data.selectedBrokerLinks || data.selectedBrokerLinks.length === 0)) {
+        form.setError("selectedBrokerLinks", { 
+          message: "Please select at least one broker link for trading campaigns" 
+        });
+        return;
+      }
+      
+      onSubmit(data);
+    } catch (error) {
+      console.error('Submission error:', error);
+    }
   };
 
   const progress = (currentStep / totalSteps) * 100;
