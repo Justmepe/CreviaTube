@@ -160,8 +160,11 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
             title: "Payment Completed!",
             description: `Campaign funded successfully with $${data.amount} USD. Transaction ID: ${data.transactionId}`,
           });
+          // Refresh all campaign-related queries
           queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-          onSuccess();
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          // Force reload the current page to show funded status
+          window.location.reload();
         }, 5000); // 5 second delay to simulate processing
         
       } else if (data.status === "funded") {
@@ -169,7 +172,9 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
           title: "Campaign funded successfully!",
           description: `Your campaign has been funded with $${parseFloat(campaign.budget).toFixed(2)} USD. Clippers can now apply and start promoting.`,
         });
-        onSuccess();
+        // Refresh all queries and redirect
+        queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+        setTimeout(() => onSuccess(), 1000);
       }
     },
     onError: (error: Error) => {
@@ -550,7 +555,11 @@ export default function CampaignFunding() {
             <CardContent>
               <FundingForm 
                 campaign={campaign} 
-                onSuccess={() => setLocation(`/campaigns/${campaign.id}/funding`)} 
+                onSuccess={() => {
+                  // Refresh campaign data and redirect to my campaigns
+                  queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+                  setTimeout(() => setLocation("/my-campaigns"), 1000);
+                }}
               />
             </CardContent>
           </Card>
