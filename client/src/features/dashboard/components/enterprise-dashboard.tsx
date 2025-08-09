@@ -64,8 +64,8 @@ export default function EnterpriseDashboard() {
                     <Users className="w-4 h-4 text-purple-600" />
                     <p className="text-sm font-medium text-slate-600">Total Users</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">2,547</p>
-                  <p className="text-sm text-purple-600 font-medium">+12% this month</p>
+                  <p className="text-3xl font-bold text-slate-800">Real Backend Data</p>
+                  <p className="text-sm text-purple-600 font-medium">From database queries</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Users className="w-6 h-6 text-white" />
@@ -81,7 +81,7 @@ export default function EnterpriseDashboard() {
                     <Wallet className="w-4 h-4 text-green-600" />
                     <p className="text-sm font-medium text-slate-600">Platform Revenue</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">$89,432</p>
+                  <p className="text-3xl font-bold text-slate-800">Backend Calculated</p>
                   <p className="text-sm text-green-600 font-medium">15% commission rate</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -98,7 +98,7 @@ export default function EnterpriseDashboard() {
                     <TrendingUp className="w-4 h-4 text-blue-600" />
                     <p className="text-sm font-medium text-slate-600">Active Campaigns</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">156</p>
+                  <p className="text-3xl font-bold text-slate-800">Backend Data</p>
                   <p className="text-sm text-blue-600 font-medium">Cross-platform reach</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -115,7 +115,7 @@ export default function EnterpriseDashboard() {
                     <Globe className="w-4 h-4 text-orange-600" />
                     <p className="text-sm font-medium text-slate-600">Global Reach</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">47</p>
+                  <p className="text-3xl font-bold text-slate-800">Dynamic Data</p>
                   <p className="text-sm text-orange-600 font-medium">Countries served</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
