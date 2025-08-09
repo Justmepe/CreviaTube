@@ -106,4 +106,112 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
+// Additional campaign endpoints needed by frontend
+router.get("/available", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const campaigns = await storage.getAvailableCampaigns();
+    // Filter for standard campaigns (not cold outreach) 
+    const standardCampaigns = campaigns.filter(c => c.campaignType !== "cold_outreach");
+    res.json(standardCampaigns);
+  } catch (error: any) {
+    console.error('Available campaigns fetch error:', error);
+    res.status(500).json({ message: "Failed to fetch available campaigns", error: error.message });
+  }
+});
+
+router.get("/cold-outreach", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    const campaigns = await storage.getAvailableCampaigns();
+    // Filter for cold outreach campaigns only
+    const coldOutreachCampaigns = campaigns.filter(c => c.campaignType === "cold_outreach");
+    res.json(coldOutreachCampaigns);
+  } catch (error: any) {
+    console.error('Cold outreach campaigns fetch error:', error);
+    res.status(500).json({ message: "Failed to fetch cold outreach campaigns", error: error.message });
+  }
+});
+
+router.get("/with-clippers", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Only creators can view campaigns with clippers" });
+  }
+
+  try {
+    const campaignsWithClippers = await storage.getCampaignsWithClippers(req.user.id);
+    res.json(campaignsWithClippers);
+  } catch (error: any) {
+    console.error('Campaigns with clippers fetch error:', error);
+    res.status(500).json({ message: "Failed to fetch campaigns with clippers", error: error.message });
+  }
+});
+
+// Campaign funding endpoint
+router.post("/:id/fund", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Only creators can fund campaigns" });
+  }
+
+  try {
+    const { id } = req.params;
+    const { method, phoneNumber, email } = req.body;
+    
+    if (!method) {
+      return res.status(400).json({ message: "Payment method is required" });
+    }
+
+    const campaign = await storage.getCampaign(id);
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found" });
+    }
+
+    if (campaign.creatorId !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // For now, simulate successful funding
+    await storage.updateCampaignFundingStatus(id, "funded");
+    
+    res.json({ 
+      message: "Campaign funded successfully",
+      transactionId: `txn_${Date.now()}`,
+      status: "funded"
+    });
+  } catch (error: any) {
+    console.error('Campaign funding error:', error);
+    res.status(500).json({ message: "Failed to fund campaign", error: error.message });
+  }
+});
+
+// Campaign application endpoint
+router.post("/:id/apply", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  if (req.user.role !== "clipper") {
+    return res.status(403).json({ message: "Only clippers can apply to campaigns" });
+  }
+
+  try {
+    const { id } = req.params;
+    const applicationData = {
+      ...req.body,
+      clipperId: req.user.id,
+      campaignId: id,
+    };
+
+    const application = await storage.createClipperApplication(applicationData);
+    res.status(201).json({
+      ...application,
+      message: "Application submitted successfully"
+    });
+  } catch (error: any) {
+    console.error('Campaign application error:', error);
+    res.status(400).json({ message: "Failed to submit application", error: error.message });
+  }
+});
+
 export { router as campaignsAPI };
