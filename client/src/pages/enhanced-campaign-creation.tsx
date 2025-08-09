@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,34 @@ import { ChevronLeft, Zap, AlertTriangle, CheckCircle } from "lucide-react";
 export default function EnhancedCampaignCreation() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [editCampaign, setEditCampaign] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Check for edit mode and load campaign data
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEdit = urlParams.get('edit') === 'true';
+    
+    if (isEdit) {
+      const campaignData = sessionStorage.getItem('editCampaign');
+      if (campaignData) {
+        try {
+          const campaign = JSON.parse(campaignData);
+          setEditCampaign(campaign);
+          setIsEditMode(true);
+          // Clear the session storage after loading
+          sessionStorage.removeItem('editCampaign');
+        } catch (error) {
+          console.error('Error parsing campaign data:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load campaign data for editing",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  }, [toast]);
   
   // Safely access auth context with error handling
   let user = null;
@@ -51,17 +80,25 @@ export default function EnhancedCampaignCreation() {
         },
       };
 
-      const res = await apiRequest("POST", "/api/campaigns", payload);
-      return await res.json();
+      if (isEditMode && editCampaign) {
+        const res = await apiRequest("PATCH", `/api/campaigns/${editCampaign.id}`, payload);
+        return await res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/campaigns", payload);
+        return await res.json();
+      }
     },
     onSuccess: (campaign) => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns/my-campaigns"] });
       toast({
-        title: "Campaign created successfully!",
-        description: `"${campaign.name}" has been created and is ready for funding.`,
+        title: isEditMode ? "Campaign updated successfully!" : "Campaign created successfully!",
+        description: isEditMode 
+          ? `"${campaign.name}" has been updated.`
+          : `"${campaign.name}" has been created and is ready for funding.`,
       });
-      // Redirect to campaigns dashboard
-      setLocation("/campaigns");
+      // Redirect to my campaigns page
+      setLocation("/my-campaigns");
     },
     onError: (error: Error) => {
       console.error('Campaign creation error:', error);
@@ -85,17 +122,17 @@ export default function EnhancedCampaignCreation() {
   };
 
   return (
-    <DashboardLayout title="Create Campaign">
+    <DashboardLayout title={isEditMode ? "Edit Campaign" : "Create Campaign"}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation("/campaigns")}
+            onClick={() => setLocation("/my-campaigns")}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Campaigns
+            Back to My Campaigns
           </Button>
         </div>
 
@@ -105,7 +142,7 @@ export default function EnhancedCampaignCreation() {
           <AlertDescription>
             <div className="flex items-center justify-between">
               <span>
-                Creating campaign as <strong>{user?.userType?.replace('_', ' ').toUpperCase()}</strong>. 
+                {isEditMode ? "Editing" : "Creating"} campaign as <strong>{user?.userType?.replace('_', ' ').toUpperCase()}</strong>. 
                 Reward options are customized for your creator type.
               </span>
               {user?.userType === "trader_creator" && (
@@ -122,6 +159,8 @@ export default function EnhancedCampaignCreation() {
         <CampaignWizard
           onSubmit={handleCampaignSubmit}
           isSubmitting={createCampaignMutation.isPending}
+          initialData={editCampaign}
+          isEditMode={isEditMode}
         />
 
         {/* Important Notes */}
