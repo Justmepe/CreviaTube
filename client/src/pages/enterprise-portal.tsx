@@ -113,17 +113,27 @@ export default function EnterprisePortal() {
   }
 
   if (error) {
+    console.error('Enterprise portal error:', error);
     return (
       <DashboardLayout title="Enterprise Portal">
         <div className="text-center py-12">
           <Building className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Enterprise Account</h3>
           <p className="text-gray-600 mb-6">
-            {error?.message || "Failed to load enterprise account data"}
+            {error?.message || "Failed to load enterprise account data. Please make sure you're logged in with an enterprise account."}
           </p>
-          <Link href="/enterprise">
-            <Button>Contact Enterprise Team</Button>
-          </Link>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Debug info: {JSON.stringify({ 
+                message: error?.message, 
+                isAuthenticated: !!user,
+                userType: user?.userType 
+              })}
+            </p>
+            <Link href="/enterprise">
+              <Button>Contact Enterprise Team</Button>
+            </Link>
+          </div>
         </div>
       </DashboardLayout>
     );

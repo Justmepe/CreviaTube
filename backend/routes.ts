@@ -1523,11 +1523,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get enterprise dashboard data
   app.get("/api/enterprise/dashboard", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log('Enterprise dashboard request:', req.isAuthenticated(), req.user?.userType);
+    
+    if (!req.isAuthenticated()) {
+      console.log('Enterprise dashboard: Not authenticated');
+      return res.status(401).json({ message: "Authentication required" });
+    }
     
     try {
       // Check if user is enterprise type
-      if (req.user.userType !== "enterprise") {
+      if ((req.user as any).userType !== "enterprise") {
+        console.log('Enterprise dashboard: User not enterprise type:', (req.user as any).userType);
         return res.status(403).json({ message: "Enterprise account required" });
       }
 
@@ -1535,7 +1541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enterpriseCampaigns = await db
         .select()
         .from(campaigns)
-        .where(eq(campaigns.creatorId, req.user.id))
+        .where(eq(campaigns.creatorId, (req.user as any).id))
         .orderBy(desc(campaigns.createdAt));
 
       // Get tracking events for enterprise campaigns
@@ -1565,8 +1571,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRevenue: Math.round(totalRevenue),
         totalEvents,
         account: {
-          company: req.user.fullName || req.user.username,
-          domain: `${req.user.username}.creocash.app`,
+          company: (req.user as any).fullName || (req.user as any).username,
+          domain: `${(req.user as any).username}.creocash.app`,
           status: "active",
           commissionRate: 0.15,
           features: ["white_label", "custom_domain", "advanced_analytics", "priority_support"]
