@@ -60,8 +60,8 @@ export default function EnhancedCampaignCreation() {
         title: "Campaign created successfully!",
         description: `"${campaign.name}" has been created and is ready for funding.`,
       });
-      // Redirect to funding page
-      setLocation(`/campaigns/${campaign.id}/funding`);
+      // Redirect to campaigns dashboard
+      setLocation("/campaigns");
     },
     onError: (error: Error) => {
       toast({
@@ -73,8 +73,6 @@ export default function EnhancedCampaignCreation() {
   });
 
   const handleCampaignSubmit = (data: any) => {
-    console.log('handleCampaignSubmit called with data:', data);
-    console.log('Mutation pending:', createCampaignMutation.isPending);
     createCampaignMutation.mutate(data);
   };
 
