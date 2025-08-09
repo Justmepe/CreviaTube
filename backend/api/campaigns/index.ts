@@ -106,6 +106,33 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
+// Update campaign (PATCH endpoint)
+router.patch("/:id", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Only creators can update campaigns" });
+  }
+
+  try {
+    const { id } = req.params;
+    const campaign = await storage.getCampaign(id);
+    
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found" });
+    }
+    
+    if (campaign.creatorId !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const updatedCampaign = await storage.updateCampaign(id, req.body);
+    res.json(updatedCampaign);
+  } catch (error: any) {
+    console.error('Campaign update error:', error);
+    res.status(500).json({ message: "Failed to update campaign", error: error.message });
+  }
+});
+
 // Additional campaign endpoints needed by frontend
 router.get("/available", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);

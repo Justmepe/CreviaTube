@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Star, Users, Clock, CheckCircle, AlertCircle, Eye, MousePointer, UserPlus, Settings, Play, DollarSign } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { getQueryFn } from '@/lib/queryClient';
+import { getQueryFn, apiRequest, queryClient } from '@/lib/queryClient';
 import { ReviewClipperModal } from '@/features/reviews/ReviewClipperModal';
+import { useToast } from '@/hooks/use-toast';
 
 interface CampaignWithClippers {
   id: string;
@@ -34,6 +35,8 @@ interface CampaignWithClippers {
 
 export default function MyCampaignsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [reviewModal, setReviewModal] = useState<{
     open: boolean;
     clipperCampaign?: any;
@@ -66,6 +69,39 @@ export default function MyCampaignsPage() {
         completionMetrics: clipperCampaign.completionMetrics,
       }
     });
+  };
+
+  const activateCampaignMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const res = await apiRequest("PATCH", `/api/campaigns/${campaignId}`, {
+        status: "active"
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Campaign Activated",
+        description: "Your campaign is now active and clippers can apply to it.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/campaigns/my-campaigns'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to activate campaign",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleActivateCampaign = (campaignId: string) => {
+    activateCampaignMutation.mutate(campaignId);
+  };
+
+  const handleEditCampaign = (campaign: CampaignWithClippers) => {
+    // Store campaign data in sessionStorage for editing
+    sessionStorage.setItem('editCampaign', JSON.stringify(campaign));
+    setLocation('/campaigns/create-enhanced?edit=true');
   };
 
   if (!user || user.role !== 'creator') {
@@ -245,18 +281,26 @@ export default function MyCampaignsPage() {
               )}
               
               {campaign.status === 'draft' && campaign.fundingStatus === 'funded' && (
-                <Button size="sm" variant="default" className="flex items-center gap-1">
+                <Button 
+                  size="sm" 
+                  variant="default" 
+                  className="flex items-center gap-1"
+                  onClick={() => handleActivateCampaign(campaign.id)}
+                >
                   <Play className="w-3 h-3" />
                   Activate
                 </Button>
               )}
               
-              <Link href={`/campaigns/create-enhanced?edit=${campaign.id}`}>
-                <Button size="sm" variant="outline" className="flex items-center gap-1">
-                  <Settings className="w-3 h-3" />
-                  Edit
-                </Button>
-              </Link>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="flex items-center gap-1"
+                onClick={() => handleEditCampaign(campaign)}
+              >
+                <Settings className="w-3 h-3" />
+                Edit
+              </Button>
             </div>
           </div>
         </CardContent>
