@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/features/auth/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import NotFound from "@/pages/not-found";
-import AuthPage from "@/features/auth/components/auth-page";
+import AuthPage from "@/pages/auth-page";
 import LandingPage from "@/pages/landing-page";
 import CreatorDashboard from "@/features/dashboard/components/creator-dashboard";
 import ClipperDashboard from "@/features/dashboard/components/clipper-dashboard";
