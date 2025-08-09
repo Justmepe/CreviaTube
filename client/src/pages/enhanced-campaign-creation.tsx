@@ -73,6 +73,8 @@ export default function EnhancedCampaignCreation() {
   });
 
   const handleCampaignSubmit = (data: any) => {
+    console.log('handleCampaignSubmit called with data:', data);
+    console.log('Mutation pending:', createCampaignMutation.isPending);
     createCampaignMutation.mutate(data);
   };
 
