@@ -165,7 +165,45 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
   ];
 
   const nextStep = async () => {
-    const isValid = await form.trigger();
+    // Step-specific validation based on current step
+    let fieldsToValidate: string[] = [];
+    
+    switch (currentStep) {
+      case 1: // Basic Information
+        fieldsToValidate = ["name", "description", "duration"];
+        break;
+      case 2: // Budget & Rewards
+        fieldsToValidate = ["budget", "rewardRates.click", "rewardRates.signup", "rewardRates.view"];
+        if (user?.userType === "trader_creator") {
+          fieldsToValidate.push("rewardRates.deposit", "rewardRates.trade");
+        }
+        if (user?.userType === "entrepreneur" || user?.userType === "enterprise") {
+          fieldsToValidate.push("rewardRates.conversion");
+        }
+        break;
+      case 3: // Goals & Metrics
+        fieldsToValidate = ["primaryGoal"];
+        const primaryGoal = form.getValues("primaryGoal");
+        if (primaryGoal === "views") fieldsToValidate.push("viewsGoal");
+        if (primaryGoal === "clicks") fieldsToValidate.push("clicksGoal");
+        if (primaryGoal === "signups") fieldsToValidate.push("signupsGoal");
+        if (primaryGoal === "deposits") fieldsToValidate.push("depositsGoal");
+        if (primaryGoal === "trades") fieldsToValidate.push("tradesGoal");
+        if (primaryGoal === "conversions") fieldsToValidate.push("conversionsGoal");
+        break;
+      case 4: // Targeting & Requirements
+        fieldsToValidate = ["targetPlatforms", "targetCountries", "targetLanguages", "minFollowers", "ageRange.min", "ageRange.max"];
+        break;
+      case 5: // Broker Links (Trader Creators Only)
+        if (user?.userType === "trader_creator") {
+          fieldsToValidate = ["selectedBrokerLinks"];
+        }
+        break;
+      default:
+        fieldsToValidate = [];
+    }
+
+    const isValid = await form.trigger(fieldsToValidate as any);
     if (isValid && currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
