@@ -19,7 +19,7 @@ import {
   Award,
   BarChart3
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 export default function PlatformReviews() {
   const { user } = useAuth();
@@ -44,10 +44,10 @@ export default function PlatformReviews() {
     enabled: !!user,
   });
   
-  const hasUserReviewed = userReviews.length > 0;
+  const hasUserReviewed = Array.isArray(userReviews) && userReviews.length > 0;
   
   // Filter and sort reviews
-  const filteredReviews = reviews
+  const filteredReviews = Array.isArray(reviews) ? reviews
     .filter((review: any) => {
       const matchesSearch = review.reviewTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           review.reviewText.toLowerCase().includes(searchTerm.toLowerCase());
@@ -71,15 +71,16 @@ export default function PlatformReviews() {
         default: // latest
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
-    });
+    }) : [];
   
   const getRatingDistribution = () => {
-    if (!stats?.ratingBreakdown) return [];
+    if (!stats || typeof stats !== 'object' || !('ratingBreakdown' in stats)) return [];
     
+    const statsSafe = stats as any;
     return [5, 4, 3, 2, 1].map(rating => ({
       rating,
-      count: stats.ratingBreakdown[rating] || 0,
-      percentage: stats.totalReviews > 0 ? Math.round((stats.ratingBreakdown[rating] || 0) / stats.totalReviews * 100) : 0
+      count: statsSafe.ratingBreakdown?.[rating] || 0,
+      percentage: statsSafe.totalReviews > 0 ? Math.round((statsSafe.ratingBreakdown?.[rating] || 0) / statsSafe.totalReviews * 100) : 0
     }));
   };
   

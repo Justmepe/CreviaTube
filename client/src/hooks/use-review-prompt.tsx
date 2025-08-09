@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { PlatformReviewModal } from "@/components/platform-review-modal";
 
@@ -37,14 +37,18 @@ export function useReviewPrompt() {
   
   // Effect to show review prompt when milestone is reached
   useEffect(() => {
-    if (promptCheck?.shouldPrompt && promptCheck.triggerType && promptCheck.triggerValue) {
+    // Safely check if promptCheck has the expected structure
+    if (promptCheck && typeof promptCheck === 'object' && 
+        'shouldPrompt' in promptCheck && promptCheck.shouldPrompt && 
+        'triggerType' in promptCheck && promptCheck.triggerType && 
+        'triggerValue' in promptCheck && promptCheck.triggerValue) {
       // Create a prompt record and show the modal
       createPromptMutation.mutate({
-        triggerType: promptCheck.triggerType,
-        triggerValue: promptCheck.triggerValue,
+        triggerType: promptCheck.triggerType as string,
+        triggerValue: promptCheck.triggerValue as string,
       });
     }
-  }, [promptCheck?.shouldPrompt, promptCheck?.triggerType, promptCheck?.triggerValue]);
+  }, [promptCheck]);
   
   const closeModal = () => {
     setShowReviewModal(false);

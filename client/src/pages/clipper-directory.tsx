@@ -1,6 +1,6 @@
 import { ClipperDirectory } from '@/features/reviews/ClipperDirectory';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 

@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   CheckCircle
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -32,6 +32,8 @@ interface Campaign {
   description: string;
   budget: number;
   budgetUsed: number;
+  escrowBalance?: number;
+  platformFee?: number;
   status: "draft" | "active" | "paused" | "completed";
   fundingStatus: string;
   targetPlatforms: string;
@@ -258,7 +260,7 @@ export default function CampaignsList() {
                 Campaign is funded and active. Clippers can now apply and start promoting.
               </p>
               <div className="text-xs text-green-600">
-                Escrow: {formatCurrency(campaign.escrowBalance)} • Platform Fee: {formatCurrency(campaign.platformFee)}
+                Escrow: {formatCurrency(campaign.escrowBalance || 0)} • Platform Fee: {formatCurrency(campaign.platformFee || 0)}
               </div>
             </div>
           )}

@@ -25,7 +25,7 @@ import {
   Link as LinkIcon,
   CheckCircle
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { Link } from "wouter";
 
 interface EnterpriseAccount {

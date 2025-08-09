@@ -58,18 +58,45 @@ export default function CampaignCreation() {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
-  // Fetch dynamic data from API
-  const { data: platforms } = useQuery({
-    queryKey: ["/api/platform/supported-platforms"],
-  });
+  // Platform data with fallback
+  const platforms = [
+    { value: "instagram", label: "Instagram" },
+    { value: "youtube", label: "YouTube" },
+    { value: "tiktok", label: "TikTok" },
+    { value: "twitter", label: "Twitter/X" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "facebook", label: "Facebook" },
+    { value: "telegram", label: "Telegram" },
+    { value: "discord", label: "Discord" },
+    { value: "website", label: "Website/Blog" },
+    { value: "email", label: "Email Marketing" }
+  ];
 
-  const { data: countries } = useQuery({
-    queryKey: ["/api/platform/supported-countries"],
-  });
+  // Countries data with fallback
+  const countries = [
+    { value: "us", label: "United States" },
+    { value: "uk", label: "United Kingdom" },
+    { value: "ca", label: "Canada" },
+    { value: "au", label: "Australia" },
+    { value: "de", label: "Germany" },
+    { value: "fr", label: "France" },
+    { value: "ke", label: "Kenya" },
+    { value: "ng", label: "Nigeria" },
+    { value: "za", label: "South Africa" },
+    { value: "in", label: "India" }
+  ];
 
-  const { data: languages } = useQuery({
-    queryKey: ["/api/platform/supported-languages"],
-  });
+  // Languages data with fallback
+  const languages = [
+    { value: "en", label: "English" },
+    { value: "es", label: "Spanish" },
+    { value: "fr", label: "French" },
+    { value: "de", label: "German" },
+    { value: "sw", label: "Swahili" },
+    { value: "ar", label: "Arabic" },
+    { value: "hi", label: "Hindi" },
+    { value: "pt", label: "Portuguese" }
+  ];
 
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),
