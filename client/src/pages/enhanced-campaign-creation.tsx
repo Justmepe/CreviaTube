@@ -14,7 +14,7 @@ import { ChevronLeft, Zap, AlertTriangle, CheckCircle } from "lucide-react";
 export default function EnhancedCampaignCreation() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [editCampaign, setEditCampaign] = useState(null);
+  const [editCampaign, setEditCampaign] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Check for edit mode and load campaign data
@@ -27,6 +27,7 @@ export default function EnhancedCampaignCreation() {
       if (campaignData) {
         try {
           const campaign = JSON.parse(campaignData);
+          console.log('Loading campaign for editing:', campaign); // Debug log
           setEditCampaign(campaign);
           setIsEditMode(true);
           // Clear the session storage after loading
@@ -39,6 +40,8 @@ export default function EnhancedCampaignCreation() {
             variant: "destructive",
           });
         }
+      } else {
+        console.log('No campaign data found in sessionStorage for editing'); // Debug log
       }
     }
   }, [toast]);
@@ -156,6 +159,7 @@ export default function EnhancedCampaignCreation() {
         </Alert>
 
         {/* Campaign Wizard */}
+        {console.log('Rendering CampaignWizard with:', { isEditMode, editCampaign })}
         <CampaignWizard
           onSubmit={handleCampaignSubmit}
           isSubmitting={createCampaignMutation.isPending}

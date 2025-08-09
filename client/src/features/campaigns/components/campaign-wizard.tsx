@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -183,6 +183,16 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
     resolver: zodResolver(campaignWizardSchema),
     defaultValues: getDefaultValues(),
   });
+
+  // Reset form when initialData becomes available in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      console.log('CampaignWizard: Resetting form with initialData:', initialData); // Debug log
+      const defaultValues = getDefaultValues();
+      console.log('CampaignWizard: Parsed default values:', defaultValues); // Debug log
+      form.reset(defaultValues);
+    }
+  }, [initialData, isEditMode, form]);
 
   const steps = [
     {
