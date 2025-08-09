@@ -308,26 +308,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/campaigns/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-
-    try {
-      const campaign = await storage.getCampaign(req.params.id);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-
-      // Check if user has access to this campaign
-      if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      res.json(campaign);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch campaign" });
-    }
-  });
-
   // Enhanced campaigns endpoint for the new interface (my campaigns)
   app.get("/api/campaigns/my-campaigns", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -345,6 +325,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching my campaigns:', error);
       res.status(500).json({ message: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.get("/api/campaigns/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const campaign = await storage.getCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+
+      // Check if user has access to this campaign
+      if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(campaign);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch campaign" });
     }
   });
 
