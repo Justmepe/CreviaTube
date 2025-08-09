@@ -64,15 +64,23 @@ export default function EnhancedCampaignCreation() {
       setLocation("/campaigns");
     },
     onError: (error: Error) => {
+      console.error('Campaign creation error:', error);
       toast({
         title: "Campaign creation failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     },
   });
 
   const handleCampaignSubmit = (data: any) => {
+    console.log('handleCampaignSubmit called with:', data);
+    console.log('Mutation status:', {
+      isPending: createCampaignMutation.isPending,
+      isError: createCampaignMutation.isError,
+      error: createCampaignMutation.error
+    });
+    
     createCampaignMutation.mutate(data);
   };
 

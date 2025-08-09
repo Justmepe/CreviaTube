@@ -210,44 +210,47 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
     }
   };
 
-  const handleSubmit = async (data: CampaignWizardData) => {
-    console.log('Form submission started with data:', data);
-    console.log('Current form errors:', form.formState.errors);
+  const handleCreateCampaign = () => {
+    console.log('Create Campaign clicked - getting form values');
     
-    try {
-      // Check required fields manually
-      const errors: any = {};
-      
-      if (!data.name || data.name.length < 5) {
-        errors.name = "Campaign name must be at least 5 characters";
-      }
-      
-      if (!data.description || data.description.length < 20) {
-        errors.description = "Description must be at least 20 characters";
-      }
-      
-      if (!data.targetPlatforms || data.targetPlatforms.length === 0) {
-        errors.targetPlatforms = "Select at least one platform";
-      }
-      
-      // Check broker links for trader creators only
-      if (user?.userType === "trader_creator" && (!data.selectedBrokerLinks || data.selectedBrokerLinks.length === 0)) {
-        errors.selectedBrokerLinks = "Please select at least one broker link for trading campaigns";
-      }
-      
-      if (Object.keys(errors).length > 0) {
-        console.log('Manual validation failed:', errors);
-        Object.keys(errors).forEach(field => {
-          form.setError(field as any, { message: errors[field] });
-        });
+    // Get current form values
+    const formValues = form.getValues();
+    console.log('Current form values:', formValues);
+    
+    // Basic validation
+    if (!formValues.name || formValues.name.length < 5) {
+      console.log('Validation failed: name too short');
+      form.setError("name", { message: "Campaign name must be at least 5 characters" });
+      setCurrentStep(1); // Go back to step 1
+      return;
+    }
+    
+    if (!formValues.description || formValues.description.length < 20) {
+      console.log('Validation failed: description too short');
+      form.setError("description", { message: "Description must be at least 20 characters" });
+      setCurrentStep(1); // Go back to step 1
+      return;
+    }
+    
+    if (!formValues.targetPlatforms || formValues.targetPlatforms.length === 0) {
+      console.log('Validation failed: no platforms selected');
+      form.setError("targetPlatforms", { message: "Select at least one platform" });
+      setCurrentStep(4); // Go back to targeting step
+      return;
+    }
+    
+    // For trader creators, ensure broker links are selected
+    if (user?.userType === "trader_creator") {
+      if (!formValues.selectedBrokerLinks || formValues.selectedBrokerLinks.length === 0) {
+        console.log('Validation failed: no broker links selected');
+        form.setError("selectedBrokerLinks", { message: "Please select at least one broker link" });
+        setCurrentStep(5); // Go back to broker links step
         return;
       }
-      
-      console.log('Validation passed, calling onSubmit');
-      onSubmit(data);
-    } catch (error) {
-      console.error('Submission error:', error);
     }
+    
+    console.log('All validation passed, submitting campaign');
+    onSubmit(formValues);
   };
 
   const progress = (currentStep / totalSteps) * 100;
@@ -1120,12 +1123,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
               <Button 
                 type="button" 
                 disabled={isSubmitting}
-                onClick={() => {
-                  console.log('Create Campaign button clicked');
-                  const formData = form.getValues();
-                  console.log('Form data:', formData);
-                  handleSubmit(formData);
-                }}
+                onClick={handleCreateCampaign}
               >
                 {isSubmitting ? "Creating Campaign..." : "Create Campaign"}
                 <TrendingUp className="h-4 w-4 ml-2" />
