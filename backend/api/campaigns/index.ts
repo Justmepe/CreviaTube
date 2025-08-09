@@ -10,19 +10,19 @@ router.get("/", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
   
   try {
-    console.log(`User ${req.user.username} (${req.user.role}, ${req.user.userType}) requesting campaigns`);
+    console.log(`User ${(req.user as any).username} (${(req.user as any).role}, ${(req.user as any).userType}) requesting campaigns`);
     
-    if (req.user.role === "creator") {
-      const campaigns = await storage.getCampaignsByCreator(req.user.id);
-      console.log(`Found ${campaigns.length} campaigns for creator ${req.user.username}`);
+    if ((req.user as any).role === "creator") {
+      const campaigns = await storage.getCampaignsByCreator((req.user as any).id);
+      console.log(`Found ${campaigns.length} campaigns for creator ${(req.user as any).username}`);
       res.json(campaigns);
-    } else if (req.user.role === "admin") {
+    } else if ((req.user as any).role === "admin") {
       const campaigns = await storage.getAllCampaigns();
-      console.log(`Found ${campaigns.length} total campaigns for admin ${req.user.username}`);
+      console.log(`Found ${campaigns.length} total campaigns for admin ${(req.user as any).username}`);
       res.json(campaigns);
-    } else if (req.user.role === "clipper") {
+    } else if ((req.user as any).role === "clipper") {
       const campaigns = await storage.getAvailableCampaigns();
-      console.log(`Found ${campaigns.length} available campaigns for clipper ${req.user.username}`);
+      console.log(`Found ${campaigns.length} available campaigns for clipper ${(req.user as any).username}`);
       res.json(campaigns);
     } else {
       res.status(403).json({ message: "Access denied" });
@@ -38,15 +38,15 @@ router.get("/my-campaigns", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
   
   try {
-    console.log(`User ${req.user.username} (${req.user.role}, ${req.user.userType}) requesting my campaigns`);
+    console.log(`User ${(req.user as any).username} (${(req.user as any).role}, ${(req.user as any).userType}) requesting my campaigns`);
     
-    if (req.user.role === "creator") {
-      const campaigns = await storage.getCampaignsByCreator(req.user.id);
-      console.log(`Found ${campaigns.length} campaigns for creator ${req.user.username}`);
+    if ((req.user as any).role === "creator") {
+      const campaigns = await storage.getCampaignsByCreator((req.user as any).id);
+      console.log(`Found ${campaigns.length} campaigns for creator ${(req.user as any).username}`);
       res.json(campaigns);
-    } else if (req.user.role === "clipper") {
-      const clipperCampaigns = await storage.getClipperCampaignsByClipper(req.user.id);
-      console.log(`Found ${clipperCampaigns.length} clipper campaigns for ${req.user.username}`);
+    } else if ((req.user as any).role === "clipper") {
+      const clipperCampaigns = await storage.getClipperCampaignsByClipper((req.user as any).id);
+      console.log(`Found ${clipperCampaigns.length} clipper campaigns for ${(req.user as any).username}`);
       res.json(clipperCampaigns);
     } else {
       res.status(403).json({ message: "Access denied" });
@@ -84,14 +84,14 @@ router.get("/:id", async (req: Request, res: Response) => {
 // Create campaign
 router.post("/", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  if (req.user.role !== "creator") {
+  if ((req.user as any).role !== "creator") {
     return res.status(403).json({ message: "Only creators can create campaigns" });
   }
 
   try {
     const validatedData = insertCampaignSchema.parse({
       ...req.body,
-      creatorId: req.user.id,
+      creatorId: (req.user as any).id,
       fundingStatus: "pending",
     });
 
@@ -109,7 +109,7 @@ router.post("/", async (req: Request, res: Response) => {
 // Update campaign (PATCH endpoint)
 router.patch("/:id", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  if (req.user.role !== "creator") {
+  if ((req.user as any).role !== "creator") {
     return res.status(403).json({ message: "Only creators can update campaigns" });
   }
 
@@ -121,7 +121,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Campaign not found" });
     }
     
-    if (campaign.creatorId !== req.user.id) {
+    if (campaign.creatorId !== (req.user as any).id) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -164,12 +164,12 @@ router.get("/cold-outreach", async (req: Request, res: Response) => {
 
 router.get("/with-clippers", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  if (req.user.role !== "creator") {
+  if ((req.user as any).role !== "creator") {
     return res.status(403).json({ message: "Only creators can view campaigns with clippers" });
   }
 
   try {
-    const campaignsWithClippers = await storage.getCampaignsWithClippers(req.user.id);
+    const campaignsWithClippers = await storage.getCampaignsWithClippers((req.user as any).id);
     res.json(campaignsWithClippers);
   } catch (error: any) {
     console.error('Campaigns with clippers fetch error:', error);
@@ -180,7 +180,7 @@ router.get("/with-clippers", async (req: Request, res: Response) => {
 // Campaign funding endpoint
 router.post("/:id/fund", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  if (req.user.role !== "creator") {
+  if ((req.user as any).role !== "creator") {
     return res.status(403).json({ message: "Only creators can fund campaigns" });
   }
 
@@ -206,7 +206,7 @@ router.post("/:id/fund", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Campaign not found" });
     }
 
-    if (campaign.creatorId !== req.user.id) {
+    if (campaign.creatorId !== (req.user as any).id) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -305,7 +305,7 @@ router.post("/:id/fund", async (req: Request, res: Response) => {
 // Campaign application endpoint
 router.post("/:id/apply", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  if (req.user.role !== "clipper") {
+  if ((req.user as any).role !== "clipper") {
     return res.status(403).json({ message: "Only clippers can apply to campaigns" });
   }
 
@@ -313,7 +313,7 @@ router.post("/:id/apply", async (req: Request, res: Response) => {
     const { id } = req.params;
     const applicationData = {
       ...req.body,
-      clipperId: req.user.id,
+      clipperId: (req.user as any).id,
       campaignId: id,
     };
 
@@ -341,7 +341,7 @@ router.get("/:id/funding-status", async (req: Request, res: Response) => {
     }
     
     // Check permissions
-    if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
+    if ((req.user as any).role === "creator" && campaign.creatorId !== (req.user as any).id) {
       return res.status(403).json({ message: "Access denied" });
     }
     
