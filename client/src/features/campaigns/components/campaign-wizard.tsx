@@ -73,6 +73,8 @@ type CampaignWizardData = z.infer<typeof campaignWizardSchema>;
 
 interface CampaignWizardProps {
   onSubmit: (data: CampaignWizardData) => void;
+  initialData?: any;
+  isEditMode?: boolean;
   isSubmitting?: boolean;
 }
 
@@ -96,7 +98,7 @@ const languages = [
   "Dutch", "Japanese", "Korean", "Hindi", "Swahili", "Arabic"
 ];
 
-export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizardProps) {
+export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, isEditMode = false }: CampaignWizardProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   
@@ -110,9 +112,50 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
     enabled: user?.userType === "trader_creator",
   });
 
-  const form = useForm<CampaignWizardData>({
-    resolver: zodResolver(campaignWizardSchema),
-    defaultValues: {
+  // Helper function to parse initial data for editing
+  const getDefaultValues = (): Partial<CampaignWizardData> => {
+    if (isEditMode && initialData) {
+      try {
+        // Parse JSON strings from the database
+        const targetPlatforms = initialData.targetPlatforms ? JSON.parse(initialData.targetPlatforms) : [];
+        const rewardRates = initialData.rewardRates ? JSON.parse(initialData.rewardRates) : {};
+        const requirements = initialData.requirements ? JSON.parse(initialData.requirements) : {};
+        
+        return {
+          name: initialData.name || "",
+          description: initialData.description || "",
+          duration: parseInt(initialData.duration) || 30,
+          budget: parseFloat(initialData.budget) || 100,
+          rewardRates: {
+            click: rewardRates.click || 0.05,
+            signup: rewardRates.signup || 2.00,
+            view: rewardRates.view || 0.01,
+            deposit: rewardRates.deposit,
+            trade: rewardRates.trade,
+            conversion: rewardRates.conversion,
+          },
+          primaryGoal: initialData.campaignGoals?.primaryGoal || "views",
+          viewsGoal: initialData.campaignGoals?.viewsGoal,
+          clicksGoal: initialData.campaignGoals?.clicksGoal,
+          signupsGoal: initialData.campaignGoals?.signupsGoal,
+          depositsGoal: initialData.campaignGoals?.depositsGoal,
+          tradesGoal: initialData.campaignGoals?.tradesGoal,
+          conversionsGoal: initialData.campaignGoals?.conversionsGoal,
+          targetPlatforms: targetPlatforms,
+          targetCountries: requirements.targetCountries || ["Global"],
+          targetLanguages: requirements.targetLanguages || ["English"],
+          minFollowers: requirements.minFollowers || 1000,
+          maxFollowers: requirements.maxFollowers,
+          ageRange: requirements.ageRange || { min: 18, max: 45 },
+          selectedBrokerLinks: [],
+        };
+      } catch (error) {
+        console.error('Error parsing initial data:', error);
+      }
+    }
+    
+    // Default values for new campaigns
+    return {
       name: "",
       description: "",
       duration: 30,
@@ -133,7 +176,12 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
       maxFollowers: undefined,
       ageRange: { min: 18, max: 45 },
       selectedBrokerLinks: [],
-    },
+    };
+  };
+
+  const form = useForm<CampaignWizardData>({
+    resolver: zodResolver(campaignWizardSchema),
+    defaultValues: getDefaultValues(),
   });
 
   const steps = [

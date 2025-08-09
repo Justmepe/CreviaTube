@@ -80,7 +80,7 @@ export default function EnhancedCampaignCreation() {
         },
       };
 
-      if (isEditMode && editCampaign) {
+      if (isEditMode && editCampaign?.id) {
         const res = await apiRequest("PATCH", `/api/campaigns/${editCampaign.id}`, payload);
         return await res.json();
       } else {
