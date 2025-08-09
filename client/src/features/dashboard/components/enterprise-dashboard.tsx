@@ -11,11 +11,12 @@ export default function EnterpriseDashboard() {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: BarChart3, current: true },
-    { name: "White-Label Portal", href: "/enterprise-portal", icon: Crown },
-    { name: "Brand Customization", href: "/enterprise/branding", icon: Palette },
-    { name: "User Management", href: "/enterprise/users", icon: Users },
-    { name: "Campaign Analytics", href: "/analytics", icon: TrendingUp },
-    { name: "Revenue Dashboard", href: "/enterprise/revenue", icon: Wallet },
+    { name: "Metrics", href: "/metrics", icon: BarChart3 },
+    { name: "Campaigns", href: "/campaigns", icon: Folder },
+    { name: "My Campaigns", href: "/my-campaigns", icon: TrendingUp },
+    { name: "Clippers", href: "/clippers", icon: Users },
+    { name: "Clipper Directory", href: "/clipper-directory", icon: Users },
+    { name: "Payouts", href: "/payouts", icon: Wallet },
     { name: "Settings", href: "/settings", icon: Star },
   ];
 
