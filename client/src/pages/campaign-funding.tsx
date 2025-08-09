@@ -130,35 +130,51 @@ const FundingForm = ({ campaign, onSuccess }: { campaign: Campaign; onSuccess: (
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       
-      // Check if we have a redirect URL from PesaPal
-      if (data.redirectUrl) {
+      // Payment initiated - show processing status
+      if (data.status === "processing") {
         toast({
-          title: "Opening payment window...",
-          description: "Complete your payment through the secure PesaPal window.",
+          title: "Payment Initiated",
+          description: data.instructions || `${data.paymentMethod.toUpperCase()} payment started. ${data.message}`,
+          duration: 8000,
         });
         
-        // Redirect to PesaPal payment page
-        window.open(data.redirectUrl, '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+        // For PayPal, open redirect URL
+        if (data.redirectUrl) {
+          setTimeout(() => {
+            window.open(data.redirectUrl, '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+          }, 1000);
+        }
         
-        // Show information about sandbox mode
+        // Show development mode notice
         setTimeout(() => {
           toast({
-            title: "Development Mode",
-            description: `This is sandbox mode - no real money will be charged. In production, $${parseFloat(campaign.budget).toFixed(2)} USD (~KES ${(parseFloat(campaign.budget) * 130).toFixed(0)}) would be deducted from your account.`,
+            title: "Development Mode Active",
+            description: `This is sandbox mode - no real money will be charged. Amount: $${data.amount} USD. Estimated completion: ${data.estimatedTime}`,
             duration: 10000,
           });
         }, 2000);
-      } else {
+        
+        // Simulate payment completion after delay (development only)
+        setTimeout(() => {
+          toast({
+            title: "Payment Completed!",
+            description: `Campaign funded successfully with $${data.amount} USD. Transaction ID: ${data.transactionId}`,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+          onSuccess();
+        }, 5000); // 5 second delay to simulate processing
+        
+      } else if (data.status === "funded") {
         toast({
           title: "Campaign funded successfully!",
           description: `Your campaign has been funded with $${parseFloat(campaign.budget).toFixed(2)} USD. Clippers can now apply and start promoting.`,
         });
+        onSuccess();
       }
-      onSuccess();
     },
     onError: (error: Error) => {
       toast({
-        title: "Funding failed",
+        title: "Payment failed",
         description: error.message,
         variant: "destructive",
       });

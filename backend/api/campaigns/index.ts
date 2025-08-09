@@ -165,6 +165,15 @@ router.post("/:id/fund", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Payment method is required" });
     }
 
+    // Validate required fields based on payment method
+    if (method === "mpesa" && !phoneNumber) {
+      return res.status(400).json({ message: "Phone number is required for M-Pesa payments" });
+    }
+    
+    if ((method === "paypal" || method === "bank") && !email) {
+      return res.status(400).json({ message: "Email is required for this payment method" });
+    }
+
     const campaign = await storage.getCampaign(id);
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found" });
@@ -174,17 +183,59 @@ router.post("/:id/fund", async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // For now, simulate successful funding
-    await storage.updateCampaignFundingStatus(id, "funded");
+    if (campaign.fundingStatus === "funded") {
+      return res.status(400).json({ message: "Campaign is already funded" });
+    }
+
+    // Set campaign to processing state (not funded yet)
+    await storage.updateCampaignFundingStatus(id, "processing");
     
-    res.json({ 
-      message: "Campaign funded successfully",
-      transactionId: `txn_${Date.now()}`,
-      status: "funded"
-    });
+    // Generate payment request based on method
+    let paymentResponse;
+    
+    if (method === "mpesa") {
+      paymentResponse = {
+        message: "M-Pesa payment initiated",
+        paymentMethod: "mpesa",
+        amount: parseFloat(campaign.budget),
+        currency: "USD",
+        phoneNumber,
+        status: "processing",
+        transactionId: `mpesa_${Date.now()}`,
+        instructions: "You will receive an M-Pesa prompt on your phone. Enter your M-Pesa PIN to complete the payment.",
+        estimatedTime: "1-2 minutes"
+      };
+    } else if (method === "paypal") {
+      paymentResponse = {
+        message: "PayPal payment initiated",
+        paymentMethod: "paypal", 
+        amount: parseFloat(campaign.budget),
+        currency: "USD",
+        email,
+        status: "processing",
+        transactionId: `paypal_${Date.now()}`,
+        redirectUrl: `https://sandbox.paypal.com/payment?amount=${campaign.budget}&currency=USD&ref=${id}`,
+        instructions: "You will be redirected to PayPal to complete your payment.",
+        estimatedTime: "2-3 minutes"
+      };
+    } else if (method === "bank") {
+      paymentResponse = {
+        message: "Bank transfer initiated",
+        paymentMethod: "bank",
+        amount: parseFloat(campaign.budget),
+        currency: "USD", 
+        email,
+        status: "processing",
+        transactionId: `bank_${Date.now()}`,
+        instructions: "Please check your email for bank transfer instructions. Processing may take 1-3 business days.",
+        estimatedTime: "1-3 business days"
+      };
+    }
+    
+    res.json(paymentResponse);
   } catch (error: any) {
     console.error('Campaign funding error:', error);
-    res.status(500).json({ message: "Failed to fund campaign", error: error.message });
+    res.status(500).json({ message: "Failed to initiate payment", error: error.message });
   }
 });
 
@@ -239,6 +290,55 @@ router.get("/:id/funding-status", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Funding status fetch error:', error);
     res.status(500).json({ message: "Failed to fetch funding status", error: error.message });
+  }
+});
+
+// Payment completion endpoint (webhook/callback)
+router.post("/:id/payment-complete", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { transactionId, status, paymentMethod } = req.body;
+    
+    if (!transactionId || !status) {
+      return res.status(400).json({ message: "Transaction ID and status are required" });
+    }
+
+    const campaign = await storage.getCampaign(id);
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found" });
+    }
+
+    if (status === "completed" || status === "success") {
+      // Mark campaign as fully funded
+      await storage.updateCampaignFundingStatus(id, "funded");
+      
+      console.log(`Campaign ${id} payment completed: ${transactionId} via ${paymentMethod}`);
+      
+      res.json({
+        message: "Payment completed successfully",
+        campaignId: id,
+        transactionId,
+        status: "funded",
+        paymentMethod
+      });
+    } else if (status === "failed" || status === "cancelled") {
+      // Reset campaign to pending funding
+      await storage.updateCampaignFundingStatus(id, "pending");
+      
+      res.json({
+        message: "Payment failed or cancelled",
+        campaignId: id,
+        transactionId,
+        status: "pending",
+        paymentMethod
+      });
+    } else {
+      res.status(400).json({ message: "Invalid payment status" });
+    }
+    
+  } catch (error: any) {
+    console.error('Payment completion error:', error);
+    res.status(500).json({ message: "Failed to process payment completion", error: error.message });
   }
 });
 

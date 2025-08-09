@@ -42,23 +42,29 @@ export function setupAPIs(app: Express): void {
         {
           id: "mpesa",
           name: "M-Pesa",
-          description: "Mobile Money Transfer",
+          description: "Mobile Money Transfer - Kenya",
           icon: "smartphone",
-          requires: ["phoneNumber"]
+          requires: ["phoneNumber"],
+          requiresPhone: true,
+          requiresEmail: true
         },
         {
           id: "paypal", 
           name: "PayPal",
-          description: "Secure online payments",
+          description: "Secure online payments worldwide",
           icon: "credit-card",
-          requires: ["email"]
+          requires: ["email"],
+          requiresPhone: false,
+          requiresEmail: true
         },
         {
           id: "bank",
           name: "Bank Transfer", 
           description: "Direct bank transfer",
           icon: "building",
-          requires: ["email"]
+          requires: ["email"],
+          requiresPhone: false,
+          requiresEmail: true
         }
       ]
     });
