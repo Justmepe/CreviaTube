@@ -89,7 +89,7 @@ export default function RealRevenueAnalytics() {
                 ${revenueData?.totalRevenue?.toLocaleString() || '0'}
               </div>
               <p className="text-xs text-green-600">
-                {revenueData?.revenueGrowth > 0 ? '+' : ''}{revenueData?.revenueGrowth.toFixed(1)}% this month
+                {(revenueData?.revenueGrowth ?? 0) > 0 ? '+' : ''}{(revenueData?.revenueGrowth ?? 0).toFixed(1)}% this month
               </p>
             </CardContent>
           </Card>
@@ -226,7 +226,7 @@ export default function RealRevenueAnalytics() {
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <h3 className="text-sm font-medium text-gray-600 mb-2">Revenue Growth</h3>
                 <p className="text-2xl font-bold text-green-600">
-                  {revenueData?.revenueGrowth > 0 ? '+' : ''}{revenueData?.revenueGrowth.toFixed(1)}%
+                  {(revenueData?.revenueGrowth ?? 0) > 0 ? '+' : ''}{(revenueData?.revenueGrowth ?? 0).toFixed(1)}%
                 </p>
                 <p className="text-xs text-gray-500">Month-over-month</p>
               </div>
@@ -234,7 +234,7 @@ export default function RealRevenueAnalytics() {
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <h3 className="text-sm font-medium text-gray-600 mb-2">User Growth</h3>
                 <p className="text-2xl font-bold text-blue-600">
-                  {revenueData?.userGrowthTrend > 0 ? '+' : ''}{revenueData?.userGrowthTrend.toFixed(1)}%
+                  {(revenueData?.userGrowthTrend ?? 0) > 0 ? '+' : ''}{(revenueData?.userGrowthTrend ?? 0).toFixed(1)}%
                 </p>
                 <p className="text-xs text-gray-500">Month-over-month</p>
               </div>
