@@ -808,7 +808,7 @@ export default function BrokerIntegration() {
 
           <TabsContent value="supported" className="space-y-6">
             <div className="grid gap-4">
-              {brokerPrograms?.map((broker: any) => (
+              {Array.isArray(brokerPrograms) && brokerPrograms?.map((broker: any) => (
                 <Card key={broker.id}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -848,6 +848,7 @@ export default function BrokerIntegration() {
                           </a>
                         </Button>
                       </div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

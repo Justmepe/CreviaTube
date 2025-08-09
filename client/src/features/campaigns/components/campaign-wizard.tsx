@@ -945,7 +945,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
                       <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     ))}
                   </div>
-                ) : brokerLinks.length === 0 ? (
+                ) : (brokerLinks as any[])?.length === 0 ? (
                   <div className="text-center py-8">
                     <ExternalLink className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No Broker Links Found</h3>
@@ -972,7 +972,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
                           Select the broker affiliate links you want to include in this campaign
                         </FormDescription>
                         <div className="grid grid-cols-1 gap-4">
-                          {brokerLinks.map((brokerLink: any) => (
+                          {(brokerLinks as any[])?.map((brokerLink: any) => (
                             <div
                               key={brokerLink.id}
                               className={`border rounded-lg p-4 cursor-pointer transition-colors ${
@@ -993,7 +993,6 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
                                 <div className="flex items-center gap-3">
                                   <Checkbox
                                     checked={field.value?.includes(brokerLink.id)}
-                                    readOnly
                                   />
                                   <div>
                                     <h4 className="font-semibold">{brokerLink.brokerName}</h4>
