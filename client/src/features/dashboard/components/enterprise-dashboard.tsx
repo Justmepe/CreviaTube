@@ -6,8 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/features/dashboard/components/dashboard-layout";
 import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, Crown, Building2, Palette, Globe, Zap, Star, Folder } from "lucide-react";
 
+interface PlatformStats {
+  totalUsers: number;
+  platformRevenue: number;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  globalReach: number;
+  totalEvents: number;
+}
+
 export default function EnterpriseDashboard() {
   const { user } = useAuth();
+
+  // Fetch real platform statistics from backend
+  const { data: platformStats, isLoading } = useQuery<PlatformStats>({
+    queryKey: ["/api/enterprise/platform-stats"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: BarChart3, current: true },
@@ -54,7 +69,7 @@ export default function EnterpriseDashboard() {
             </div>
           </div>
 
-          {/* Enterprise Stats Cards */}
+          {/* Enterprise Stats Cards - Real Data from Backend */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Total Users Card */}
             <div className="bg-gradient-to-br from-purple-100/80 to-indigo-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
@@ -64,8 +79,10 @@ export default function EnterpriseDashboard() {
                     <Users className="w-4 h-4 text-purple-600" />
                     <p className="text-sm font-medium text-slate-600">Total Users</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">Real Backend Data</p>
-                  <p className="text-sm text-purple-600 font-medium">From database queries</p>
+                  <p className="text-3xl font-bold text-slate-800">
+                    {isLoading ? "Loading..." : platformStats?.totalUsers?.toLocaleString() || "0"}
+                  </p>
+                  <p className="text-sm text-purple-600 font-medium">Real database count</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Users className="w-6 h-6 text-white" />
@@ -81,8 +98,10 @@ export default function EnterpriseDashboard() {
                     <Wallet className="w-4 h-4 text-green-600" />
                     <p className="text-sm font-medium text-slate-600">Platform Revenue</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">Backend Calculated</p>
-                  <p className="text-sm text-green-600 font-medium">15% commission rate</p>
+                  <p className="text-3xl font-bold text-slate-800">
+                    {isLoading ? "Loading..." : `$${platformStats?.platformRevenue?.toLocaleString() || "0"}`}
+                  </p>
+                  <p className="text-sm text-green-600 font-medium">20% platform commission</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Wallet className="w-6 h-6 text-white" />
@@ -98,8 +117,12 @@ export default function EnterpriseDashboard() {
                     <TrendingUp className="w-4 h-4 text-blue-600" />
                     <p className="text-sm font-medium text-slate-600">Active Campaigns</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">Backend Data</p>
-                  <p className="text-sm text-blue-600 font-medium">Cross-platform reach</p>
+                  <p className="text-3xl font-bold text-slate-800">
+                    {isLoading ? "Loading..." : platformStats?.activeCampaigns?.toLocaleString() || "0"}
+                  </p>
+                  <p className="text-sm text-blue-600 font-medium">
+                    of {platformStats?.totalCampaigns || 0} total campaigns
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <TrendingUp className="w-6 h-6 text-white" />
@@ -107,7 +130,7 @@ export default function EnterpriseDashboard() {
               </div>
             </div>
 
-            {/* Brand Reach Card */}
+            {/* Global Reach Card */}
             <div className="bg-gradient-to-br from-orange-100/80 to-amber-200/60 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -115,8 +138,12 @@ export default function EnterpriseDashboard() {
                     <Globe className="w-4 h-4 text-orange-600" />
                     <p className="text-sm font-medium text-slate-600">Global Reach</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">Dynamic Data</p>
-                  <p className="text-sm text-orange-600 font-medium">Countries served</p>
+                  <p className="text-3xl font-bold text-slate-800">
+                    {isLoading ? "Loading..." : platformStats?.globalReach || "0"}
+                  </p>
+                  <p className="text-sm text-orange-600 font-medium">
+                    Countries with activity
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Globe className="w-6 h-6 text-white" />

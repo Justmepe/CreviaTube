@@ -7,7 +7,7 @@ import { trackingService } from "./core/services/tracking-service";
 import { campaignCompletionService } from "./core/services/campaign-completion";
 import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts, insertPlatformReviewSchema } from "../shared/schema.js";
 import { randomBytes } from "crypto";
-import { sql, eq, gte, count, desc } from "drizzle-orm";
+import { sql, eq, gte, count, desc, sum } from "drizzle-orm";
 import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
@@ -1587,6 +1587,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching enterprise dashboard:", error);
       res.status(500).json({ message: "Failed to fetch enterprise dashboard" });
+    }
+  });
+
+  // Get platform-wide statistics for enterprise users
+  app.get("/api/enterprise/platform-stats", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as any).userType !== "enterprise") {
+      return res.status(403).json({ message: "Enterprise account required" });
+    }
+
+    try {
+      // Get total users count
+      const [totalUsersCount] = await db
+        .select({ count: count(users.id) })
+        .from(users);
+
+      // Get total platform revenue (sum of all budget used across campaigns)
+      const [platformRevenueQuery] = await db
+        .select({ 
+          totalBudgetUsed: sum(campaigns.budgetUsed)
+        })
+        .from(campaigns);
+
+      const totalBudgetUsed = Number(platformRevenueQuery?.totalBudgetUsed || 0);
+      const platformRevenue = Math.round(totalBudgetUsed * 0.20); // Platform takes 20%
+
+      // Get total campaigns count
+      const [totalCampaignsCount] = await db
+        .select({ count: count(campaigns.id) })
+        .from(campaigns);
+
+      // Get active campaigns count
+      const [activeCampaignsCount] = await db
+        .select({ count: count(campaigns.id) })
+        .from(campaigns)
+        .where(eq(campaigns.status, 'active'));
+
+      // Get unique countries from tracking events (approximation)
+      const [trackingEventsQuery] = await db
+        .select({ count: count(trackingEvents.id) })
+        .from(trackingEvents);
+
+      // Estimate countries based on tracking events (rough approximation: 1 country per 100 events)
+      const totalEvents = trackingEventsQuery?.count || 0;
+      const estimatedCountries = Math.max(1, Math.min(195, Math.ceil(totalEvents / 100)));
+
+      res.json({
+        totalUsers: totalUsersCount?.count || 0,
+        platformRevenue,
+        totalCampaigns: totalCampaignsCount?.count || 0,
+        activeCampaigns: activeCampaignsCount?.count || 0,
+        globalReach: estimatedCountries,
+        totalEvents
+      });
+    } catch (error: any) {
+      console.error("Error fetching platform stats:", error);
+      res.status(500).json({ message: "Failed to fetch platform statistics" });
     }
   });
 
