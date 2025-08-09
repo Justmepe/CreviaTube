@@ -33,6 +33,30 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
+// Get user's campaigns (my-campaigns endpoint)
+router.get("/my-campaigns", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  
+  try {
+    console.log(`User ${req.user.username} (${req.user.role}, ${req.user.userType}) requesting my campaigns`);
+    
+    if (req.user.role === "creator") {
+      const campaigns = await storage.getCampaignsByCreator(req.user.id);
+      console.log(`Found ${campaigns.length} campaigns for creator ${req.user.username}`);
+      res.json(campaigns);
+    } else if (req.user.role === "clipper") {
+      const clipperCampaigns = await storage.getClipperCampaignsByClipper(req.user.id);
+      console.log(`Found ${clipperCampaigns.length} clipper campaigns for ${req.user.username}`);
+      res.json(clipperCampaigns);
+    } else {
+      res.status(403).json({ message: "Access denied" });
+    }
+  } catch (error: any) {
+    console.error('My campaigns fetch error:', error);
+    res.status(500).json({ message: "Failed to fetch my campaigns", error: error.message });
+  }
+});
+
 // Get single campaign by ID
 router.get("/:id", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return res.sendStatus(401);
