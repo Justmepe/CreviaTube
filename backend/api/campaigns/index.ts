@@ -194,17 +194,53 @@ router.post("/:id/fund", async (req: Request, res: Response) => {
     let paymentResponse;
     
     if (method === "mpesa") {
-      paymentResponse = {
-        message: "M-Pesa payment initiated",
-        paymentMethod: "mpesa",
-        amount: parseFloat(campaign.budget),
-        currency: "USD",
-        phoneNumber,
-        status: "processing",
-        transactionId: `mpesa_${Date.now()}`,
-        instructions: "You will receive an M-Pesa prompt on your phone. Enter your M-Pesa PIN to complete the payment.",
-        estimatedTime: "1-2 minutes"
-      };
+      try {
+        // Use real PesaPal integration for M-Pesa payments
+        const { EscrowService } = require("../../core/services/escrow-service");
+        const escrowService = new EscrowService();
+        
+        const pesapalResult = await escrowService.fundCampaign(id, {
+          method: "mobile_money", 
+          phoneNumber,
+          email: email || `${phoneNumber}@placeholder.com` // PesaPal requires email
+        });
+
+        if (pesapalResult.success) {
+          paymentResponse = {
+            message: "PesaPal M-Pesa payment initiated successfully",
+            paymentMethod: "mpesa",
+            amount: pesapalResult.totalAmountUSD,
+            currency: "USD", 
+            phoneNumber,
+            status: "processing",
+            transactionId: pesapalResult.transactionId,
+            redirectUrl: pesapalResult.redirectUrl,
+            instructions: "Complete payment using the PesaPal M-Pesa checkout. You will be redirected to the payment page.",
+            estimatedTime: "3-5 minutes",
+            isPesaPal: true,
+            pesapalAmountKES: pesapalResult.totalAmountKES
+          };
+        } else {
+          throw new Error("PesaPal payment initiation failed");
+        }
+        
+      } catch (pesapalError: any) {
+        console.error('PesaPal integration error:', pesapalError);
+        // Fall back to demo mode if PesaPal fails
+        paymentResponse = {
+          message: "M-Pesa payment initiated in demo mode (PesaPal unavailable)",
+          paymentMethod: "mpesa",
+          amount: parseFloat(campaign.budget),
+          currency: "USD",
+          phoneNumber,
+          status: "processing",
+          transactionId: `mpesa_demo_${Date.now()}`,
+          instructions: `DEMO MODE: M-Pesa payment for ${phoneNumber}. PesaPal integration temporarily unavailable: ${pesapalError.message}`,
+          estimatedTime: "1-2 minutes",
+          isPesaPal: false,
+          error: pesapalError.message
+        };
+      }
     } else if (method === "paypal") {
       paymentResponse = {
         message: "PayPal payment initiated",
