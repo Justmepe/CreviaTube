@@ -114,7 +114,7 @@ export default function PlatformReviews() {
             </p>
           </div>
           
-          {user && !hasUserReviewed && (
+          {user && !hasUserReviewed ? (
             <Button 
               onClick={() => setShowReviewModal(true)}
               className="bg-teal-600 hover:bg-teal-700"
@@ -122,11 +122,11 @@ export default function PlatformReviews() {
               <MessageSquare className="h-4 w-4 mr-2" />
               Write a Review
             </Button>
-          )}
+          ) : null}
         </div>
         
         {/* Statistics Cards */}
-        {stats && (
+        {stats && typeof stats === 'object' ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card>
               <CardContent className="pt-6">
@@ -137,7 +137,7 @@ export default function PlatformReviews() {
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-600">Average Rating</p>
                     <div className="flex items-center gap-1">
-                      <p className="text-2xl font-bold text-gray-900">{stats.averageRating}</p>
+                      <p className="text-2xl font-bold text-gray-900">{(stats as any).averageRating || '0.0'}</p>
                       <div className="flex">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       </div>
@@ -155,7 +155,7 @@ export default function PlatformReviews() {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-600">Total Reviews</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalReviews}</p>
+                    <p className="text-2xl font-bold text-gray-900">{(stats as any).totalReviews || 0}</p>
                   </div>
                 </div>
               </CardContent>
@@ -170,7 +170,7 @@ export default function PlatformReviews() {
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-600">5-Star Reviews</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {Math.round(((stats.ratingBreakdown?.[5] || 0) / stats.totalReviews) * 100)}%
+                      {Math.round((((stats as any).ratingBreakdown?.[5] || 0) / ((stats as any).totalReviews || 1)) * 100)}%
                     </p>
                   </div>
                 </div>
@@ -191,10 +191,10 @@ export default function PlatformReviews() {
               </CardContent>
             </Card>
           </div>
-        )}
+        ) : null}
         
         {/* Rating Distribution */}
-        {stats && (
+        {stats && typeof stats === 'object' ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export default function PlatformReviews() {
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : null}
         
         {/* Filters and Search */}
         <Card>
