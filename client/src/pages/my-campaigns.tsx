@@ -83,9 +83,9 @@ export default function MyCampaignsPage() {
   }
 
   function CampaignCard({ campaign }: { campaign: CampaignWithClippers }) {
-    const completedClippers = campaign.clippers.filter(c => c.isCompleted);
-    const activeClippers = campaign.clippers.filter(c => c.isApproved && !c.isCompleted);
-    const pendingClippers = campaign.clippers.filter(c => !c.isApproved);
+    const completedClippers = campaign.clippers?.filter(c => c.isCompleted) || [];
+    const activeClippers = campaign.clippers?.filter(c => c.isApproved && !c.isCompleted) || [];
+    const pendingClippers = campaign.clippers?.filter(c => !c.isApproved) || [];
     
     return (
       <Card>
@@ -115,7 +115,7 @@ export default function MyCampaignsPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-blue-50 rounded">
               <Users className="w-5 h-5 mx-auto mb-1 text-blue-600" />
-              <p className="font-semibold">{campaign.clippers.length}</p>
+              <p className="font-semibold">{campaign.clippers?.length || 0}</p>
               <p className="text-xs text-gray-600">Total Clippers</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded">

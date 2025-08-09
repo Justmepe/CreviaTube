@@ -196,7 +196,7 @@ router.post("/:id/fund", async (req: Request, res: Response) => {
     if (method === "mpesa") {
       try {
         // Use real PesaPal integration for M-Pesa payments
-        const { EscrowService } = require("../../core/services/escrow-service");
+        const { EscrowService } = await import("../../core/services/escrow-service");
         const escrowService = new EscrowService();
         
         const pesapalResult = await escrowService.fundCampaign(id, {
