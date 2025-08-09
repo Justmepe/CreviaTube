@@ -38,7 +38,7 @@ export default function MyCampaignsPage() {
   }>({ open: false });
 
   const { data: campaigns, isLoading } = useQuery<CampaignWithClippers[]>({
-    queryKey: ['/api/campaigns/with-clippers'],
+    queryKey: ['/api/campaigns/my-campaigns'],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === 'creator',
   });

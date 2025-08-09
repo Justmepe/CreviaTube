@@ -141,26 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/campaigns/my-campaigns", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      if (req.user.role === "clipper") {
-        // For clippers: get their applications
-        const applications = await storage.getClipperApplications(req.user.id);
-        res.json(applications);
-      } else if (req.user.role === "creator") {
-        // For creators: get campaigns with clipper applications waiting for approval
-        const campaignsWithApplications = await storage.getCampaignsWithPendingApplications(req.user.id);
-        res.json(campaignsWithApplications);
-      } else {
-        res.status(403).json({ message: "Access denied" });
-      }
-    } catch (error: any) {
-      console.error('My campaigns fetch error:', error);
-      res.status(500).json({ message: "Failed to fetch campaigns", error: error.message });
-    }
-  });
+
 
   app.get("/api/campaigns/with-clippers", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
