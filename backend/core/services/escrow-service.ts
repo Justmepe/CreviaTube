@@ -14,7 +14,9 @@ if (process.env.PESAPAL_CONSUMER_KEY && process.env.PESAPAL_CONSUMER_SECRET) {
   pesapalConfig = {
     consumerKey: process.env.PESAPAL_CONSUMER_KEY,
     consumerSecret: process.env.PESAPAL_CONSUMER_SECRET,
-    baseUrl: process.env.PESAPAL_BASE_URL || "https://pay.pesapal.com/v3",
+    baseUrl: (process.env.PESAPAL_BASE_URL && process.env.PESAPAL_BASE_URL.startsWith('http')) 
+      ? process.env.PESAPAL_BASE_URL 
+      : "https://cybqa.pesapal.com/pesapalv3",
     isSandbox: process.env.NODE_ENV !== "production",
   };
 }

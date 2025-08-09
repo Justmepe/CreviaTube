@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/features/dashboard/components/dashboard-layout";
-import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, MousePointer, ShoppingCart, Target, Globe, Zap, Star, Folder, Mail, Crown } from "lucide-react";
+import { Users, TrendingUp, Wallet, BarChart3, Plus, Eye, MousePointer, ShoppingCart, Target, Globe, Zap, Star, Folder, Mail, Crown, DollarSign } from "lucide-react";
 
 export default function EntrepreneurDashboard() {
   const { user } = useAuth();
