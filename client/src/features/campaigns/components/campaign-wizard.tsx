@@ -211,23 +211,39 @@ export function CampaignWizard({ onSubmit, isSubmitting = false }: CampaignWizar
   };
 
   const handleSubmit = async (data: CampaignWizardData) => {
-    // Perform final validation before submission
+    console.log('Form submission started with data:', data);
+    console.log('Current form errors:', form.formState.errors);
+    
     try {
-      // Validate all fields for final submission
-      const isValid = await form.trigger();
-      if (!isValid) {
-        console.error('Form validation failed:', form.formState.errors);
-        return;
+      // Check required fields manually
+      const errors: any = {};
+      
+      if (!data.name || data.name.length < 5) {
+        errors.name = "Campaign name must be at least 5 characters";
       }
       
-      // Additional validation for trader creators
+      if (!data.description || data.description.length < 20) {
+        errors.description = "Description must be at least 20 characters";
+      }
+      
+      if (!data.targetPlatforms || data.targetPlatforms.length === 0) {
+        errors.targetPlatforms = "Select at least one platform";
+      }
+      
+      // Check broker links for trader creators only
       if (user?.userType === "trader_creator" && (!data.selectedBrokerLinks || data.selectedBrokerLinks.length === 0)) {
-        form.setError("selectedBrokerLinks", { 
-          message: "Please select at least one broker link for trading campaigns" 
+        errors.selectedBrokerLinks = "Please select at least one broker link for trading campaigns";
+      }
+      
+      if (Object.keys(errors).length > 0) {
+        console.log('Manual validation failed:', errors);
+        Object.keys(errors).forEach(field => {
+          form.setError(field as any, { message: errors[field] });
         });
         return;
       }
       
+      console.log('Validation passed, calling onSubmit');
       onSubmit(data);
     } catch (error) {
       console.error('Submission error:', error);
