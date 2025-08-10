@@ -61,6 +61,11 @@ function HomeRoute() {
   return user ? <DashboardRouter /> : <LandingPage />;
 }
 
+// Add navigation back to home for Enterprise Request Dashboard
+function EnterpriseRequestDashboardWithNav() {
+  return <EnterpriseRequestDashboard />;
+}
+
 function CampaignsRoute() {
   const { user } = useAuth();
   return user?.role === "clipper" ? <CampaignsMarketplace /> : <CampaignsEnhanced />;
@@ -136,7 +141,7 @@ function DashboardRouter() {
   // Enterprise users need special handling based on approval status
   if (user.userType === "enterprise") {
     // Check if they have an approved enterprise account, otherwise show request form
-    return <EnterpriseRequestDashboard />;
+    return <EnterpriseRequestDashboardWithNav />;
   }
   
   // Route based on specific user types only

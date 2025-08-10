@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Building2, Clock, Send, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Building2, Clock, Send, CheckCircle2, XCircle, AlertCircle, Home, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 interface EnterpriseRequest {
   id: string;
@@ -121,6 +122,18 @@ export default function EnterpriseRequestDashboard() {
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
       
       <div className="relative z-10 container mx-auto px-6 py-12">
+        {/* Navigation Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </Link>
+          <Link href="/" className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors">
+            <Home className="w-4 h-4" />
+            <span>Home</span>
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
@@ -187,12 +200,19 @@ export default function EnterpriseRequestDashboard() {
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-green-800 font-medium mb-2">🎉 Welcome to Enterprise!</p>
                       <p className="text-green-700">Your white-label platform is now active. Refresh this page to access your enterprise dashboard.</p>
-                      <Button 
-                        onClick={() => window.location.reload()} 
-                        className="mt-3 bg-green-600 hover:bg-green-700"
-                      >
-                        Access Enterprise Dashboard
-                      </Button>
+                      <div className="flex space-x-3 mt-3">
+                        <Button 
+                          onClick={() => window.location.reload()} 
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Access Enterprise Dashboard
+                        </Button>
+                        <Link href="/">
+                          <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50">
+                            Go to Home
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </div>

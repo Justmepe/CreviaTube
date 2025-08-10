@@ -72,11 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear all cached data when registering to ensure clean state
       queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
-      toast({
-        title: "Account created successfully!",
-        description: "Welcome to CreoCash. You can now start creating campaigns.",
-        variant: "default",
-      });
+      
+      // Show different welcome messages based on user type
+      if (user.userType === "enterprise") {
+        toast({
+          title: "Enterprise Account Created!",
+          description: "Please complete your enterprise request to activate your white-label platform.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Account created successfully!",
+          description: "Welcome to CreoCash. You can now start creating campaigns.",
+          variant: "default",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
