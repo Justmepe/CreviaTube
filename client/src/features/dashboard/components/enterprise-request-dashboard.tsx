@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Building2, Clock, Send, CheckCircle2, XCircle, AlertCircle, Home, ArrowLeft } from "lucide-react";
+import { Building2, Clock, Send, CheckCircle2, XCircle, AlertCircle, Home, ArrowLeft, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface EnterpriseRequest {
@@ -133,26 +133,42 @@ export default function EnterpriseRequestDashboard() {
         {/* Navigation Header */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <button 
-            onClick={() => {
-              console.log("Back button clicked, navigating to /");
-              setLocation('/');
+            onClick={async () => {
+              try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+              } catch (error) {
+                console.error('Logout failed:', error);
+                window.location.href = '/';
+              }
             }}
-            className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
+            className="flex items-center space-x-2 text-slate-600 hover:text-red-600 transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back to Home</span>
-            <span className="sm:hidden">Back</span>
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+            <span className="sm:hidden">Logout</span>
           </button>
-          <button 
-            onClick={() => {
-              console.log("Home button clicked, navigating to /");
-              setLocation('/');
-            }}
-            className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
-          >
-            <Home className="w-4 h-4" />
-            <span className="hidden sm:inline">Home</span>
-          </button>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => {
+                window.location.href = '/';
+              }}
+              className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Home</span>
+              <span className="sm:hidden">Back</span>
+            </button>
+            <button 
+              onClick={() => {
+                window.location.href = '/';
+              }}
+              className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Home</span>
+            </button>
+          </div>
         </div>
 
         {/* Header */}
