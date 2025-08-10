@@ -41,13 +41,24 @@ export default function AuthPage() {
 
   // Update role automatically based on user type selection
   const handleUserTypeChange = (userType: string) => {
+    if (userType === "enterprise") {
+      // Redirect to enterprise signup page with current form data
+      const params = new URLSearchParams({
+        fullName: registerData.fullName,
+        email: registerData.email,
+        username: registerData.username,
+        phoneNumber: registerData.phoneNumber || ''
+      });
+      setLocation(`/enterprise-signup?${params.toString()}`);
+      return;
+    }
+    
     setRegisterData(prev => ({
       ...prev,
       userType: userType as any,
-      // Enterprise users get creator role (they white-label the platform)
       // Creator types (influencer, trader, business) get creator role
       // Regular users without specific types are clippers
-      role: userType === "enterprise" || userType === "trader_creator" || userType === "influencer" || userType === "entrepreneur" ? "creator" : "clipper"
+      role: userType === "trader_creator" || userType === "influencer" || userType === "entrepreneur" ? "creator" : "clipper"
     }));
   };
 

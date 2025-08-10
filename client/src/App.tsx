@@ -55,6 +55,7 @@ import Contact from "@/pages/contact";
 import Careers from "@/pages/careers";
 import CommunityGuidelines from "@/pages/community-guidelines";
 import Events from "@/pages/events";
+import EnterpriseSignupPage from "@/pages/enterprise-signup-page";
 
 function HomeRoute() {
   const { user } = useAuth();
@@ -75,6 +76,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={HomeRoute} />
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/enterprise-signup" component={EnterpriseSignupPage} />
       <Route path="/landing" component={LandingPage} />
       <ProtectedRoute path="/dashboard" component={DashboardRouter} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
