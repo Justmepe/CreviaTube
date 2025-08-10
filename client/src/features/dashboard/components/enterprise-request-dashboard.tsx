@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Building2, Clock, Send, CheckCircle2, XCircle, AlertCircle, Home, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
 
 interface EnterpriseRequest {
   id: string;
@@ -124,14 +123,20 @@ export default function EnterpriseRequestDashboard() {
       <div className="relative z-10 container mx-auto px-6 py-12">
         {/* Navigation Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors">
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
+          >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Home</span>
-          </Link>
-          <Link href="/" className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors">
+          </button>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
+          >
             <Home className="w-4 h-4" />
             <span>Home</span>
-          </Link>
+          </button>
         </div>
 
         {/* Header */}
@@ -207,11 +212,13 @@ export default function EnterpriseRequestDashboard() {
                         >
                           Access Enterprise Dashboard
                         </Button>
-                        <Link href="/">
-                          <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50">
-                            Go to Home
-                          </Button>
-                        </Link>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => window.location.href = '/'}
+                          className="border-green-600 text-green-700 hover:bg-green-50"
+                        >
+                          Go to Home
+                        </Button>
                       </div>
                     </div>
                   )}

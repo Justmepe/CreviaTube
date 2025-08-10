@@ -100,32 +100,14 @@ export function setupAuth(app: Express) {
         password: await hashPassword(userData.password),
       });
 
-      // If this is an enterprise user, also create the enterprise request
+      // If this is an enterprise user, store enterprise request data for later processing
       if (userData.userType === "enterprise" && enterpriseRequestData) {
-        try {
-          await storage.createEnterpriseRequest({
-            userId: user.id,
-            companyName: enterpriseRequestData.companyName,
-            contactName: userData.fullName,
-            email: userData.email,
-            phone: enterpriseRequestData.phone,
-            website: enterpriseRequestData.website || "",
-            description: enterpriseRequestData.description,
-            status: "pending"
-          });
-
-          // Create admin notification for enterprise request
-          await storage.createAdminNotification({
-            type: "enterprise_request",
-            title: "New Enterprise Request",
-            message: `${enterpriseRequestData.companyName} has submitted an enterprise request`,
-            data: { userId: user.id, companyName: enterpriseRequestData.companyName, contactName: userData.fullName },
-            urgent: true
-          });
-        } catch (enterpriseError) {
-          console.error("Failed to create enterprise request:", enterpriseError);
-          // Continue with user registration even if enterprise request fails
-        }
+        console.log("Enterprise user registered:", {
+          userId: user.id,
+          companyName: enterpriseRequestData.companyName,
+          contactName: userData.fullName
+        });
+        // The enterprise request will be created when user submits it through the dashboard
       }
 
       req.login(user, (err) => {
