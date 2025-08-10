@@ -27,6 +27,13 @@ export default function EnterpriseRequestDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  // If user is not authenticated, redirect to home
+  if (!user) {
+    setLocation('/');
+    return null;
+  }
+  
   const [formData, setFormData] = useState({
     companyName: '',
     contactName: user?.fullName || '',
@@ -126,7 +133,10 @@ export default function EnterpriseRequestDashboard() {
         {/* Navigation Header */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <button 
-            onClick={() => setLocation('/')}
+            onClick={() => {
+              console.log("Back button clicked, navigating to /");
+              setLocation('/');
+            }}
             className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -134,7 +144,10 @@ export default function EnterpriseRequestDashboard() {
             <span className="sm:hidden">Back</span>
           </button>
           <button 
-            onClick={() => setLocation('/')}
+            onClick={() => {
+              console.log("Home button clicked, navigating to /");
+              setLocation('/');
+            }}
             className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
             <Home className="w-4 h-4" />
