@@ -58,7 +58,8 @@ import Events from "@/pages/events";
 
 function HomeRoute() {
   const { user } = useAuth();
-  return user ? <DashboardRouter /> : <LandingPage />;
+  // Always show landing page for root path, even if user is logged in
+  return <LandingPage />;
 }
 
 // Add navigation back to home for Enterprise Request Dashboard
@@ -76,6 +77,7 @@ function Router() {
     <Switch>
       <Route path="/" component={HomeRoute} />
       <Route path="/landing" component={LandingPage} />
+      <ProtectedRoute path="/dashboard" component={DashboardRouter} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
       <ProtectedRoute path="/campaigns" component={CampaignsRoute} />
       <ProtectedRoute path="/campaigns/create" component={CampaignCreation} />

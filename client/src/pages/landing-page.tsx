@@ -21,6 +21,7 @@ import {
   CreditCard,
   Home,
   LogIn,
+  User,
   Mail,
   Phone,
   MapPin,
@@ -98,11 +99,7 @@ export default function LandingPage() {
     setReviewsUpdateTime(new Date());
   }, [refetchReviews]);
 
-  // Redirect if user is already logged in
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  // No automatic redirect - let logged-in users stay on landing page
 
   // Handle Get Started button click
   const handleGetStarted = () => {
@@ -204,24 +201,44 @@ export default function LandingPage() {
                 Reviews
               </button>
               
-              <button
-                onClick={() => handleNavigation('signin')}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </button>
+              {user ? (
+                <button
+                  onClick={() => setLocation('/dashboard')}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-200"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleNavigation('signin')}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+              )}
             </nav>
             
             {/* Mobile Menu Button */}
             <div className="md:hidden">
-              <button
-                onClick={() => handleNavigation('signin')}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </button>
+              {user ? (
+                <button
+                  onClick={() => setLocation('/dashboard')}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleNavigation('signin')}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -306,13 +323,23 @@ export default function LandingPage() {
               
               {/* Call-to-Action Button */}
               <div className="flex items-center space-x-4 pt-4">
-                <Button 
-                  onClick={handleGetStarted}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 text-lg"
-                >
-                  <span>Get Started Free</span>
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
+                {user ? (
+                  <Button 
+                    onClick={() => setLocation('/dashboard')}
+                    className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 text-lg"
+                  >
+                    <span>Go to Dashboard</span>
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleGetStarted}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 text-lg"
+                  >
+                    <span>Get Started Free</span>
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                )}
                 <div className="text-sm text-slate-500">
                   <span className="flex items-center">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
