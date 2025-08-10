@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
+    mutationFn: async (credentials: InsertUser & { enterpriseRequestData?: any }) => {
       const res = await apiRequest("POST", "/api/register", credentials);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: "Registration failed" }));

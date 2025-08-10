@@ -82,21 +82,51 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      const { enterpriseRequestData, ...userData } = req.body;
+      
+      const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
       // Check if email already exists
-      const existingEmailUser = await storage.getUserByEmail(req.body.email);
+      const existingEmailUser = await storage.getUserByEmail(userData.email);
       if (existingEmailUser) {
         return res.status(400).json({ message: "Email already exists" });
       }
 
       const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
+        ...userData,
+        password: await hashPassword(userData.password),
       });
+
+      // If this is an enterprise user, also create the enterprise request
+      if (userData.userType === "enterprise" && enterpriseRequestData) {
+        try {
+          await storage.createEnterpriseRequest({
+            userId: user.id,
+            companyName: enterpriseRequestData.companyName,
+            contactName: userData.fullName,
+            email: userData.email,
+            phone: enterpriseRequestData.phone,
+            website: enterpriseRequestData.website || "",
+            description: enterpriseRequestData.description,
+            status: "pending"
+          });
+
+          // Create admin notification for enterprise request
+          await storage.createAdminNotification({
+            type: "enterprise_request",
+            title: "New Enterprise Request",
+            message: `${enterpriseRequestData.companyName} has submitted an enterprise request`,
+            data: { userId: user.id, companyName: enterpriseRequestData.companyName, contactName: userData.fullName },
+            urgent: true
+          });
+        } catch (enterpriseError) {
+          console.error("Failed to create enterprise request:", enterpriseError);
+          // Continue with user registration even if enterprise request fails
+        }
+      }
 
       req.login(user, (err) => {
         if (err) return next(err);

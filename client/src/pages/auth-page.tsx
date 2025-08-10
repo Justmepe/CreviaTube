@@ -11,6 +11,7 @@ import {
   Sparkles,
   Star
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AuthPage() {
@@ -26,6 +27,16 @@ export default function AuthPage() {
     role: "clipper" as "creator" | "clipper",
     userType: undefined as "trader_creator" | "influencer" | "entrepreneur" | "enterprise" | undefined,
     phoneNumber: "",
+  });
+
+  // Enterprise request form data
+  const [enterpriseRequestData, setEnterpriseRequestData] = useState({
+    companyName: "",
+    contactName: "",
+    contactEmail: "",
+    phone: "",
+    website: "",
+    description: ""
   });
 
   // Update role automatically based on user type selection
@@ -58,9 +69,34 @@ export default function AuthPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      registerMutation.mutate(registerData);
+      // For enterprise users, validate enterprise request data too
+      if (registerData.userType === "enterprise") {
+        if (!enterpriseRequestData.companyName || !enterpriseRequestData.phone || !enterpriseRequestData.description) {
+          alert("Please fill in all required enterprise information.");
+          return;
+        }
+      }
+      // Include enterprise request data if enterprise user type
+      const registrationData = registerData.userType === "enterprise" 
+        ? { ...registerData, enterpriseRequestData }
+        : registerData;
+      registerMutation.mutate(registrationData);
     } catch (error) {
       console.error("Registration error:", error);
+    }
+  };
+
+  // Update enterprise request contact info when basic info changes
+  const handleBasicInfoChange = (field: string, value: string) => {
+    setRegisterData(prev => ({ ...prev, [field]: value }));
+    
+    // Auto-fill enterprise request form if enterprise is selected
+    if (registerData.userType === "enterprise") {
+      if (field === "fullName") {
+        setEnterpriseRequestData(prev => ({ ...prev, contactName: value }));
+      } else if (field === "email") {
+        setEnterpriseRequestData(prev => ({ ...prev, contactEmail: value }));
+      }
     }
   };
 
@@ -162,7 +198,7 @@ export default function AuthPage() {
                       id="fullName"
                       type="text"
                       value={registerData.fullName}
-                      onChange={(e) => setRegisterData(prev => ({ ...prev, fullName: e.target.value }))}
+                      onChange={(e) => handleBasicInfoChange("fullName", e.target.value)}
                       required
                       className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                       placeholder="Enter your full name"
@@ -175,7 +211,7 @@ export default function AuthPage() {
                       id="email"
                       type="email"
                       value={registerData.email}
-                      onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) => handleBasicInfoChange("email", e.target.value)}
                       required
                       className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
                       placeholder="Enter your email"
@@ -240,6 +276,71 @@ export default function AuthPage() {
                     />
                   </div>
                 </div>
+
+                {/* Enterprise Request Form - Shows when Enterprise is selected */}
+                {registerData.userType === "enterprise" && (
+                  <div className="p-6 bg-purple-50 border border-purple-200 rounded-xl">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                        <Star className="w-4 h-4 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-purple-800">Enterprise Platform Request</h3>
+                    </div>
+                    <p className="text-purple-700 text-sm mb-4">
+                      Complete your enterprise information to get your own white-label affiliate marketing platform.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="companyName" className="text-purple-700 font-medium">Company Name *</Label>
+                        <Input
+                          id="companyName"
+                          required
+                          value={enterpriseRequestData.companyName}
+                          onChange={(e) => setEnterpriseRequestData(prev => ({ ...prev, companyName: e.target.value }))}
+                          placeholder="Your Company Inc."
+                          className="h-10 border-purple-200 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contactPhone" className="text-purple-700 font-medium">Phone Number *</Label>
+                        <Input
+                          id="contactPhone"
+                          type="tel"
+                          required
+                          value={enterpriseRequestData.phone}
+                          onChange={(e) => setEnterpriseRequestData(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="+1 (555) 123-4567"
+                          className="h-10 border-purple-200 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <Label htmlFor="website" className="text-purple-700 font-medium">Company Website</Label>
+                      <Input
+                        id="website"
+                        type="url"
+                        value={enterpriseRequestData.website}
+                        onChange={(e) => setEnterpriseRequestData(prev => ({ ...prev, website: e.target.value }))}
+                        placeholder="https://yourcompany.com"
+                        className="h-10 border-purple-200 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg"
+                      />
+                    </div>
+                    
+                    <div className="mt-4">
+                      <Label htmlFor="businessDescription" className="text-purple-700 font-medium">Business Description *</Label>
+                      <Textarea
+                        id="businessDescription"
+                        required
+                        value={enterpriseRequestData.description}
+                        onChange={(e) => setEnterpriseRequestData(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Describe your business, target audience, and how you plan to use the affiliate marketing platform..."
+                        className="h-24 border-purple-200 focus:border-purple-500 focus:ring-purple-500/20 rounded-lg resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {registerMutation.error && (
                   <Alert className="border-red-200 bg-red-50">
