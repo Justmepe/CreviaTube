@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Building2, Clock, Send, CheckCircle2, XCircle, AlertCircle, Home, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface EnterpriseRequest {
   id: string;
@@ -25,6 +26,7 @@ interface EnterpriseRequest {
 export default function EnterpriseRequestDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [formData, setFormData] = useState({
     companyName: '',
     contactName: user?.fullName || '',
@@ -124,14 +126,14 @@ export default function EnterpriseRequestDashboard() {
         {/* Navigation Header */}
         <div className="flex items-center justify-between mb-8">
           <button 
-            onClick={() => window.location.href = '/'}
+            onClick={() => setLocation('/')}
             className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Home</span>
           </button>
           <button 
-            onClick={() => window.location.href = '/'}
+            onClick={() => setLocation('/')}
             className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
             <Home className="w-4 h-4" />
@@ -214,7 +216,7 @@ export default function EnterpriseRequestDashboard() {
                         </Button>
                         <Button 
                           variant="outline" 
-                          onClick={() => window.location.href = '/'}
+                          onClick={() => setLocation('/')}
                           className="border-green-600 text-green-700 hover:bg-green-50"
                         >
                           Go to Home
