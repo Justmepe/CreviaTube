@@ -8,7 +8,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import LandingPage from "@/pages/landing-page";
-import CreatorDashboard from "@/features/dashboard/components/creator-dashboard";
+
 import ClipperDashboard from "@/features/dashboard/components/clipper-dashboard";
 import AdminDashboard from "@/features/admin/components/admin-dashboard";
 import MetricsDashboard from "@/pages/metrics-dashboard";
@@ -139,7 +139,7 @@ function DashboardRouter() {
     return <EnterpriseRequestDashboard />;
   }
   
-  // Route based on user type for creators
+  // Route based on specific user types only
   if (user.userType === "trader_creator") {
     return <TraderCreatorDashboard />;
   }
@@ -152,16 +152,13 @@ function DashboardRouter() {
     return <EntrepreneurDashboard />;
   }
   
-  // Default routing based on role
-  switch (user.role) {
-    case "creator":
-      return <CreatorDashboard />;
-    case "clipper":
-      return <ClipperDashboard />;
-    default:
-      // New users without specific type get clipper dashboard
-      return <ClipperDashboard />;
+  // Only clippers get clipper dashboard
+  if (user.role === "clipper") {
+    return <ClipperDashboard />;
   }
+  
+  // Users without specific type should be redirected to select their type
+  return <ClipperDashboard />;
 }
 
 
