@@ -142,33 +142,12 @@ export default function EnterpriseRequestDashboard() {
                 window.location.href = '/';
               }
             }}
-            className="flex items-center space-x-2 text-slate-600 hover:text-red-600 transition-colors cursor-pointer"
+            className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-            <span className="sm:hidden">Logout</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back to Home</span>
+            <span className="sm:hidden">Back</span>
           </button>
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => {
-                window.location.href = '/';
-              }}
-              className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Home</span>
-              <span className="sm:hidden">Back</span>
-            </button>
-            <button 
-              onClick={() => {
-                window.location.href = '/';
-              }}
-              className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Home</span>
-            </button>
-          </div>
         </div>
 
         {/* Header */}
