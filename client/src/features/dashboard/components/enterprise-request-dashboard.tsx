@@ -122,54 +122,57 @@ export default function EnterpriseRequestDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-indigo-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
       
-      <div className="relative z-10 container mx-auto px-6 py-12">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 sm:py-12">
         {/* Navigation Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <button 
             onClick={() => setLocation('/')}
             className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
+            <span className="hidden sm:inline">Back to Home</span>
+            <span className="sm:hidden">Back</span>
           </button>
           <button 
             onClick={() => setLocation('/')}
             className="flex items-center space-x-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer"
           >
             <Home className="w-4 h-4" />
-            <span>Home</span>
+            <span className="hidden sm:inline">Home</span>
           </button>
         </div>
 
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
-              <Building2 className="w-8 h-8 text-white" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent mb-4 px-4">
             Enterprise Platform Request
           </h1>
-          <p className="text-slate-600 text-lg max-w-2xl mx-auto">
+          <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto px-4">
             Request access to your own white-label affiliate marketing platform with custom branding, dedicated domain, and premium features.
           </p>
         </div>
 
         {existingRequest ? (
           // Show request status if already submitted
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto px-4">
             <Card className="bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl">
               <CardHeader>
                 <div className="flex items-center space-x-3">
                   {getStatusIcon(existingRequest.status)}
-                  <CardTitle className="text-xl">
-                    Request Status: {existingRequest.status.replace('_', ' ').toUpperCase()}
-                  </CardTitle>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg sm:text-xl truncate">
+                      Request Status: {existingRequest.status.replace('_', ' ').toUpperCase()}
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      Submitted on {new Date(existingRequest.submittedAt).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
                 </div>
-                <CardDescription>
-                  Submitted on {new Date(existingRequest.submittedAt).toLocaleDateString()}
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -177,19 +180,19 @@ export default function EnterpriseRequestDashboard() {
                     <p className="text-slate-700">{getStatusMessage(existingRequest.status)}</p>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="font-semibold text-slate-700">Company Name</Label>
-                      <p className="text-slate-600">{existingRequest.companyName}</p>
+                      <p className="text-slate-600 break-words">{existingRequest.companyName}</p>
                     </div>
                     <div>
                       <Label className="font-semibold text-slate-700">Contact Email</Label>
-                      <p className="text-slate-600">{existingRequest.email}</p>
+                      <p className="text-slate-600 break-all text-sm sm:text-base">{existingRequest.email}</p>
                     </div>
                     {existingRequest.website && (
                       <div>
                         <Label className="font-semibold text-slate-700">Website</Label>
-                        <p className="text-slate-600">{existingRequest.website}</p>
+                        <p className="text-slate-600 break-all text-sm sm:text-base">{existingRequest.website}</p>
                       </div>
                     )}
                     <div>
@@ -207,17 +210,17 @@ export default function EnterpriseRequestDashboard() {
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-green-800 font-medium mb-2">🎉 Welcome to Enterprise!</p>
                       <p className="text-green-700">Your white-label platform is now active. Refresh this page to access your enterprise dashboard.</p>
-                      <div className="flex space-x-3 mt-3">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-3">
                         <Button 
                           onClick={() => window.location.reload()} 
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                         >
                           Access Enterprise Dashboard
                         </Button>
                         <Button 
                           variant="outline" 
                           onClick={() => setLocation('/')}
-                          className="border-green-600 text-green-700 hover:bg-green-50"
+                          className="border-green-600 text-green-700 hover:bg-green-50 w-full sm:w-auto"
                         >
                           Go to Home
                         </Button>
@@ -230,42 +233,44 @@ export default function EnterpriseRequestDashboard() {
           </div>
         ) : (
           // Show request form if no request submitted yet
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto px-4">
             <Card className="bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-2xl">Enterprise Account Request</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-xl sm:text-2xl">Enterprise Account Request</CardTitle>
+                <CardDescription className="text-sm sm:text-base">
                   Fill out this form to request your own white-label affiliate marketing platform
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="companyName">Company Name *</Label>
+                      <Label htmlFor="companyName" className="text-sm sm:text-base">Company Name *</Label>
                       <Input
                         id="companyName"
                         required
                         value={formData.companyName}
                         onChange={(e) => setFormData({...formData, companyName: e.target.value})}
                         placeholder="Your Company Inc."
+                        className="text-sm sm:text-base"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="contactName">Contact Name *</Label>
+                      <Label htmlFor="contactName" className="text-sm sm:text-base">Contact Name *</Label>
                       <Input
                         id="contactName"
                         required
                         value={formData.contactName}
                         onChange={(e) => setFormData({...formData, contactName: e.target.value})}
                         placeholder="John Doe"
+                        className="text-sm sm:text-base"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="email">Email Address *</Label>
+                      <Label htmlFor="email" className="text-sm sm:text-base">Email Address *</Label>
                       <Input
                         id="email"
                         type="email"
@@ -273,10 +278,11 @@ export default function EnterpriseRequestDashboard() {
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                         placeholder="john@company.com"
+                        className="text-sm sm:text-base"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Label htmlFor="phone" className="text-sm sm:text-base">Phone Number *</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -284,36 +290,38 @@ export default function EnterpriseRequestDashboard() {
                         value={formData.phone}
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         placeholder="+1 (555) 123-4567"
+                        className="text-sm sm:text-base"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="website">Company Website</Label>
+                    <Label htmlFor="website" className="text-sm sm:text-base">Company Website</Label>
                     <Input
                       id="website"
                       type="url"
                       value={formData.website}
                       onChange={(e) => setFormData({...formData, website: e.target.value})}
                       placeholder="https://yourcompany.com"
+                      className="text-sm sm:text-base"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="description">Business Description *</Label>
+                    <Label htmlFor="description" className="text-sm sm:text-base">Business Description *</Label>
                     <Textarea
                       id="description"
                       required
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                       placeholder="Describe your business, target audience, and how you plan to use the affiliate marketing platform..."
-                      className="h-32"
+                      className="h-32 text-sm sm:text-base resize-none"
                     />
                   </div>
 
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-2">What You'll Get:</h4>
-                    <ul className="text-blue-800 space-y-1 text-sm">
+                  <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">What You'll Get:</h4>
+                    <ul className="text-blue-800 space-y-1 text-xs sm:text-sm">
                       <li>• Custom white-label platform with your branding</li>
                       <li>• Dedicated subdomain (yourcompany.creocash.com)</li>
                       <li>• Custom commission rates (typically 15% vs standard 20%)</li>
@@ -325,7 +333,7 @@ export default function EnterpriseRequestDashboard() {
 
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 shadow-lg"
+                    className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 shadow-lg text-sm sm:text-base py-2 sm:py-3"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Submit Enterprise Request
