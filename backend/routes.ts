@@ -1623,8 +1623,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(enterpriseAccounts)
         .where(eq(enterpriseAccounts.userId, (req.user as any).id));
 
-      // If white-label enterprise, show their sub-platform stats
-      if (enterpriseAccount && enterpriseAccount.status === 'active') {
+      // If white-label enterprise account exists and is active, show their sub-platform stats
+      if (enterpriseAccount && (enterpriseAccount.status === 'active' || enterpriseAccount.status === 'setup')) {
         // For white-label enterprises, show stats scoped to their platform
         
         // Get campaigns created under this enterprise
@@ -1833,6 +1833,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Failed to update enterprise request:", error);
       res.status(500).json({ message: "Failed to update enterprise request" });
+    }
+  });
+
+  // Approve enterprise request and create permanent white-label account (Admin only)
+  app.post("/api/admin/enterprise-requests/:id/approve", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    const { id } = req.params;
+    const { customDomain, commissionRate = 0.15, features, brandingConfig } = req.body;
+
+    try {
+      // Get the enterprise request
+      const [request] = await db.select().from(enterpriseRequests).where(eq(enterpriseRequests.id, id));
+      
+      if (!request) {
+        return res.status(404).json({ message: "Enterprise request not found" });
+      }
+
+      if (request.status === "completed") {
+        return res.status(400).json({ message: "Enterprise request already approved" });
+      }
+
+      // Generate unique subdomain if not provided
+      const defaultDomain = customDomain || `${request.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.creocash.com`;
+
+      // Create comprehensive enterprise account with full white-label configuration
+      const [enterpriseAccount] = await db.insert(enterpriseAccounts).values({
+        id: randomBytes(16).toString('hex'),
+        requestId: id,
+        userId: request.userId,
+        companyName: request.companyName,
+        customDomain: defaultDomain,
+        status: "active", // Automatically activate for immediate white-label access
+        activatedAt: new Date(),
+        
+        // Default pricing configuration with custom commission rate
+        pricingConfig: {
+          commissionRate: commissionRate,
+          payoutThreshold: 100,
+          customRates: {}
+        },
+        
+        // Full enterprise features enabled by default for all approved accounts
+        features: features || {
+          whiteLabel: true,
+          customBranding: true,
+          apiAccess: true,
+          customDomains: true,
+          prioritySupport: true,
+          dedicatedManager: true
+        },
+        
+        // Default branding configuration that can be customized later
+        brandingConfig: brandingConfig || {
+          primaryColor: "#6366f1",
+          secondaryColor: "#8b5cf6",
+          companyName: request.companyName
+        },
+        
+        billingCycle: "monthly",
+        contractDetails: {
+          approvedBy: req.user.id,
+          approvedAt: new Date().toISOString(),
+          contractType: "white_label_enterprise",
+          autoRenewal: true,
+          approvedByAdmin: req.user.username || req.user.fullName
+        }
+      }).returning();
+
+      // Update the request status to completed
+      await db.update(enterpriseRequests).set({
+        status: "completed",
+        assignedTo: req.user.id,
+        notes: `Approved and activated as white-label enterprise account. Domain: ${defaultDomain}. Commission rate: ${commissionRate * 100}%`,
+        updatedAt: new Date()
+      }).where(eq(enterpriseRequests.id, id));
+
+      // Update user to enterprise type to enable enterprise features
+      await db.update(users).set({
+        userType: "enterprise",
+        updatedAt: new Date()
+      }).where(eq(users.id, request.userId));
+
+      // Create admin notification for successful activation
+      await db.insert(adminNotifications).values({
+        id: randomBytes(16).toString('hex'),
+        type: "enterprise_activated",
+        title: "Enterprise White-Label Account Activated",
+        message: `${request.companyName} white-label platform is now live at ${defaultDomain}`,
+        data: {
+          enterpriseAccountId: enterpriseAccount.id,
+          companyName: request.companyName,
+          domain: defaultDomain,
+          userId: request.userId,
+          commissionRate: commissionRate,
+          approvedBy: req.user.id
+        },
+        urgent: false
+      });
+
+      console.log(`✅ Enterprise white-label account activated: ${request.companyName} at ${defaultDomain} (Commission: ${commissionRate * 100}%)`);
+
+      res.json({
+        message: "Enterprise request approved and white-label platform activated",
+        enterpriseAccount,
+        whiteLabelUrl: `https://${defaultDomain}`,
+        features: enterpriseAccount.features,
+        commissionRate: enterpriseAccount.pricingConfig?.commissionRate,
+        status: "active",
+        isWhiteLabel: true
+      });
+    } catch (error: any) {
+      console.error('Error approving enterprise request:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Activate existing enterprise accounts that were created in setup mode
+  app.post("/api/admin/enterprise-accounts/:id/activate", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+
+    const { id } = req.params;
+    const { commissionRate = 0.15, brandingConfig } = req.body;
+
+    try {
+      // Get the enterprise account
+      const [account] = await db.select().from(enterpriseAccounts).where(eq(enterpriseAccounts.id, id));
+      
+      if (!account) {
+        return res.status(404).json({ message: "Enterprise account not found" });
+      }
+
+      // Update enterprise account to active status with full configuration
+      const [updatedAccount] = await db.update(enterpriseAccounts).set({
+        status: "active",
+        activatedAt: new Date(),
+        pricingConfig: {
+          commissionRate: commissionRate,
+          payoutThreshold: 100,
+          customRates: {}
+        },
+        features: {
+          whiteLabel: true,
+          customBranding: true,
+          apiAccess: true,
+          customDomains: true,
+          prioritySupport: true,
+          dedicatedManager: true
+        },
+        brandingConfig: brandingConfig || account.brandingConfig || {
+          primaryColor: "#6366f1",
+          secondaryColor: "#8b5cf6",
+          companyName: account.companyName
+        }
+      }).where(eq(enterpriseAccounts.id, id)).returning();
+
+      console.log(`✅ Enterprise account manually activated: ${account.companyName}`);
+
+      res.json({
+        message: "Enterprise account activated successfully",
+        enterpriseAccount: updatedAccount,
+        isWhiteLabel: true
+      });
+    } catch (error: any) {
+      console.error('Error activating enterprise account:', error);
+      res.status(500).json({ message: error.message });
     }
   });
 
