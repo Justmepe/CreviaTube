@@ -38,6 +38,10 @@ import EnterpriseAdmin from "@/pages/enterprise-admin";
 import EnterpriseAccounts from "@/pages/enterprise-accounts";
 import EnterprisePortal from "@/pages/enterprise-portal";
 import EnterpriseDashboard from "@/features/dashboard/components/enterprise-dashboard";
+import EnterpriseRequestDashboard from "@/features/dashboard/components/enterprise-request-dashboard";
+import TraderCreatorDashboard from "@/features/dashboard/components/trader-creator-dashboard";
+import InfluencerDashboard from "@/features/dashboard/components/influencer-dashboard";
+import EntrepreneurDashboard from "@/features/dashboard/components/entrepreneur-dashboard";
 import ClipperDirectoryPage from "@/pages/clipper-directory";
 import MyCampaignsPage from "@/pages/my-campaigns";
 import ColdOutreachCampaign from "@/pages/cold-outreach-campaign";
@@ -122,22 +126,45 @@ function DashboardRouter() {
   
   if (!user) return null;
   
-  // Enterprise users get the enterprise dashboard regardless of their role
-  if (user.userType === "enterprise") {
-    return <EnterpriseDashboard />;
+  // Route users to appropriate dashboards based on their type and status
+  
+  // Admin users always get admin dashboard
+  if (user.role === "admin") {
+    return <ComprehensiveAdminDashboard />;
   }
   
+  // Enterprise users need special handling based on approval status
+  if (user.userType === "enterprise") {
+    // Check if they have an approved enterprise account, otherwise show request form
+    return <EnterpriseRequestDashboard />;
+  }
+  
+  // Route based on user type for creators
+  if (user.userType === "trader_creator") {
+    return <TraderCreatorDashboard />;
+  }
+  
+  if (user.userType === "influencer") {
+    return <InfluencerDashboard />;
+  }
+  
+  if (user.userType === "entrepreneur") {
+    return <EntrepreneurDashboard />;
+  }
+  
+  // Default routing based on role
   switch (user.role) {
     case "creator":
       return <CreatorDashboard />;
     case "clipper":
       return <ClipperDashboard />;
-    case "admin":
-      return <ComprehensiveAdminDashboard />;
     default:
-      return <CreatorDashboard />;
+      // New users without specific type get clipper dashboard
+      return <ClipperDashboard />;
   }
 }
+
+
 
 function App() {
   return (

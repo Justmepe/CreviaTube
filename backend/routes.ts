@@ -2006,6 +2006,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enterprise request submission endpoint
+  app.post("/api/enterprise/request", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const { companyName, contactName, email, phone, website, description } = req.body;
+
+      // Check if user already has a pending request
+      const existingRequest = await db.select().from(enterpriseRequests)
+        .where(eq(enterpriseRequests.userId, (req.user as any).id));
+
+      if (existingRequest.length > 0) {
+        return res.status(400).json({ message: "You already have a pending enterprise request" });
+      }
+
+      // Create new enterprise request
+      const [request] = await db.insert(enterpriseRequests).values({
+        id: randomBytes(16).toString('hex'),
+        userId: (req.user as any).id,
+        companyName,
+        contactName,
+        email,
+        phone,
+        website,
+        description,
+        status: "pending"
+      }).returning();
+
+      // Create admin notification
+      await db.insert(adminNotifications).values({
+        id: randomBytes(16).toString('hex'),
+        type: "enterprise_request",
+        title: "New Enterprise Request",
+        message: `${companyName} has submitted an enterprise request`,
+        data: { requestId: request.id, companyName, contactName },
+        urgent: true
+      });
+
+      res.json({ message: "Enterprise request submitted successfully", request });
+    } catch (error: any) {
+      console.error('Error submitting enterprise request:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get user's enterprise request
+  app.get("/api/enterprise/my-request", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const [request] = await db.select().from(enterpriseRequests)
+        .where(eq(enterpriseRequests.userId, (req.user as any).id));
+
+      if (!request) {
+        return res.status(404).json({ message: "No enterprise request found" });
+      }
+
+      res.json(request);
+    } catch (error: any) {
+      console.error('Error fetching enterprise request:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get user's enterprise account
+  app.get("/api/enterprise/my-account", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const [account] = await db.select().from(enterpriseAccounts)
+        .where(eq(enterpriseAccounts.userId, (req.user as any).id));
+
+      if (!account) {
+        return res.status(404).json({ message: "No enterprise account found" });
+      }
+
+      res.json(account);
+    } catch (error: any) {
+      console.error('Error fetching enterprise account:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin dashboard endpoints
   app.get("/api/admin/stats", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
