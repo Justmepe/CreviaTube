@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./core/services/escrow-service";
 import { trackingService } from "./core/services/tracking-service";
 import { campaignCompletionService } from "./core/services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts, insertPlatformReviewSchema } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts, clipperCampaigns, insertPlatformReviewSchema } from "../shared/schema.js";
 import { randomBytes } from "crypto";
 import { sql, eq, gte, count, desc, sum } from "drizzle-orm";
 import { db } from "./db";
@@ -1521,7 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get enterprise dashboard data
+  // Get enterprise dashboard data with white-label account integration
   app.get("/api/enterprise/dashboard", async (req, res) => {
     console.log('Enterprise dashboard request:', req.isAuthenticated(), req.user?.userType);
     
@@ -1536,6 +1536,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Enterprise dashboard: User not enterprise type:', (req.user as any).userType);
         return res.status(403).json({ message: "Enterprise account required" });
       }
+
+      // Get enterprise account configuration for this user
+      const [enterpriseAccount] = await db
+        .select()
+        .from(enterpriseAccounts)
+        .where(eq(enterpriseAccounts.userId, (req.user as any).id));
 
       // Get campaigns created by this enterprise user
       const enterpriseCampaigns = await db
@@ -1558,31 +1564,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         totalEvents = eventStats?.count || 0;
         
-        // Calculate revenue based on standard enterprise commission rate (15%)
-        const commissionRate = 0.15;
+        // Use custom commission rate from enterprise account or default to 15%
+        const commissionRate = enterpriseAccount?.pricingConfig?.commissionRate || 0.15;
         totalRevenue = enterpriseCampaigns.reduce((sum, campaign) => 
           sum + (Number(campaign.budgetUsed || 0) * commissionRate), 0
         );
       }
+
+      // Use enterprise account details if available
+      const accountInfo = {
+        company: enterpriseAccount?.companyName || (req.user as any).fullName || (req.user as any).username,
+        domain: enterpriseAccount?.customDomain || `${(req.user as any).username}.creocash.app`,
+        status: enterpriseAccount?.status || "setup",
+        commissionRate: enterpriseAccount?.pricingConfig?.commissionRate || 0.15,
+        features: enterpriseAccount?.features || {
+          whiteLabel: true,
+          customBranding: true,
+          apiAccess: true,
+          customDomains: true,
+          prioritySupport: true,
+          dedicatedManager: false
+        },
+        branding: enterpriseAccount?.brandingConfig || null
+      };
 
       const stats = {
         totalCampaigns: enterpriseCampaigns.length,
         activeCampaigns: enterpriseCampaigns.filter(c => c.status === 'active').length,
         totalRevenue: Math.round(totalRevenue),
         totalEvents,
-        account: {
-          company: (req.user as any).fullName || (req.user as any).username,
-          domain: `${(req.user as any).username}.creocash.app`,
-          status: "active",
-          commissionRate: 0.15,
-          features: ["white_label", "custom_domain", "advanced_analytics", "priority_support"]
-        }
+        account: accountInfo,
+        isWhiteLabel: !!enterpriseAccount,
+        enterpriseAccountId: enterpriseAccount?.id || null
       };
 
       res.json({
         stats,
         campaigns: enterpriseCampaigns,
-        user: req.user
+        user: req.user,
+        enterpriseAccount: enterpriseAccount || null
       });
     } catch (error: any) {
       console.error("Error fetching enterprise dashboard:", error);
@@ -1590,56 +1610,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get platform-wide statistics for enterprise users
+  // Get platform-wide statistics for enterprise users with white-label consideration
   app.get("/api/enterprise/platform-stats", async (req, res) => {
     if (!req.isAuthenticated() || (req.user as any).userType !== "enterprise") {
       return res.status(403).json({ message: "Enterprise account required" });
     }
 
     try {
-      // Get total users count
-      const [totalUsersCount] = await db
-        .select({ count: count(users.id) })
-        .from(users);
+      // Get enterprise account to check if white-label 
+      const [enterpriseAccount] = await db
+        .select()
+        .from(enterpriseAccounts)
+        .where(eq(enterpriseAccounts.userId, (req.user as any).id));
 
-      // Get total platform revenue (sum of all budget used across campaigns)
-      const [platformRevenueQuery] = await db
-        .select({ 
-          totalBudgetUsed: sum(campaigns.budgetUsed)
-        })
-        .from(campaigns);
+      // If white-label enterprise, show their sub-platform stats
+      if (enterpriseAccount && enterpriseAccount.status === 'active') {
+        // For white-label enterprises, show stats scoped to their platform
+        
+        // Get campaigns created under this enterprise
+        const [enterpriseCampaignsCount] = await db
+          .select({ count: count(campaigns.id) })
+          .from(campaigns)
+          .where(eq(campaigns.creatorId, (req.user as any).id));
 
-      const totalBudgetUsed = Number(platformRevenueQuery?.totalBudgetUsed || 0);
-      const platformRevenue = Math.round(totalBudgetUsed * 0.20); // Platform takes 20%
+        const [enterpriseActiveCampaignsCount] = await db
+          .select({ count: count(campaigns.id) })
+          .from(campaigns)
+          .where(sql`creator_id = ${(req.user as any).id} AND status = 'active'`);
 
-      // Get total campaigns count
-      const [totalCampaignsCount] = await db
-        .select({ count: count(campaigns.id) })
-        .from(campaigns);
+        // Get revenue for this enterprise's campaigns
+        const [enterpriseRevenueQuery] = await db
+          .select({ 
+            totalBudgetUsed: sum(campaigns.budgetUsed)
+          })
+          .from(campaigns)
+          .where(eq(campaigns.creatorId, (req.user as any).id));
 
-      // Get active campaigns count
-      const [activeCampaignsCount] = await db
-        .select({ count: count(campaigns.id) })
-        .from(campaigns)
-        .where(eq(campaigns.status, 'active'));
+        const totalBudgetUsed = Number(enterpriseRevenueQuery?.totalBudgetUsed || 0);
+        const commissionRate = enterpriseAccount.pricingConfig?.commissionRate || 0.15;
+        const enterpriseRevenue = Math.round(totalBudgetUsed * commissionRate);
 
-      // Get unique countries from tracking events (approximation)
-      const [trackingEventsQuery] = await db
-        .select({ count: count(trackingEvents.id) })
-        .from(trackingEvents);
+        // Count users who joined through this enterprise's campaigns (clippers)
+        const enterpriseCampaignIds = await db
+          .select({ id: campaigns.id })
+          .from(campaigns)
+          .where(eq(campaigns.creatorId, (req.user as any).id));
 
-      // Estimate countries based on tracking events (rough approximation: 1 country per 100 events)
-      const totalEvents = trackingEventsQuery?.count || 0;
-      const estimatedCountries = Math.max(1, Math.min(195, Math.ceil(totalEvents / 100)));
+        const campaignIdList = enterpriseCampaignIds.map(c => c.id);
+        
+        let enterpriseUsers = 1; // At least the enterprise user themselves
+        let enterpriseEvents = 0;
+        
+        if (campaignIdList.length > 0) {
+          const [clippersCount] = await db
+            .select({ count: count(sql`DISTINCT clipper_id`) })
+            .from(clipperCampaigns)
+            .where(sql`campaign_id = ANY(${campaignIdList})`);
 
-      res.json({
-        totalUsers: totalUsersCount?.count || 0,
-        platformRevenue,
-        totalCampaigns: totalCampaignsCount?.count || 0,
-        activeCampaigns: activeCampaignsCount?.count || 0,
-        globalReach: estimatedCountries,
-        totalEvents
-      });
+          const [eventsCount] = await db
+            .select({ count: count(trackingEvents.id) })
+            .from(trackingEvents)
+            .where(sql`campaign_id = ANY(${campaignIdList})`);
+
+          enterpriseUsers += clippersCount?.count || 0;
+          enterpriseEvents = eventsCount?.count || 0;
+        }
+
+        res.json({
+          totalUsers: enterpriseUsers,
+          platformRevenue: enterpriseRevenue,
+          totalCampaigns: enterpriseCampaignsCount?.count || 0,
+          activeCampaigns: enterpriseActiveCampaignsCount?.count || 0,
+          globalReach: Math.max(1, Math.ceil(enterpriseEvents / 50)), // More conservative for enterprise
+          totalEvents: enterpriseEvents,
+          isWhiteLabel: true,
+          enterpriseName: enterpriseAccount.companyName
+        });
+      } else {
+        // Standard enterprise view - global platform stats
+        const [totalUsersCount] = await db
+          .select({ count: count(users.id) })
+          .from(users);
+
+        const [platformRevenueQuery] = await db
+          .select({ 
+            totalBudgetUsed: sum(campaigns.budgetUsed)
+          })
+          .from(campaigns);
+
+        const totalBudgetUsed = Number(platformRevenueQuery?.totalBudgetUsed || 0);
+        const platformRevenue = Math.round(totalBudgetUsed * 0.20); // Platform takes 20%
+
+        const [totalCampaignsCount] = await db
+          .select({ count: count(campaigns.id) })
+          .from(campaigns);
+
+        const [activeCampaignsCount] = await db
+          .select({ count: count(campaigns.id) })
+          .from(campaigns)
+          .where(eq(campaigns.status, 'active'));
+
+        const [trackingEventsQuery] = await db
+          .select({ count: count(trackingEvents.id) })
+          .from(trackingEvents);
+
+        const totalEvents = trackingEventsQuery?.count || 0;
+        const estimatedCountries = Math.max(1, Math.min(195, Math.ceil(totalEvents / 100)));
+
+        res.json({
+          totalUsers: totalUsersCount?.count || 0,
+          platformRevenue,
+          totalCampaigns: totalCampaignsCount?.count || 0,
+          activeCampaigns: activeCampaignsCount?.count || 0,
+          globalReach: estimatedCountries,
+          totalEvents,
+          isWhiteLabel: false
+        });
+      }
     } catch (error: any) {
       console.error("Error fetching platform stats:", error);
       res.status(500).json({ message: "Failed to fetch platform statistics" });

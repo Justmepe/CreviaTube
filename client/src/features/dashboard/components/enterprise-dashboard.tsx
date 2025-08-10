@@ -13,6 +13,8 @@ interface PlatformStats {
   activeCampaigns: number;
   globalReach: number;
   totalEvents: number;
+  isWhiteLabel?: boolean;
+  enterpriseName?: string;
 }
 
 export default function EnterpriseDashboard() {
@@ -52,15 +54,25 @@ export default function EnterpriseDashboard() {
                   <Crown className="w-5 h-5 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                  Enterprise Control Center
+                  {platformStats?.isWhiteLabel 
+                    ? `${platformStats.enterpriseName} Platform`
+                    : "Enterprise Control Center"
+                  }
                 </h1>
               </div>
-              <p className="text-slate-600 text-lg font-medium">White-label platform management and analytics</p>
+              <p className="text-slate-600 text-lg font-medium">
+                {platformStats?.isWhiteLabel 
+                  ? "Your dedicated white-label affiliate platform"
+                  : "White-label platform management and analytics"
+                }
+              </p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 shadow-lg">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                <span className="text-slate-700 font-medium">Enterprise Active</span>
+                <span className="text-slate-700 font-medium">
+                  {platformStats?.isWhiteLabel ? "White-Label Active" : "Enterprise Active"}
+                </span>
               </div>
               <Button className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 shadow-lg">
                 <Plus className="w-4 h-4 mr-2" />
