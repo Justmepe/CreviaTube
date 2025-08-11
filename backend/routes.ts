@@ -1451,6 +1451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const requests = await db.select().from(enterpriseRequests).orderBy(desc(enterpriseRequests.createdAt));
+      console.log("Admin enterprise requests response:", JSON.stringify(requests, null, 2));
       res.json(requests);
     } catch (error: any) {
       console.error("Failed to fetch enterprise requests:", error);
@@ -1756,6 +1757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const notifications = await db.select().from(adminNotifications).orderBy(desc(adminNotifications.createdAt)).limit(50);
+      console.log("Admin notifications response:", JSON.stringify(notifications, null, 2));
       res.json(notifications);
     } catch (error: any) {
       console.error("Failed to fetch admin notifications:", error);
@@ -2157,8 +2159,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }]
       };
       
+      console.log("Admin stats response:", JSON.stringify(stats, null, 2));
       res.json(stats);
     } catch (error: any) {
+      console.error("Admin stats error:", error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -2357,8 +2361,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]
       };
       
+      console.log("System health response:", JSON.stringify(systemHealth, null, 2));
       res.json(systemHealth);
     } catch (error: any) {
+      console.error("System health error:", error);
       res.status(500).json({ message: error.message });
     }
   });

@@ -249,7 +249,7 @@ export class DatabaseStorage implements IStorage {
     const [campaign] = await db
       .select()
       .from(campaigns)
-      .where(eq(campaigns.paymentTrackingId, trackingId));
+      .where(eq(campaigns.id, trackingId)); // Use campaign ID instead of non-existent paymentTrackingId
     return campaign || undefined;
   }
 
