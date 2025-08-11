@@ -5,7 +5,8 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "../shared/schema.js";
+import { db } from "./db";
+import { User as SelectUser, enterpriseRequests, adminNotifications } from "../shared/schema.js";
 
 declare global {
   namespace Express {
@@ -100,14 +101,55 @@ export function setupAuth(app: Express) {
         password: await hashPassword(userData.password),
       });
 
-      // If this is an enterprise user, store enterprise request data for later processing
-      if (userData.userType === "enterprise" && enterpriseRequestData) {
-        console.log("Enterprise user registered:", {
+      // If this is an enterprise user, create the enterprise request record
+      if (userData.userType === "enterprise") {
+        const { goal, businessDescription } = userData;
+        
+        // Use already imported modules
+        
+        // Create enterprise request record
+        const enterpriseRequest = {
+          id: randomBytes(16).toString('hex'),
           userId: user.id,
-          companyName: enterpriseRequestData.companyName,
-          contactName: userData.fullName
+          contactName: userData.fullName,
+          contactEmail: userData.email,
+          contactPhone: userData.phoneNumber || null,
+          companyName: `${userData.fullName}'s Business`, // Use user's name as company name if not provided
+          companySize: 'startup', // Default value
+          requestType: goal || 'white_label_solution', // Use the goal from signup
+          message: businessDescription || 'Enterprise platform request from signup',
+          preferredMeetingTime: 'anytime',
+          urgency: 'medium',
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          assignedTo: null,
+          meetingScheduled: false,
+          notes: '',
+        };
+
+        // Store enterprise request in database
+        await db.insert(enterpriseRequests).values(enterpriseRequest);
+        
+        // Create admin notification
+        const adminNotification = {
+          id: randomBytes(8).toString('hex'),
+          type: 'enterprise_contact',
+          title: `New Enterprise Signup: ${userData.fullName}`,
+          message: `${userData.fullName} (${userData.email}) has signed up for an enterprise account. Goal: ${goal}`,
+          data: enterpriseRequest,
+          read: false,
+          urgent: false,
+        };
+
+        // Store admin notification in database
+        await db.insert(adminNotifications).values(adminNotification);
+        
+        console.log("Enterprise user registered with request:", {
+          userId: user.id,
+          requestId: enterpriseRequest.id,
+          contactName: userData.fullName,
+          goal: goal
         });
-        // The enterprise request will be created when user submits it through the dashboard
       }
 
       req.login(user, (err) => {
