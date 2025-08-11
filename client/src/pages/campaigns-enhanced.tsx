@@ -53,7 +53,7 @@ export default function CampaignsEnhanced() {
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
 
   const { data: campaigns = [], isLoading } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns/my-campaigns"],
+    queryKey: ["/api/campaigns"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
@@ -138,10 +138,12 @@ export default function CampaignsEnhanced() {
               <option value="completed">Completed</option>
             </select>
           </div>
-          <Button onClick={() => setLocation("/campaigns/create-enhanced")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Campaign
-          </Button>
+          {user?.role !== "admin" && (
+            <Button onClick={() => setLocation("/campaigns/create-enhanced")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Campaign
+            </Button>
+          )}
         </div>
 
         {/* Campaign Overview Stats */}
@@ -286,13 +288,17 @@ export default function CampaignsEnhanced() {
                   <p className="text-muted-foreground text-center mb-4">
                     {searchQuery || statusFilter !== "all" 
                       ? "Try adjusting your search or filter criteria."
-                      : "Create your first campaign to start promoting your content."
+                      : user?.role === "admin" 
+                        ? "No campaigns have been created by users yet."
+                        : "Create your first campaign to start promoting your content."
                     }
                   </p>
-                  <Button onClick={() => setLocation("/campaigns/create-enhanced")}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Campaign
-                  </Button>
+                  {user?.role !== "admin" && (
+                    <Button onClick={() => setLocation("/campaigns/create-enhanced")}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Campaign
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
