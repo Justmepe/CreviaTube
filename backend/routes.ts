@@ -2203,8 +2203,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const users = await storage.getAllUsers();
+      console.log("Admin users response:", JSON.stringify(users, null, 2));
       res.json(users);
     } catch (error: any) {
+      console.error("Admin users error:", error);
       res.status(500).json({ message: error.message });
     }
   });

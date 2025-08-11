@@ -13,8 +13,10 @@ const requireAdmin = (req: any, res: any, next: any) => {
 // Get all users (admin only)
 router.get("/users", requireAdmin, async (req, res) => {
   try {
-    // TODO: Implement get all users logic
-    res.json({ message: "Admin users endpoint" });
+    const { storage } = await import("../../storage");
+    const users = await storage.getAllUsers();
+    console.log("Admin API users response:", JSON.stringify(users, null, 2));
+    res.json(users);
   } catch (error) {
     console.error("Admin get users error:", error);
     res.status(500).json({ message: "Failed to fetch users" });
