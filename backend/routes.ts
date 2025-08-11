@@ -1532,24 +1532,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Check if user is enterprise type
-      if ((req.user as any).userType !== "enterprise") {
-        console.log('Enterprise dashboard: User not enterprise type:', (req.user as any).userType);
-        return res.status(403).json({ message: "Enterprise account required" });
+      // Check if user is enterprise type or admin
+      if ((req.user as any).userType !== "enterprise" && (req.user as any).role !== "admin") {
+        console.log('Enterprise dashboard: User not enterprise type or admin:', (req.user as any).userType, (req.user as any).role);
+        return res.status(403).json({ message: "Enterprise account or admin access required" });
       }
 
-      // Get enterprise account configuration for this user
-      const [enterpriseAccount] = await db
-        .select()
-        .from(enterpriseAccounts)
-        .where(eq(enterpriseAccounts.userId, (req.user as any).id));
-
-      // Get campaigns created by this enterprise user
-      const enterpriseCampaigns = await db
-        .select()
-        .from(campaigns)
-        .where(eq(campaigns.creatorId, (req.user as any).id))
-        .orderBy(desc(campaigns.createdAt));
+      let enterpriseAccount = null;
+      let enterpriseCampaigns: any[] = [];
+      
+      if ((req.user as any).role === "admin") {
+        // For admin users, show aggregated enterprise data
+        const allEnterpriseAccounts = await db
+          .select()
+          .from(enterpriseAccounts);
+        
+        // Get all campaigns from enterprise users
+        if (allEnterpriseAccounts.length > 0) {
+          const enterpriseUserIds = allEnterpriseAccounts.map(acc => acc.userId);
+          enterpriseCampaigns = await db
+            .select()
+            .from(campaigns)
+            .where(sql`creator_id = ANY(${enterpriseUserIds})`)
+            .orderBy(desc(campaigns.createdAt));
+        }
+        
+        // Use first enterprise account as reference for admin view
+        enterpriseAccount = allEnterpriseAccounts[0] || null;
+      } else {
+        // For enterprise users, get their specific account and campaigns
+        const [account] = await db
+          .select()
+          .from(enterpriseAccounts)
+          .where(eq(enterpriseAccounts.userId, (req.user as any).id));
+        
+        enterpriseAccount = account;
+        
+        enterpriseCampaigns = await db
+          .select()
+          .from(campaigns)
+          .where(eq(campaigns.creatorId, (req.user as any).id))
+          .orderBy(desc(campaigns.createdAt));
+      }
 
       // Get tracking events for enterprise campaigns
       const campaignIds = enterpriseCampaigns.map(c => c.id);
@@ -1572,11 +1596,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Use enterprise account details if available
+      // Use enterprise account details if available, or admin aggregate info
       const accountInfo = {
-        company: enterpriseAccount?.companyName || (req.user as any).fullName || (req.user as any).username,
-        domain: enterpriseAccount?.customDomain || `${(req.user as any).username}.creocash.app`,
-        status: enterpriseAccount?.status || "setup",
+        company: (req.user as any).role === "admin" 
+          ? "Admin Dashboard - All Enterprise Accounts"
+          : enterpriseAccount?.companyName || (req.user as any).fullName || (req.user as any).username,
+        domain: (req.user as any).role === "admin" 
+          ? "creocash.com/admin" 
+          : enterpriseAccount?.customDomain || `${(req.user as any).username}.creocash.app`,
+        status: (req.user as any).role === "admin" ? "admin" : (enterpriseAccount?.status || "setup"),
         commissionRate: enterpriseAccount?.pricingConfig?.commissionRate || 0.15,
         features: enterpriseAccount?.features || {
           whiteLabel: true,
@@ -1599,12 +1627,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enterpriseAccountId: enterpriseAccount?.id || null
       };
 
-      res.json({
+      // For admin users, include additional account info
+      const responseData = {
         stats,
-        campaigns: enterpriseCampaigns,
-        user: req.user,
-        enterpriseAccount: enterpriseAccount || null
-      });
+        campaigns: enterpriseCampaigns.slice(0, 10), // Limit to recent 10 for admin view
+        account: enterpriseAccount,
+        user: req.user
+      };
+
+      res.json(responseData);
     } catch (error: any) {
       console.error("Error fetching enterprise dashboard:", error);
       res.status(500).json({ message: "Failed to fetch enterprise dashboard" });
