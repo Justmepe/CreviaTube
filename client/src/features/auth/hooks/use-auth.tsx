@@ -36,7 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: "Login failed" }));
-        throw new Error(errorData.message || "Invalid username or password");
+        // Extract clean error message
+        let errorMessage = errorData.message || "Login failed";
+        if (res.status === 401) {
+          errorMessage = "Invalid username or password";
+        }
+        throw new Error(errorMessage);
       }
       return await res.json();
     },
@@ -64,7 +69,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/register", credentials);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: "Registration failed" }));
-        throw new Error(errorData.message || "Registration failed");
+        // Extract clean error message
+        let errorMessage = errorData.message || "Registration failed";
+        if (errorMessage.includes("Username already exists")) {
+          errorMessage = "This username is already taken. Please choose a different one.";
+        } else if (errorMessage.includes("Email already exists")) {
+          errorMessage = "An account with this email already exists. Please use a different email.";
+        } else if (res.status === 400) {
+          errorMessage = errorMessage; // Keep backend message for other validation errors
+        } else {
+          errorMessage = "Registration failed. Please try again.";
+        }
+        throw new Error(errorMessage);
       }
       return await res.json();
     },
