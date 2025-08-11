@@ -130,9 +130,19 @@ export default function EnterprisePortal() {
                 userType: user?.userType 
               })}
             </p>
-            <Link href="/enterprise">
-              <Button>Contact Enterprise Team</Button>
-            </Link>
+            {user?.role !== "admin" && (
+              <Link href="/enterprise">
+                <Button>Contact Enterprise Team</Button>
+              </Link>
+            )}
+            {user?.role === "admin" && (
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">Admin access detected - use the Enterprise management section</p>
+                <Link href="/admin/enterprise">
+                  <Button>Manage Enterprise Requests</Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </DashboardLayout>
@@ -146,11 +156,21 @@ export default function EnterprisePortal() {
           <Building className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Enterprise Account Found</h3>
           <p className="text-gray-600 mb-6">
-            You don't have an active enterprise account yet. Contact our team to set up your white-label platform.
+            {user?.role === "admin" 
+              ? "This is the enterprise portal for managing white-label accounts. Use the admin panel to manage enterprise requests."
+              : "You don't have an active enterprise account yet. Contact our team to set up your white-label platform."
+            }
           </p>
-          <Link href="/enterprise">
-            <Button>Contact Enterprise Team</Button>
-          </Link>
+          {user?.role !== "admin" && (
+            <Link href="/enterprise">
+              <Button>Contact Enterprise Team</Button>
+            </Link>
+          )}
+          {user?.role === "admin" && (
+            <Link href="/admin/enterprise">
+              <Button>Manage Enterprise Accounts</Button>
+            </Link>
+          )}
         </div>
       </DashboardLayout>
     );
