@@ -1590,7 +1590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalEvents = eventStats?.count || 0;
         
         // Use custom commission rate from enterprise account or default to 15%
-        const commissionRate = enterpriseAccount?.pricingConfig?.commissionRate || 0.15;
+        const commissionRate = (enterpriseAccount as any)?.pricingConfig?.commissionRate || 0.15;
         totalRevenue = enterpriseCampaigns.reduce((sum, campaign) => 
           sum + (Number(campaign.budgetUsed || 0) * commissionRate), 0
         );
@@ -1600,13 +1600,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const accountInfo = {
         company: (req.user as any).role === "admin" 
           ? "Admin Dashboard - All Enterprise Accounts"
-          : enterpriseAccount?.companyName || (req.user as any).fullName || (req.user as any).username,
+          : (enterpriseAccount as any)?.companyName || (req.user as any).fullName || (req.user as any).username,
         domain: (req.user as any).role === "admin" 
           ? "creocash.com/admin" 
-          : enterpriseAccount?.customDomain || `${(req.user as any).username}.creocash.app`,
-        status: (req.user as any).role === "admin" ? "admin" : (enterpriseAccount?.status || "setup"),
-        commissionRate: enterpriseAccount?.pricingConfig?.commissionRate || 0.15,
-        features: enterpriseAccount?.features || {
+          : (enterpriseAccount as any)?.customDomain || `${(req.user as any).username}.creocash.app`,
+        status: (req.user as any).role === "admin" ? "admin" : ((enterpriseAccount as any)?.status || "setup"),
+        commissionRate: (enterpriseAccount as any)?.pricingConfig?.commissionRate || 0.15,
+        features: (enterpriseAccount as any)?.features || {
           whiteLabel: true,
           customBranding: true,
           apiAccess: true,
@@ -1614,7 +1614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           prioritySupport: true,
           dedicatedManager: false
         },
-        branding: enterpriseAccount?.brandingConfig || null
+        branding: (enterpriseAccount as any)?.brandingConfig || null
       };
 
       const stats = {
@@ -1624,7 +1624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalEvents,
         account: accountInfo,
         isWhiteLabel: !!enterpriseAccount,
-        enterpriseAccountId: enterpriseAccount?.id || null
+        enterpriseAccountId: (enterpriseAccount as any)?.id || null
       };
 
       // For admin users, include additional account info
