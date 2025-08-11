@@ -117,12 +117,12 @@ export default function AdminDashboard() {
   }
 
   const navigation = [
-    { name: "Overview", href: "/", icon: BarChart3, current: true },
-    { name: "Users", href: "/users", icon: Users },
+    { name: "Overview", href: "/admin/control", icon: BarChart3, current: true },
+    { name: "Users", href: "/admin/users", icon: Users },
     { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
-    { name: "Enterprise", href: "/enterprise", icon: Building, badge: enterpriseRequests?.filter(req => req.status === 'pending').length || 0 },
-    { name: "Payouts", href: "/payouts", icon: DollarSign },
-    { name: "Security", href: "/security", icon: Shield },
+    { name: "Enterprise", href: "/admin/enterprise", icon: Building, badge: enterpriseRequests?.filter(req => req.status === 'pending').length || 0 },
+    { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
+    { name: "Analytics", href: "/admin/analytics", icon: Shield },
   ];
 
   return (

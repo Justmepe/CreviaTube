@@ -106,6 +106,7 @@ function Router() {
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/real-analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
+      <ProtectedRoute path="/admin/enterprise" component={EnterpriseAdmin} />
       <ProtectedRoute path="/enterprise" component={EnterprisePortal} />
       <ProtectedRoute path="/enterprise-admin" component={EnterpriseAdmin} />
       <ProtectedRoute path="/enterprise-accounts" component={EnterpriseAccounts} />
