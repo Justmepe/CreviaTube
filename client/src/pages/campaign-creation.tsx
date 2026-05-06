@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { z } from "zod";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,91 +13,95 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { DollarSign, Target, Users, Calendar, Zap, Lock, Shield, AlertTriangle } from "lucide-react";
+import {
+  Target,
+  Lock,
+  ShieldCheck,
+  AlertTriangle,
+  Zap,
+  Wallet,
+  Users,
+  Eye,
+  MousePointerClick,
+  UserPlus,
+  TrendingUp,
+} from "lucide-react";
 
+// Frontend zod for the form. Backend re-validates via insertCampaignSchema.
 const campaignSchema = z.object({
   name: z.string().min(5, "Name must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
   budget: z.string().min(1, "Budget is required"),
+  duration: z.number().int().min(1, "Minimum 1 day"),
   targetPlatforms: z.array(z.string()).min(1, "Select at least one platform"),
   rewardRates: z.object({
-    click: z.number().min(0.01, "Minimum click reward is $0.01"),
-    signup: z.number().min(0.1, "Minimum signup reward is $0.10"),
-    deposit: z.number().optional(),
-    trade: z.number().optional(),
+    view: z.number().min(0, "Per-1k-views must be ≥ 0"),
+    click: z.number().min(0, "Per-click must be ≥ 0"),
+    signup: z.number().min(0, "Per-signup must be ≥ 0"),
     conversion: z.number().optional(),
   }),
-  requirements: z.string().optional(),
-  duration: z.number().min(1, "Minimum campaign duration is 1 day"),
+  campaignGoals: z.object({
+    primaryGoal: z.enum(["views", "clicks", "signups", "conversions"]),
+    viewsGoal: z.number().int().min(0).optional(),
+    clicksGoal: z.number().int().min(0).optional(),
+    signupsGoal: z.number().int().min(0).optional(),
+    conversionsGoal: z.number().int().min(0).optional(),
+  }),
+  minFollowers: z.number().int().min(0),
 });
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
 
-// Platform icons mapping
-const platformIcons: Record<string, string> = {
-  "instagram": "📱",
-  "youtube": "📺",
-  "tiktok": "🎵",
-  "twitter": "🐦",
-  "linkedin": "💼",
-  "facebook": "👥",
-  "telegram": "💬",
-  "discord": "🎮",
-  "website": "🌐",
-  "email": "📧"
-};
+const PLATFORMS = [
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube Shorts" },
+  { value: "instagram", label: "Instagram Reels" },
+  { value: "twitter", label: "X (Twitter)" },
+  { value: "facebook", label: "Facebook" },
+  { value: "linkedin", label: "LinkedIn" },
+];
+
+const COUNTRIES = [
+  { value: "us", label: "United States" },
+  { value: "uk", label: "United Kingdom" },
+  { value: "ca", label: "Canada" },
+  { value: "au", label: "Australia" },
+  { value: "de", label: "Germany" },
+  { value: "fr", label: "France" },
+  { value: "ke", label: "Kenya" },
+  { value: "ng", label: "Nigeria" },
+  { value: "za", label: "South Africa" },
+  { value: "in", label: "India" },
+];
+
+const LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "sw", label: "Swahili" },
+  { value: "ar", label: "Arabic" },
+  { value: "hi", label: "Hindi" },
+  { value: "pt", label: "Portuguese" },
+];
+
+const GOAL_OPTIONS = [
+  { value: "views", label: "Verified views", icon: Eye, helper: "Best for awareness / reach campaigns" },
+  { value: "clicks", label: "Link clicks", icon: MousePointerClick, helper: "Best for traffic / app installs" },
+  { value: "signups", label: "Signups", icon: UserPlus, helper: "Best for lead gen / waitlists" },
+  { value: "conversions", label: "Conversions", icon: TrendingUp, helper: "Best for revenue / paid actions" },
+] as const;
 
 export default function CampaignCreation() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [, setLocation] = useLocation();
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-
-  // Platform data with fallback
-  const platforms = [
-    { value: "instagram", label: "Instagram" },
-    { value: "youtube", label: "YouTube" },
-    { value: "tiktok", label: "TikTok" },
-    { value: "twitter", label: "Twitter/X" },
-    { value: "linkedin", label: "LinkedIn" },
-    { value: "facebook", label: "Facebook" },
-    { value: "telegram", label: "Telegram" },
-    { value: "discord", label: "Discord" },
-    { value: "website", label: "Website/Blog" },
-    { value: "email", label: "Email Marketing" }
-  ];
-
-  // Countries data with fallback
-  const countries = [
-    { value: "us", label: "United States" },
-    { value: "uk", label: "United Kingdom" },
-    { value: "ca", label: "Canada" },
-    { value: "au", label: "Australia" },
-    { value: "de", label: "Germany" },
-    { value: "fr", label: "France" },
-    { value: "ke", label: "Kenya" },
-    { value: "ng", label: "Nigeria" },
-    { value: "za", label: "South Africa" },
-    { value: "in", label: "India" }
-  ];
-
-  // Languages data with fallback
-  const languages = [
-    { value: "en", label: "English" },
-    { value: "es", label: "Spanish" },
-    { value: "fr", label: "French" },
-    { value: "de", label: "German" },
-    { value: "sw", label: "Swahili" },
-    { value: "ar", label: "Arabic" },
-    { value: "hi", label: "Hindi" },
-    { value: "pt", label: "Portuguese" }
-  ];
 
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),
@@ -104,45 +109,64 @@ export default function CampaignCreation() {
       name: "",
       description: "",
       budget: "100",
+      duration: 7,
       targetPlatforms: [],
       rewardRates: {
+        view: 0.04,    // per 1,000 verified views
         click: 0.05,
-        signup: 2.00,
-        conversion: user?.accountType === "business" ? 5.00 : undefined,
+        signup: 2.0,
+        conversion: user?.accountType === "business" ? 5.0 : undefined,
       },
-      requirements: "",
-      duration: 7,
+      campaignGoals: {
+        primaryGoal: "views",
+        viewsGoal: 100000,
+        clicksGoal: undefined,
+        signupsGoal: undefined,
+        conversionsGoal: undefined,
+      },
+      minFollowers: 1000,
     },
   });
 
+  const primaryGoal = form.watch("campaignGoals.primaryGoal");
+  const selectedPlatforms = form.watch("targetPlatforms");
+  const budgetNumber = parseFloat(form.watch("budget") || "0");
+
+  const togglePlatform = (id: string) => {
+    const current = form.getValues("targetPlatforms");
+    const updated = current.includes(id) ? current.filter((p) => p !== id) : [...current, id];
+    form.setValue("targetPlatforms", updated, { shouldValidate: true });
+  };
+
   const createCampaignMutation = useMutation({
     mutationFn: async (data: CampaignFormData) => {
+      // Backend stores reward_rates and target_platforms as JSON-stringified text;
+      // campaign_goals is a true json column. Match those shapes.
       const payload = {
         name: data.name,
         description: data.description,
         budget: data.budget,
-        targetPlatforms: JSON.stringify(selectedPlatforms),
+        duration: data.duration,
+        targetPlatforms: JSON.stringify(data.targetPlatforms),
         rewardRates: JSON.stringify(data.rewardRates),
         requirements: JSON.stringify({
-          minFollowers: 1000,
+          minFollowers: data.minFollowers,
           geography: selectedCountries,
           languages: selectedLanguages,
         }),
-        duration: data.duration,
+        campaignGoals: data.campaignGoals,
       };
       const res = await apiRequest("POST", "/api/campaigns", payload);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (campaign: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       toast({
-        title: "Campaign created successfully",
-        description: "Your campaign is now live and accepting clipper applications.",
+        title: "Campaign created",
+        description: "Now fund it with USDC to make it live.",
       });
-      form.reset();
-      setSelectedPlatforms([]);
-      setSelectedCountries([]);
-      setSelectedLanguages([]);
+      // Send the creator straight to the funding page so they don't have to hunt for it.
+      setLocation(`/campaigns/${campaign.id}/funding`);
     },
     onError: (error: Error) => {
       toast({
@@ -153,75 +177,60 @@ export default function CampaignCreation() {
     },
   });
 
-  const togglePlatform = (platformId: string) => {
-    const updated = selectedPlatforms.includes(platformId)
-      ? selectedPlatforms.filter(p => p !== platformId)
-      : [...selectedPlatforms, platformId];
-    setSelectedPlatforms(updated);
-    form.setValue("targetPlatforms", updated);
-  };
-
-  const toggleCountry = (country: string) => {
-    const updated = selectedCountries.includes(country)
-      ? selectedCountries.filter(c => c !== country)
-      : [...selectedCountries, country];
-    setSelectedCountries(updated);
-  };
-
-  const toggleLanguage = (language: string) => {
-    const updated = selectedLanguages.includes(language)
-      ? selectedLanguages.filter(l => l !== language)
-      : [...selectedLanguages, language];
-    setSelectedLanguages(updated);
-  };
-
-  const budgetNumber = parseFloat(form.watch("budget") || "0");
-  const estimatedReach = Math.min(budgetNumber * 20, 50000);
-  const estimatedClippers = Math.min(Math.floor(budgetNumber / 50), 200);
+  const platformFee = budgetNumber * 0.2;
+  const escrowAmount = budgetNumber * 0.8;
 
   return (
     <DashboardLayout title="Create Campaign">
-      <div className="max-w-4xl space-y-8">
-        {/* Budget Escrow Notice */}
-        <Alert className="border-orange-200 bg-orange-50">
-          <Shield className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
-            <strong>Budget Escrow System:</strong> Your campaign budget will be held in escrow to ensure fair clipper payments. 
-            The platform takes 20% as fees, and 80% is reserved for automatic clipper payments. 
-            <span className="font-semibold text-orange-900"> Once funded, the budget cannot be withdrawn</span> to protect clipper earnings.
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Page header */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">New campaign</h1>
+          <p className="text-slate-600 mt-1">
+            Set the goal, fund USDC into escrow, clippers post, payouts fire when you hit it.
+          </p>
+        </div>
+
+        {/* Escrow notice */}
+        <Alert className="border-blue-200 bg-blue-50 text-blue-900">
+          <ShieldCheck className="h-4 w-4 text-blue-700" />
+          <AlertDescription>
+            <strong>USDC escrow:</strong> 80% of your budget is reserved for clipper payouts, 20% is the
+            platform fee. Funds release on-chain the moment the campaign goal is met. Unused balance refunds
+            to your wallet when the campaign ends.
           </AlertDescription>
         </Alert>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-teal-600" />
-              Campaign Details
+              <Target className="h-5 w-5 text-blue-700" />
+              Campaign details
             </CardTitle>
-            <CardDescription>
-              Create a new affiliate marketing campaign. You'll need to fund the budget before clippers can join.
-            </CardDescription>
+            <CardDescription>You can change everything except budget and goals after creation.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createCampaignMutation.mutate(data))} className="space-y-6">
-                
-                {/* Basic Information */}
-                <div className="grid grid-cols-1 gap-6">
+              <form
+                onSubmit={form.handleSubmit((data) => createCampaignMutation.mutate(data))}
+                className="space-y-8"
+              >
+                {/* === BASICS === */}
+                <section className="space-y-5">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Campaign Name</FormLabel>
+                        <FormLabel>Campaign name</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., Promote My Trading Course" {...field} />
+                          <Input placeholder="e.g., App launch · TikTok push" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="description"
@@ -229,40 +238,33 @@ export default function CampaignCreation() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Describe what you want clippers to promote and your target audience..."
-                            className="min-h-[100px]"
-                            {...field} 
+                          <Textarea
+                            placeholder="What you want clippers to promote, target audience, content angles, do's and don'ts."
+                            className="min-h-[120px]"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="budget"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Campaign Budget ($)</FormLabel>
+                          <FormLabel>Budget (USDC)</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              min="10"
-                              {...field}
-                              onChange={(e) => field.onChange(e.target.value)}
-                            />
+                            <Input type="number" min="1" step="0.01" {...field} />
                           </FormControl>
-                          <FormDescription>
-                            Total budget for clipper rewards
-                          </FormDescription>
+                          <FormDescription>Total locked in escrow on Base.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="duration"
@@ -270,72 +272,153 @@ export default function CampaignCreation() {
                         <FormItem>
                           <FormLabel>Duration (days)</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               min="1"
                               {...field}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Campaign duration (minimum 1 day, default 7 days)
-                          </FormDescription>
+                          <FormDescription>Unfilled budget refunds after this.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
-                </div>
+                </section>
 
                 <Separator />
 
-                {/* Platform Requirements */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Platform Requirements</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select which platforms clippers should promote your content on
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {platforms?.map((platform) => (
-                      <Button
-                        key={platform.value}
-                        type="button"
-                        variant={selectedPlatforms.includes(platform.value) ? "default" : "outline"}
-                        className="justify-start h-auto p-3"
-                        onClick={() => togglePlatform(platform.value)}
-                      >
-                        <span className="mr-2">{platformIcons[platform.value] || "📱"}</span>
-                        {platform.label}
-                      </Button>
-                    ))}
+                {/* === PLATFORMS === */}
+                <section>
+                  <h3 className="text-base font-semibold text-slate-900">Target platforms</h3>
+                  <p className="text-sm text-slate-600 mt-1 mb-4">Where clippers should post.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {PLATFORMS.map((p) => {
+                      const active = selectedPlatforms.includes(p.value);
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => togglePlatform(p.value)}
+                          className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition text-left ${
+                            active
+                              ? "bg-blue-700 text-white border-blue-700 shadow-sm"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
                   </div>
                   {form.formState.errors.targetPlatforms && (
-                    <p className="text-sm text-red-600 mt-2">
-                      {form.formState.errors.targetPlatforms.message}
-                    </p>
+                    <p className="text-sm text-red-600 mt-2">{form.formState.errors.targetPlatforms.message}</p>
                   )}
-                </div>
+                </section>
 
                 <Separator />
 
-                {/* Reward Rates */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Reward Rates</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Set how much you'll pay clippers for each action
+                {/* === CAMPAIGN GOALS === */}
+                <section>
+                  <h3 className="text-base font-semibold text-slate-900">Campaign goal</h3>
+                  <p className="text-sm text-slate-600 mt-1 mb-4">
+                    Pick one primary metric. The smart contract auto-releases the bounty the moment a clipper
+                    crosses this number with verified events.
                   </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                    {GOAL_OPTIONS.map((opt) => {
+                      const Icon = opt.icon;
+                      const active = primaryGoal === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            form.setValue("campaignGoals.primaryGoal", opt.value, { shouldValidate: true })
+                          }
+                          className={`p-4 rounded-xl border text-left transition ${
+                            active
+                              ? "bg-blue-50 border-blue-300 ring-2 ring-blue-300/40"
+                              : "bg-white border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Icon className={`w-4 h-4 ${active ? "text-blue-700" : "text-slate-500"}`} />
+                            <span className="font-semibold text-sm">{opt.label}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">{opt.helper}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Numeric input for the chosen goal */}
+                  <FormField
+                    control={form.control}
+                    name={`campaignGoals.${primaryGoal}Goal` as any}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Target {primaryGoal}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder={primaryGoal === "views" ? "100000" : "1000"}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Payouts auto-release when a clipper reaches this many verified {primaryGoal}.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </section>
+
+                <Separator />
+
+                {/* === REWARD RATES === */}
+                <section>
+                  <h3 className="text-base font-semibold text-slate-900">Reward rates</h3>
+                  <p className="text-sm text-slate-600 mt-1 mb-4">What clippers earn per verified action.</p>
                   <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="rewardRates.view"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Per 1,000 views (USDC)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="rewardRates.click"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Per Click ($)</FormLabel>
+                          <FormLabel>Per click (USDC)</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               step="0.01"
-                              min="0.01"
+                              min="0"
                               {...field}
                               onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                             />
@@ -344,18 +427,18 @@ export default function CampaignCreation() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="rewardRates.signup"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Per Signup ($)</FormLabel>
+                          <FormLabel>Per signup (USDC)</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               step="0.01"
-                              min="0.10"
+                              min="0"
                               {...field}
                               onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                             />
@@ -364,19 +447,20 @@ export default function CampaignCreation() {
                         </FormItem>
                       )}
                     />
-                    
+
                     {user?.accountType === "business" && (
                       <FormField
                         control={form.control}
                         name="rewardRates.conversion"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Per Conversion ($)</FormLabel>
+                            <FormLabel>Per conversion (USDC)</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="number" 
+                              <Input
+                                type="number"
                                 step="0.01"
-                                {...field}
+                                min="0"
+                                value={field.value ?? ""}
                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                               />
                             </FormControl>
@@ -386,158 +470,112 @@ export default function CampaignCreation() {
                       />
                     )}
                   </div>
-                </div>
+                </section>
 
                 <Separator />
 
-                {/* Requirements */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Clipper Requirements</h3>
-                  
-                  <div className="mb-4">
-                    <label className="text-sm font-medium mb-2 block">Minimum Followers</label>
-                    <Input 
-                      type="number" 
-                      min="0"
-                      defaultValue="1000"
-                      placeholder="1000"
-                    />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Minimum follower count across all platforms
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Target Countries</label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {selectedCountries.map((country) => (
-                          <Badge key={country} variant="secondary" className="cursor-pointer" onClick={() => toggleCountry(country)}>
-                            {country} ×
-                          </Badge>
-                        ))}
-                      </div>
-                      <Select onValueChange={(value) => toggleCountry(value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Add target countries" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {countries?.filter(c => !selectedCountries.includes(c.label)).map((country) => (
-                            <SelectItem key={country.value} value={country.label}>{country.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Required Languages</label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {selectedLanguages.map((language) => (
-                          <Badge key={language} variant="secondary" className="cursor-pointer" onClick={() => toggleLanguage(language)}>
-                            {language} ×
-                          </Badge>
-                        ))}
-                      </div>
-                      <Select onValueChange={(value) => toggleLanguage(value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Add required languages" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {languages?.filter(l => !selectedLanguages.includes(l.label)).map((language) => (
-                            <SelectItem key={language.value} value={language.label}>{language.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Budget Breakdown */}
-                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-blue-600" />
-                    Budget Breakdown
+                {/* === CLIPPER REQUIREMENTS === */}
+                <section>
+                  <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-slate-500" />
+                    Clipper requirements
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Total Budget</span>
-                      <span className="font-semibold text-lg">${budgetNumber.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Platform Fee (20%)</span>
-                      <span className="text-red-600">-${(budgetNumber * 0.20).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Clipper Escrow (80%)</span>
-                      <span className="text-green-600">${(budgetNumber * 0.80).toFixed(2)}</span>
-                    </div>
-                    <div className="border-t pt-2">
-                      <div className="flex justify-between items-center font-semibold">
-                        <span>Available for Rewards</span>
-                        <span className="text-green-700">${(budgetNumber * 0.80).toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                      <div className="text-sm text-yellow-800">
-                        <strong>Important:</strong> Once you fund this campaign, the budget is locked in escrow 
-                        and cannot be withdrawn. This ensures clippers receive their payments automatically.
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  <p className="text-sm text-slate-600 mt-1 mb-4">Filter who can apply.</p>
 
-                {/* Campaign Preview */}
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Campaign Preview</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-3">
-                      <DollarSign className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Estimated Reach</p>
-                        <p className="font-semibold">{estimatedReach.toLocaleString()} people</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Users className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Potential Clippers</p>
-                        <p className="font-semibold">{estimatedClippers} clippers</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="font-semibold">{form.watch("duration")} days</p>
+                  <div className="space-y-5">
+                    <FormField
+                      control={form.control}
+                      name="minFollowers"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Minimum followers</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>Across any of the selected platforms.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <ChipPicker
+                      label="Target countries"
+                      placeholder="Add country"
+                      options={COUNTRIES}
+                      selected={selectedCountries}
+                      onToggle={(v) =>
+                        setSelectedCountries((prev) =>
+                          prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+                        )
+                      }
+                    />
+
+                    <ChipPicker
+                      label="Required languages"
+                      placeholder="Add language"
+                      options={LANGUAGES}
+                      selected={selectedLanguages}
+                      onToggle={(v) =>
+                        setSelectedLanguages((prev) =>
+                          prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+                        )
+                      }
+                    />
+                  </div>
+                </section>
+
+                <Separator />
+
+                {/* === BUDGET BREAKDOWN === */}
+                <section className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                  <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
+                    <Lock className="h-4 w-4 text-slate-500" />
+                    Where your USDC goes
+                  </h3>
+                  <div className="space-y-2.5">
+                    <Row label="Total budget" value={`${budgetNumber.toFixed(2)} USDC`} />
+                    <Row label="Platform fee (20%)" value={`- ${platformFee.toFixed(2)} USDC`} muted />
+                    <div className="border-t border-slate-200 pt-3 mt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Reserved for clippers</span>
+                        <span className="font-bold text-emerald-700 text-lg">{escrowAmount.toFixed(2)} USDC</span>
                       </div>
                     </div>
                   </div>
-                </div>
+                  <Alert className="mt-5 border-amber-200 bg-amber-50 text-amber-900">
+                    <AlertTriangle className="h-4 w-4 text-amber-700" />
+                    <AlertDescription className="text-sm">
+                      Once funded, the budget is locked in on-chain escrow. Unspent balance returns to your
+                      wallet automatically when the campaign ends.
+                    </AlertDescription>
+                  </Alert>
+                </section>
 
-                <div className="flex gap-4">
-                  <Button 
-                    type="submit" 
+                {/* === SUBMIT === */}
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-2">
+                  <Button type="button" variant="outline" onClick={() => form.reset()}>
+                    Reset form
+                  </Button>
+                  <Button
+                    type="submit"
                     disabled={createCampaignMutation.isPending}
-                    className="bg-teal-600 hover:bg-teal-700"
+                    className="bg-gradient-to-r from-blue-700 to-emerald-700 hover:from-blue-800 hover:to-emerald-800 text-white shadow-md"
                   >
                     <Zap className="h-4 w-4 mr-2" />
-                    {createCampaignMutation.isPending ? "Creating..." : "Create Draft Campaign"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => form.reset()}>
-                    Reset Form
+                    {createCampaignMutation.isPending ? "Creating…" : "Create draft & continue to funding"}
                   </Button>
                 </div>
-                
+
                 <Alert className="border-blue-200 bg-blue-50">
-                  <Shield className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800">
-                    <strong>Next Step:</strong> After creating your campaign, you'll be prompted to fund it with your credit card or bank account. 
-                    Once funded, clippers can apply and start promoting your content immediately. All payments to clippers are processed automatically from your escrow balance.
+                  <Wallet className="h-4 w-4 text-blue-700" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Next step:</strong> after creation you'll be sent to the funding page to send
+                    USDC on Base into escrow. Clippers can apply once funding settles on-chain.
                   </AlertDescription>
                 </Alert>
               </form>
@@ -546,5 +584,70 @@ export default function CampaignCreation() {
         </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+// =============== Subcomponents ===============
+
+function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <div className="flex justify-between items-center text-sm">
+      <span className="text-slate-600">{label}</span>
+      <span className={`font-medium ${muted ? "text-slate-500" : "text-slate-900"}`}>{value}</span>
+    </div>
+  );
+}
+
+function ChipPicker({
+  label,
+  placeholder,
+  options,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  placeholder: string;
+  options: { value: string; label: string }[];
+  selected: string[];
+  onToggle: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-slate-700 mb-2 block">{label}</label>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selected.map((value) => {
+            const opt = options.find((o) => o.value === value);
+            return (
+              <Badge
+                key={value}
+                variant="secondary"
+                className="cursor-pointer hover:bg-slate-200"
+                onClick={() => onToggle(value)}
+              >
+                {opt?.label || value} ×
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+      <Select
+        value=""
+        onValueChange={(v) => onToggle(v)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options
+            .filter((o) => !selected.includes(o.value))
+            .map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
