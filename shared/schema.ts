@@ -62,6 +62,7 @@ export const users = pgTable("users", {
   phoneNumber: text("phone_number"),
   mpesaNumber: text("mpesa_number"),
   isActive: boolean("is_active").notNull().default(true),
+  emailVerified: boolean("email_verified").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 
@@ -894,6 +895,49 @@ export const subscriptions = pgTable("subscriptions", {
 
 export type PaymentIntent = typeof paymentIntents.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
+
+// --- Email infrastructure ---
+// Single-use tokens for email verification (and later: password reset etc).
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// One row per outbound email. dedupeKey allows callers to no-op on duplicate sends
+// (e.g., if /api/payments/verify fires twice for the same intent we still send only once).
+export const emailLog = pgTable("email_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  kind: text("kind").notNull(),                              // 'welcome_verification' | 'subscription_paid' | ...
+  recipient: text("recipient").notNull(),
+  subject: text("subject").notNull(),
+  dedupeKey: varchar("dedupe_key", { length: 128 }).unique(), // null = always send
+  resendId: text("resend_id"),                               // Resend's message id for webhook correlation
+  status: text("status").notNull().default("queued"),        // queued | sent | failed | skipped
+  error: text("error"),
+  metadata: json("metadata"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
+export type EmailLogEntry = typeof emailLog.$inferSelect;
+
+// Single-use password reset tokens. 1-hour TTL.
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
 // Insert schemas for new tables
 export const insertGeographicDataSchema = createInsertSchema(geographicData).omit({

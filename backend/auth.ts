@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "../shared/schema.js";
+import { issueVerificationEmail } from "./api/email-verification";
 
 declare global {
   namespace Express {
@@ -100,10 +101,17 @@ export function setupAuth(app: Express) {
         password: await hashPassword(userData.password),
       });
 
+      // Fire-and-forget: send verification email. Failures here shouldn't block signup.
+      issueVerificationEmail({
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      }).catch(err => console.error("Failed to issue verification email:", err));
+
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json({ 
-          success: true, 
+        res.status(201).json({
+          success: true,
           user: user,
           message: "User registered successfully"
         });

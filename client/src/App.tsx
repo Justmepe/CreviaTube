@@ -33,6 +33,9 @@ import InfluencerDashboard from "@/features/dashboard/components/influencer-dash
 import BusinessDashboard from "@/features/dashboard/components/business-dashboard";
 import ClipperDirectoryPage from "@/pages/clipper-directory";
 import ClipperProfilePage from "@/pages/clipper-profile";
+import VerifyEmailPage from "@/pages/verify-email";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 import MyCampaignsPage from "@/pages/my-campaigns";
 import PlatformReviews from "@/pages/platform-reviews";
 import AboutUs from "@/pages/about-us";
@@ -61,6 +64,9 @@ function Router() {
     <Switch>
       <Route path="/" component={HomeRoute} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/verify-email" component={VerifyEmailPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/landing" component={LandingPage} />
       <ProtectedRoute path="/dashboard" component={DashboardRouter} />
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />

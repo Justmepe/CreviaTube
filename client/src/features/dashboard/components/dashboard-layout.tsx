@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { EmailVerificationBanner } from "@/features/auth/components/email-verification-banner";
 import {
   BarChart3,
   Users,
@@ -189,6 +190,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
 
       {/* Main content */}
       <div className="pl-64">
+        <EmailVerificationBanner />
         <main className="py-8">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {title && (

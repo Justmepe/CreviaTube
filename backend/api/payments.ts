@@ -1,8 +1,18 @@
 import type { Express } from "express";
 import { eq, and, lt } from "drizzle-orm";
+import * as React from "react";
 import { db } from "../db";
-import { paymentIntents, subscriptions, campaigns, budgetEscrow } from "../../shared/schema.js";
+import { paymentIntents, subscriptions, campaigns, budgetEscrow, users } from "../../shared/schema.js";
 import { RECEIVE_ADDRESS, toUsdcUnits, verifyUsdcTransfer, isSameAddress } from "../lib/web3";
+import { sendEmail, APP_URL } from "../lib/email";
+import { SubscriptionPaid } from "../emails/subscription-paid";
+import { CampaignFunded } from "../emails/campaign-funded";
+
+function basescanTxUrl(txHash: string): string {
+  const chainId = Number(process.env.WEB3_CHAIN_ID || 84532);
+  const base = chainId === 8453 ? "https://basescan.org" : "https://sepolia.basescan.org";
+  return `${base}/tx/${txHash}`;
+}
 
 // Single subscription tier for v1.
 const PREMIUM_PLAN = {
@@ -156,13 +166,82 @@ export function setupPaymentsAPI(app: Express): void {
     }
 
     if (intent.kind === "subscription") {
-      await activateSubscription(intent.userId, intent.id, PREMIUM_PLAN.durationDays);
+      const periodEnd = await activateSubscription(intent.userId, intent.id, PREMIUM_PLAN.durationDays);
+      // Fire-and-forget confirmation email
+      void notifySubscriptionPaid({
+        userId: intent.userId,
+        intentId: intent.id,
+        txHash,
+        amountUsdc: PREMIUM_PLAN.priceUsdc,
+        periodEnd,
+      });
     } else if (intent.kind === "campaign_funding" && intent.referenceId) {
       await fundCampaign(intent.referenceId);
+      void notifyCampaignFunded({
+        campaignId: intent.referenceId,
+        intentId: intent.id,
+        txHash,
+      });
     }
 
     res.json({ status: "paid", intentId: intent.id, txHash });
   });
+}
+
+async function notifySubscriptionPaid(opts: {
+  userId: string; intentId: string; txHash: string; amountUsdc: string; periodEnd: Date;
+}) {
+  try {
+    const [u] = await db.select().from(users).where(eq(users.id, opts.userId)).limit(1);
+    if (!u) return;
+    await sendEmail({
+      kind: "subscription_paid",
+      to: u.email,
+      subject: "Your CreviaTube subscription is active",
+      react: React.createElement(SubscriptionPaid, {
+        fullName: u.fullName,
+        planName: "Premium",
+        amountUsdc: opts.amountUsdc,
+        periodEnd: opts.periodEnd.toLocaleDateString(),
+        txHash: opts.txHash,
+        basescanUrl: basescanTxUrl(opts.txHash),
+        appUrl: APP_URL,
+      }),
+      dedupeKey: `subscription_paid:${opts.intentId}`,
+      userId: u.id,
+    });
+  } catch (e) {
+    console.error("notifySubscriptionPaid failed:", e);
+  }
+}
+
+async function notifyCampaignFunded(opts: { campaignId: string; intentId: string; txHash: string }) {
+  try {
+    const [c] = await db.select().from(campaigns).where(eq(campaigns.id, opts.campaignId)).limit(1);
+    if (!c) return;
+    const [u] = await db.select().from(users).where(eq(users.id, c.creatorId)).limit(1);
+    if (!u) return;
+    await sendEmail({
+      kind: "campaign_funded",
+      to: u.email,
+      subject: `Campaign funded: ${c.name}`,
+      react: React.createElement(CampaignFunded, {
+        fullName: u.fullName,
+        campaignName: c.name,
+        campaignId: c.id,
+        totalUsdc: parseFloat(c.budget).toFixed(2),
+        escrowUsdc: c.escrowBalance,
+        platformFeeUsdc: c.platformFee,
+        txHash: opts.txHash,
+        basescanUrl: basescanTxUrl(opts.txHash),
+        appUrl: APP_URL,
+      }),
+      dedupeKey: `campaign_funded:${opts.intentId}`,
+      userId: u.id,
+    });
+  } catch (e) {
+    console.error("notifyCampaignFunded failed:", e);
+  }
 }
 
 async function fundCampaign(campaignId: string) {
@@ -198,7 +277,7 @@ async function fundCampaign(campaignId: string) {
   });
 }
 
-async function activateSubscription(userId: string, intentId: string, durationDays: number) {
+async function activateSubscription(userId: string, intentId: string, durationDays: number): Promise<Date> {
   const now = new Date();
   const newEnd = new Date(now.getTime() + durationDays * 24 * 60 * 60_000);
 
@@ -211,7 +290,7 @@ async function activateSubscription(userId: string, intentId: string, durationDa
       currentPeriodEnd: newEnd,
       lastPaymentIntentId: intentId,
     });
-    return;
+    return newEnd;
   }
 
   // Extend from later of (now, current end) so renewals stack.
@@ -227,4 +306,5 @@ async function activateSubscription(userId: string, intentId: string, durationDa
     lastPaymentIntentId: intentId,
     updatedAt: now,
   }).where(eq(subscriptions.userId, userId));
+  return extendedEnd;
 }

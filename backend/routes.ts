@@ -16,6 +16,8 @@ import { setupClipperProgressRoutes } from "./api/clipper-progress";
 import { setupWalletAPI } from "./api/wallet";
 import { setupPaymentsAPI } from "./api/payments";
 import { setupCampaignMatchingAPI } from "./api/campaign-matching";
+import { setupEmailVerificationAPI } from "./api/email-verification";
+import { setupPasswordResetAPI } from "./api/password-reset";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
 import analyticsRoutes from "./analytics/analytics-routes";
 import visualizationRoutes from "./analytics/visualization-routes"; // NEW IMPORT
@@ -56,6 +58,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Clipper-platform fit ranking (campaign matching)
   setupCampaignMatchingAPI(app);
+
+  // Email verification (POST /api/email/verify, POST /api/email/resend-verification)
+  setupEmailVerificationAPI(app);
+
+  // Password reset (POST /api/password/request-reset, POST /api/password/reset)
+  setupPasswordResetAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {
@@ -642,6 +650,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.reviewClipperApplication(applicationId, action, notes, req.user.id);
+
+      // Notify the clipper of the decision (fire-and-forget).
+      void (async () => {
+        try {
+          const [{ ApplicationDecision }, { sendEmail, APP_URL }, React] = await Promise.all([
+            import("./emails/application-decision"),
+            import("./lib/email"),
+            import("react"),
+          ]);
+          const [appRow] = await db
+            .select({
+              clipperId: clipperCampaigns.clipperId,
+              campaignId: clipperCampaigns.campaignId,
+              clipperEmail: users.email,
+              clipperName: users.fullName,
+              campaignName: campaigns.name,
+            })
+            .from(clipperCampaigns)
+            .innerJoin(users, eq(clipperCampaigns.clipperId, users.id))
+            .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+            .where(eq(clipperCampaigns.id, applicationId))
+            .limit(1);
+          if (!appRow) return;
+          await sendEmail({
+            kind: action === "approve" ? "application_approved" : "application_rejected",
+            to: appRow.clipperEmail,
+            subject: action === "approve"
+              ? `You're approved for "${appRow.campaignName}"`
+              : `Application closed: "${appRow.campaignName}"`,
+            react: React.createElement(ApplicationDecision, {
+              fullName: appRow.clipperName,
+              campaignName: appRow.campaignName,
+              campaignId: appRow.campaignId,
+              approved: action === "approve",
+              notes: notes || undefined,
+              appUrl: APP_URL,
+            }),
+            dedupeKey: `application_${action}:${applicationId}`,
+            userId: appRow.clipperId,
+          });
+        } catch (err) {
+          console.error("application-decision email failed:", err);
+        }
+      })();
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: "Failed to review application", error: error.message });
@@ -911,9 +964,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amountUnits: toUsdcUnits(requestedAmount.toFixed(2)),
       });
 
+      // Email helpers (lazy-imported so tsc + boot stay independent of email lib state)
+      const sendPayoutEmail = async (kind: "payout_sent" | "payout_failed", extra: Record<string, any>) => {
+        try {
+          const { sendEmail, APP_URL } = await import("./lib/email");
+          const React = await import("react");
+          const { PayoutSent } = await import("./emails/payout-sent");
+          const { PayoutFailed } = await import("./emails/payout-failed");
+          const chainId = Number(process.env.WEB3_CHAIN_ID || 84532);
+          const explorer = chainId === 8453 ? "https://basescan.org" : "https://sepolia.basescan.org";
+          const subject = kind === "payout_sent"
+            ? `${requestedAmount.toFixed(2)} USDC sent to your wallet`
+            : `Payout of ${requestedAmount.toFixed(2)} USDC failed`;
+          const react = kind === "payout_sent"
+            ? React.createElement(PayoutSent, {
+                fullName: req.user.fullName,
+                amountUsdc: requestedAmount.toFixed(2),
+                walletAddress,
+                txHash: extra.txHash,
+                basescanUrl: `${explorer}/tx/${extra.txHash}`,
+              })
+            : React.createElement(PayoutFailed, {
+                fullName: req.user.fullName,
+                amountUsdc: requestedAmount.toFixed(2),
+                reason: extra.reason,
+                appUrl: APP_URL,
+              });
+          await sendEmail({
+            kind,
+            to: req.user.email,
+            subject,
+            react,
+            dedupeKey: `${kind}:${payout.id}`,
+            userId: req.user.id,
+          });
+        } catch (err) {
+          console.error(`${kind} email failed:`, err);
+        }
+      };
+
       if (!result.ok) {
         await storage.updatePayoutStatus(payout.id, "failed");
         await db.update(payouts).set({ failureReason: result.reason }).where(eq(payouts.id, payout.id));
+        void sendPayoutEmail("payout_failed", { reason: result.reason });
         return res.status(502).json({ message: `Payout failed: ${result.reason}`, payoutId: payout.id });
       }
 
@@ -922,6 +1015,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "completed",
         processedAt: new Date(),
       }).where(eq(payouts.id, payout.id));
+
+      void sendPayoutEmail("payout_sent", { txHash: result.txHash });
 
       console.log(`✅ Payout sent: ${requestedAmount} USDC → ${walletAddress} (tx ${result.txHash})`);
       res.status(201).json({

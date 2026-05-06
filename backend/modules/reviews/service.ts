@@ -1,7 +1,10 @@
 import { db } from '../../db';
 import { clipperReviews, clipperStats, users, campaigns, clipperCampaigns } from '../../../shared/schema';
 import { eq, desc, avg, sum, count, and, sql } from 'drizzle-orm';
+import * as React from 'react';
 import type { InsertClipperReview, ClipperReview, ClipperStats } from '../../../shared/schema';
+import { sendEmail, APP_URL } from '../../lib/email';
+import { ReviewReceived } from '../../emails/review-received';
 
 export class ReviewService {
   /**
@@ -71,6 +74,36 @@ export class ReviewService {
 
       // Update clipper stats
       await this.updateClipperStats(reviewData.clipperId);
+
+      // Notify the clipper of the new review (fire-and-forget)
+      void (async () => {
+        try {
+          const [clipper] = await db.select({ id: users.id, email: users.email, fullName: users.fullName })
+            .from(users).where(eq(users.id, reviewData.clipperId)).limit(1);
+          const [creator] = await db.select({ fullName: users.fullName })
+            .from(users).where(eq(users.id, reviewData.creatorId)).limit(1);
+          const [campaign] = await db.select({ name: campaigns.name })
+            .from(campaigns).where(eq(campaigns.id, reviewData.campaignId)).limit(1);
+          if (!clipper || !creator || !campaign) return;
+          await sendEmail({
+            kind: "review_received",
+            to: clipper.email,
+            subject: `New ${Number(reviewData.overallRating).toFixed(1)}★ review from ${creator.fullName}`,
+            react: React.createElement(ReviewReceived, {
+              clipperFullName: clipper.fullName,
+              creatorName: creator.fullName,
+              campaignName: campaign.name,
+              overallRating: Number(reviewData.overallRating),
+              reviewTitle: reviewData.reviewTitle,
+              appUrl: APP_URL,
+            }),
+            dedupeKey: `review_received:${review.id}`,
+            userId: clipper.id,
+          });
+        } catch (err) {
+          console.error("review_received email failed:", err);
+        }
+      })();
 
       console.log(`✅ Review submitted for clipper ${reviewData.clipperId} by creator ${reviewData.creatorId}`);
       return review.id;

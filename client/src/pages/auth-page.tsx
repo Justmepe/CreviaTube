@@ -143,13 +143,19 @@ export default function AuthPage() {
                   </Alert>
                 )}
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={loginMutation.isPending}
                   className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   {loginMutation.isPending ? "Signing In..." : "Sign In"}
                 </Button>
+
+                <div className="text-center">
+                  <a href="/forgot-password" className="text-sm text-slate-600 hover:text-slate-900 hover:underline">
+                    Forgot your password?
+                  </a>
+                </div>
               </form>
             </TabsContent>
 

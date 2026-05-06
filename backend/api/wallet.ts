@@ -74,6 +74,33 @@ export function setupWalletAPI(app: Express): void {
 
     await db.update(users).set({ walletAddress: lowered, updatedAt: new Date() }).where(eq(users.id, req.user.id));
     delete req.session.walletNonce;
+
+    // Security notification (fire-and-forget). Lazy-imported to avoid hard dep on email at boot.
+    void (async () => {
+      try {
+        const [{ sendEmail, APP_URL: _APP }, React, { WalletBound }] = await Promise.all([
+          import("../lib/email"),
+          import("react"),
+          import("../emails/wallet-bound"),
+        ]);
+        await sendEmail({
+          kind: "wallet_bound",
+          to: req.user.email,
+          subject: "A wallet was bound to your CreviaTube account",
+          react: React.createElement(WalletBound, {
+            fullName: req.user.fullName,
+            walletAddress: lowered,
+            when: new Date().toUTCString(),
+          }),
+          // Allow re-send if the user re-binds the same wallet later — key on bind timestamp.
+          dedupeKey: `wallet_bound:${req.user.id}:${lowered}:${Date.now()}`,
+          userId: req.user.id,
+        });
+      } catch (err) {
+        console.error("wallet_bound email failed:", err);
+      }
+    })();
+
     res.json({ success: true, walletAddress: lowered });
   });
 
