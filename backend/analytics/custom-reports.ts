@@ -1,5 +1,8 @@
 import { cacheService } from '../cache';
-import { getWebSocketServer } from '../security/websocket-server';
+
+// Realtime WebSocket push was removed in the Phase 1 strip; this stub keeps
+// the existing `if (wsServer) { ... }` guards working as no-ops.
+const getWebSocketServer = (): null => null;
 
 // Custom reports interfaces
 interface CustomReport {

@@ -1,5 +1,9 @@
 import { cacheService } from '../cache';
-// import { getWebSocketServer } from '../security/websocket-server';
+
+// Realtime WebSocket push was removed in the Phase 1 strip; this stub keeps
+// the existing `if (wsServer) { ... }` guards working as no-ops so the
+// analytics service still records data without the realtime broadcast.
+const getWebSocketServer = (): null => null;
 
 // Enhanced analytics interfaces
 interface ConversionFunnel {

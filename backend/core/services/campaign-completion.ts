@@ -120,12 +120,13 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
    */
   async getClipperProgress(clipperCampaignId: string): Promise<ClipperProgress> {
     try {
-      // Get aggregated metrics for this clipper campaign
+      // Aggregated metrics. Sum the per-event value with a fallback of 1 so an
+      // event without an explicit eventValue still counts as one occurrence —
+      // this matches how trackingService records views/clicks (value optional).
       const metrics = await db
         .select({
           eventType: trackingEvents.eventType,
-          totalEvents: sql<number>`count(*)::int`,
-          totalValue: sql<number>`sum(${trackingEvents.eventValue})::decimal`,
+          totalValue: sql<number>`sum(coalesce(${trackingEvents.eventValue}::numeric, 1))::int`,
         })
         .from(trackingEvents)
         .where(eq(trackingEvents.clipperCampaignId, clipperCampaignId))
@@ -145,24 +146,25 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
 
       // Aggregate metrics by type
       metrics.forEach(metric => {
+        const value = Number(metric.totalValue) || 0;
         switch (metric.eventType) {
           case 'view':
-            progress.totalViews = metric.totalEvents;
+            progress.totalViews = value;
             break;
           case 'click':
-            progress.totalClicks = metric.totalEvents;
+            progress.totalClicks = value;
             break;
           case 'signup':
-            progress.totalSignups = metric.totalEvents;
+            progress.totalSignups = value;
             break;
           case 'deposit':
-            progress.totalDeposits = metric.totalEvents;
+            progress.totalDeposits = value;
             break;
           case 'trade':
-            progress.totalTrades = metric.totalEvents;
+            progress.totalTrades = value;
             break;
           case 'conversion':
-            progress.totalConversions = metric.totalEvents;
+            progress.totalConversions = value;
             break;
         }
       });

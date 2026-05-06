@@ -771,30 +771,14 @@ export class DataVisualizationService {
     this.updateIntervals.set(chart.id, interval);
   }
 
-  // Update real-time data
+  // Update real-time data. The realtime push channel was removed in the
+  // Phase 1 strip; clients now poll, so we just refresh the cache here.
   private async updateRealTimeData(chartId: string): Promise<void> {
     try {
       const chartData = await this.generateChartData(chartId);
       this.realTimeData.set(chartId, chartData.datasets[0].data);
-      this.broadcastChartUpdate(chartId, chartData);
     } catch (error) {
       console.error(`Error updating real-time data for chart ${chartId}:`, error);
-    }
-  }
-
-  // Broadcast chart update
-  private broadcastChartUpdate(chartId: string, data: ChartData): void {
-    const wsServer = getWebSocketServer();
-    if (wsServer) {
-      wsServer.broadcastToRoom(`chart_${chartId}`, {
-        type: 'chart_update',
-        data: {
-          chartId,
-          data,
-          timestamp: new Date(),
-        },
-        timestamp: new Date(),
-      });
     }
   }
 
