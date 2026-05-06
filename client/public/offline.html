@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - CreviaTube</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #333; }
+        .offline-container { background: white; border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); max-width: 400px; width: 90%; animation: slideUp 0.6s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .offline-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #6c757d; }
+        .offline-icon::before { content: "📶"; }
+        h1 { color: #495057; margin-bottom: 10px; font-size: 24px; font-weight: 600; }
+        .subtitle { color: #6c757d; margin-bottom: 30px; font-size: 16px; line-height: 1.5; }
+        .status-indicator { display: inline-flex; align-items: center; background: #fff3cd; color: #856404; padding: 8px 16px; border-radius: 20px; font-size: 14px; margin-bottom: 30px; border: 1px solid #ffeaa7; }
+        .status-dot { width: 8px; height: 8px; background: #ffc107; border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .retry-button { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; margin-bottom: 20px; width: 100%; }
+        .retry-button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3); }
+        .retry-button:active { transform: translateY(0); }
+        .offline-features { text-align: left; margin-top: 30px; padding-top: 30px; border-top: 1px solid #e9ecef; }
+        .offline-features h3 { color: #495057; margin-bottom: 15px; font-size: 18px; }
+        .feature-list { list-style: none; }
+        .feature-list li { color: #6c757d; margin-bottom: 8px; padding-left: 20px; position: relative; font-size: 14px; }
+        .feature-list li::before { content: "✓"; position: absolute; left: 0; color: #4CAF50; font-weight: bold; }
+        .connection-info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; font-size: 12px; color: #6c757d; }
+        .connection-info strong { color: #495057; }
+        @media (max-width: 480px) { .offline-container { padding: 30px 20px; margin: 20px; } h1 { font-size: 20px; } .subtitle { font-size: 14px; } }
+    </style>
+    </head>
+    <body>
+    <div class="offline-container">
+        <div class="offline-icon"></div>
+        <h1>You're Offline</h1>
+        <p class="subtitle">Don't worry! You can still access some features while offline.</p>
+        <div class="status-indicator"><div class="status-dot"></div><span>Checking connection...</span></div>
+        <button class="retry-button" onclick="retryConnection()">Try Again</button>
+        <div class="offline-features">
+            <h3>Available Offline:</h3>
+            <ul class="feature-list">
+                <li>View cached pages and content</li>
+                <li>Access your dashboard data</li>
+                <li>Review campaign analytics</li>
+                <li>Check your profile information</li>
+                <li>View previously loaded charts</li>
+            </ul>
+        </div>
+        <div class="connection-info">
+            <strong>Connection Status:</strong> Offline<br>
+            <strong>Last Sync:</strong> <span id="lastSync">Unknown</span><br>
+            <strong>Cache Size:</strong> <span id="cacheSize">Calculating...</span>
+        </div>
+    </div>
+    <script>
+      function updateConnectionStatus() {
+        const statusIndicator = document.querySelector('.status-indicator');
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = statusIndicator.querySelector('span');
+        if (navigator.onLine) {
+          statusIndicator.style.background = '#d4edda';
+          statusIndicator.style.color = '#155724';
+          statusIndicator.style.borderColor = '#c3e6cb';
+          statusDot.style.background = '#28a745';
+          statusText.textContent = 'Connected! Redirecting...';
+          setTimeout(() => { window.location.href = '/'; }, 2000);
+        } else {
+          statusIndicator.style.background = '#fff3cd';
+          statusIndicator.style.color = '#856404';
+          statusIndicator.style.borderColor = '#ffeaa7';
+          statusDot.style.background = '#ffc107';
+          statusText.textContent = 'Still offline';
+        }
+      }
+      function retryConnection() {
+        const button = document.querySelector('.retry-button');
+        button.textContent = 'Checking...';
+        button.disabled = true;
+        setTimeout(() => {
+          if (navigator.onLine) { window.location.reload(); }
+          else { button.textContent = 'Try Again'; button.disabled = false; updateConnectionStatus(); }
+        }, 2000);
+      }
+      async function getCacheInfo() {
+        try {
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            let totalSize = 0;
+            for (const cacheName of cacheNames) {
+              const cache = await caches.open(cacheName);
+              const keys = await cache.keys();
+              totalSize += keys.length;
+            }
+            document.getElementById('cacheSize').textContent = `${totalSize} items cached`;
+          }
+        } catch (e) {
+          document.getElementById('cacheSize').textContent = 'Unable to calculate';
+        }
+      }
+      function getLastSync() {
+        const lastSync = localStorage.getItem('lastSync');
+        document.getElementById('lastSync').textContent = lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'Never';
+      }
+      window.addEventListener('online', updateConnectionStatus);
+      window.addEventListener('offline', updateConnectionStatus);
+      document.addEventListener('DOMContentLoaded', () => {
+        updateConnectionStatus();
+        getCacheInfo();
+        getLastSync();
+        setInterval(updateConnectionStatus, 5000);
+      });
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+    </script>
+    </body>
+    </html>
+
+

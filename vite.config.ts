@@ -33,5 +33,7 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    // Disable HMR to prevent constant refresh
+    hmr: false,
   },
 });

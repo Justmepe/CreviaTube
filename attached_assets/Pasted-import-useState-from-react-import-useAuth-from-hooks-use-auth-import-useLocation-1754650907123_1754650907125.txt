@@ -222,7 +222,7 @@ export default function AuthPage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">
-                  CreoCash
+                  CreviaTube
                 </h1>
                 <p className="text-slate-600 font-medium">Global Creator Economy Platform</p>
               </div>
@@ -287,7 +287,7 @@ export default function AuthPage() {
                   Trusted by Creators Worldwide
                 </h2>
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                  Join thousands of successful creators who are already earning with CreoCash. 
+                  Join thousands of successful creators who are already earning with CreviaTube. 
                   See what they have to say about their experience.
                 </p>
               </div>
@@ -351,7 +351,7 @@ export default function AuthPage() {
                       id: 1,
                       rating: 5,
                       title: "Game-changing platform for creators",
-                      text: "CreoCash has completely transformed how I monetize my trading content. The automated escrow system gives me peace of mind, and the analytics help me optimize my campaigns perfectly.",
+                      text: "CreviaTube has completely transformed how I monetize my trading content. The automated escrow system gives me peace of mind, and the analytics help me optimize my campaigns perfectly.",
                       author: "Sarah Chen",
                       role: "Trading Educator",
                       verified: true
@@ -360,7 +360,7 @@ export default function AuthPage() {
                       id: 2,
                       rating: 5,
                       title: "Incredible earning potential",
-                      text: "As a clipper, I've earned more in 3 months with CreoCash than I did in a year with other platforms. The goal-based system is transparent and the payouts are instant.",
+                      text: "As a clipper, I've earned more in 3 months with CreviaTube than I did in a year with other platforms. The goal-based system is transparent and the payouts are instant.",
                       author: "Marcus Johnson",
                       role: "Content Clipper",
                       verified: true
@@ -477,7 +477,7 @@ export default function AuthPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CreoCash</span>
+                <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CreviaTube</span>
               </div>
               <p className="text-slate-600 text-lg">Global Creator Economy Platform</p>
             </div>
@@ -687,7 +687,7 @@ export default function AuthPage() {
 
             {/* Footer */}
             <div className="text-center mt-8 text-slate-500 text-sm">
-              <p>Join 50,000+ creators earning with CreoCash</p>
+              <p>Join 50,000+ creators earning with CreviaTube</p>
             </div>
           </div>
         </div>

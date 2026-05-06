@@ -151,10 +151,7 @@ export default function MetricsDashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="social">Social Media</TabsTrigger>
-          {user?.userType === 'trader_creator' && (
-            <TabsTrigger value="trading">Trading</TabsTrigger>
-          )}
-          {(user?.userType === 'entrepreneur' || user?.userType === 'enterprise') && (
+          {user?.accountType === 'business' && (
             <TabsTrigger value="website">Website</TabsTrigger>
           )}
         </TabsList>
@@ -201,30 +198,8 @@ export default function MetricsDashboard() {
               </CardContent>
             </Card>
 
-            {/* Trading Balance (if trader) */}
-            {user?.userType === 'trader_creator' && (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(
-                      Object.values(metrics?.trading || {}).reduce((sum, broker) => {
-                        return sum + (broker.metrics.accountBalance || broker.metrics.portfolioValue || 0);
-                      }, 0)
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Across {Object.keys(metrics?.trading || {}).length} brokers
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Website Traffic (if entrepreneur) */}
-            {(user?.userType === 'entrepreneur' || user?.userType === 'enterprise') && (
+            {user?.accountType === 'business' && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Monthly Visitors</CardTitle>
@@ -357,86 +332,7 @@ export default function MetricsDashboard() {
           )}
         </TabsContent>
 
-        {user?.userType === 'trader_creator' && (
-          <TabsContent value="trading" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(metrics?.trading || {}).map(([brokerId, data]) => {
-                const m = data.metrics;
-                
-                return (
-                  <Card key={brokerId}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                          <BarChart3 className="h-5 w-5" />
-                          {brokerId}
-                        </CardTitle>
-                        <Badge variant="outline">
-                          {new Date(data.lastSyncAt).toLocaleDateString()}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Account Balance</p>
-                          <p className="text-lg font-semibold">
-                            {formatCurrency(m.accountBalance || 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Total P&L</p>
-                          <p className={`text-lg font-semibold ${(m.profitLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(m.profitLoss || 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Total Trades</p>
-                          <p className="text-lg font-semibold">{m.totalTrades || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Win Rate</p>
-                          <p className="text-lg font-semibold">
-                            {(m.winRate || 0).toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {m.winRate && (
-                        <>
-                          <Separator />
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-2">Performance</p>
-                            <Progress value={m.winRate} className="h-2" />
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {Object.keys(metrics?.trading || {}).length === 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>No trading accounts connected</CardTitle>
-                  <CardDescription>
-                    Connect your trading accounts to track your performance and share results with your audience.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Connect Trading Accounts
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        )}
-
-        {(user?.userType === 'entrepreneur' || user?.userType === 'enterprise') && (
+        {user?.accountType === 'business' && (
           <TabsContent value="website" className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               {Object.entries(metrics?.website || {}).map(([websiteUrl, data]) => {

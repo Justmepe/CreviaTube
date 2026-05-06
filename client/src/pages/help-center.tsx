@@ -48,7 +48,7 @@ export default function HelpCenter() {
             <h1 className="text-4xl font-bold text-slate-800">Help Center</h1>
           </div>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Find answers to common questions and learn how to make the most of CreoCash
+            Find answers to common questions and learn how to make the most of CreviaTube
           </p>
         </div>
 

@@ -22,7 +22,7 @@ export default function ClipperDashboard() {
   });
 
   // Fetch featured platform reviews for homepage
-  const { data: featuredReviews = [] } = useQuery({
+  const { data: featuredReviews = [] } = useQuery<any[]>({
     queryKey: ["/api/platform-reviews", { status: "published", limit: 3 }],
   });
 
@@ -55,7 +55,7 @@ export default function ClipperDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-green-400/10 to-emerald-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-teal-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout title="CreoCash Clipper Hub">
+      <DashboardLayout title="CreviaTube Clipper Hub">
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">
@@ -65,7 +65,7 @@ export default function ClipperDashboard() {
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                  CreoCash Clipper Hub
+                  CreviaTube Clipper Hub
                 </h1>
               </div>
               <p className="text-slate-600 text-lg font-medium">Your performance dashboard and earnings center</p>
@@ -207,7 +207,7 @@ export default function ClipperDashboard() {
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
                   What Our Users Say
                 </h2>
-                <p className="text-slate-600">Real feedback from creators and clippers using CreoCash</p>
+                <p className="text-slate-600">Real feedback from creators and clippers using CreviaTube</p>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

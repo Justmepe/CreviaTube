@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { CampaignMatchBadge } from "@/features/campaigns/components/campaign-match-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +67,7 @@ interface Campaign {
     id: string;
     username: string;
     fullName: string;
-    userType: string;
+    accountType: string;
     socialAccounts?: Record<string, any>;
   };
   _count?: {
@@ -104,18 +106,39 @@ const PlatformIcon = ({ platform }: { platform: string }) => {
   return <Icon className="h-4 w-4" />;
 };
 
+type MatchedResponse = {
+  clipperPlatforms: string[];
+  hasConnectedPlatforms: boolean;
+  campaigns: Array<Campaign & { matchScore?: number; matchedPlatforms?: string[] }>;
+};
+
 export default function EnhancedClipperMarketplace() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [platformFilter, setPlatformFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("latest");
+  const [sortBy, setSortBy] = useState<string>(user?.role === "clipper" ? "best_fit" : "latest");
   const [creatorTypeFilter, setCreatorTypeFilter] = useState("all");
 
   const { data: availableCampaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns/available"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
+
+  const { data: matched } = useQuery<MatchedResponse>({
+    queryKey: ["/api/campaigns/matched"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: user?.role === "clipper",
+  });
+
+  // Map<campaignId, {matchScore, matchedPlatforms}> so badges render regardless of sort mode.
+  const matchByCampaignId = new Map<string, { matchScore: number; matchedPlatforms: string[] }>();
+  for (const c of matched?.campaigns ?? []) {
+    if (typeof c.matchScore === "number") {
+      matchByCampaignId.set(c.id, { matchScore: c.matchScore, matchedPlatforms: c.matchedPlatforms ?? [] });
+    }
+  }
 
   const { data: coldOutreachCampaigns = [], isLoading: coldOutreachLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns/cold-outreach"],
@@ -159,20 +182,16 @@ export default function EnhancedClipperMarketplace() {
 
   const getCreatorTypeColor = (type: string) => {
     switch (type) {
-      case "trader_creator": return "bg-blue-100 text-blue-800";
       case "influencer": return "bg-pink-100 text-pink-800";
-      case "entrepreneur": return "bg-green-100 text-green-800";
-      case "enterprise": return "bg-purple-100 text-purple-800";
+      case "business": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const getCreatorTypeLabel = (type: string) => {
     switch (type) {
-      case "trader_creator": return "Trading Educator";
       case "influencer": return "Social Influencer";
-      case "entrepreneur": return "Entrepreneur";
-      case "enterprise": return "Enterprise Brand";
+      case "business": return "Business";
       default: return type;
     }
   };
@@ -180,20 +199,27 @@ export default function EnhancedClipperMarketplace() {
   // Filter and sort campaigns
   const filteredCampaigns = availableCampaigns
     .filter(campaign => {
-      if (searchTerm && !campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
+      if (searchTerm && !campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !campaign.description.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
       if (platformFilter !== "all" && !JSON.parse(campaign.targetPlatforms || '[]').includes(platformFilter)) {
         return false;
       }
-      if (creatorTypeFilter !== "all" && campaign.creator.userType !== creatorTypeFilter) {
+      if (creatorTypeFilter !== "all" && campaign.creator.accountType !== creatorTypeFilter) {
         return false;
       }
       return campaign.fundingStatus === "funded" && campaign.status === "active";
     })
     .sort((a, b) => {
       switch (sortBy) {
+        case "best_fit": {
+          const ma = matchByCampaignId.get(a.id)?.matchScore ?? 0;
+          const mb = matchByCampaignId.get(b.id)?.matchScore ?? 0;
+          if (mb !== ma) return mb - ma;
+          // Tiebreak by recency
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
         case "budget": return b.budget - a.budget;
         case "reward": return (b.rewardRates.view || 0) - (a.rewardRates.view || 0);
         case "duration": return a.duration - b.duration;
@@ -278,10 +304,8 @@ export default function EnhancedClipperMarketplace() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Clippers</SelectItem>
-                  <SelectItem value="trader_creator">Trading Educators</SelectItem>
                   <SelectItem value="influencer">Social Influencers</SelectItem>
-                  <SelectItem value="entrepreneur">Entrepreneurs</SelectItem>
-                  <SelectItem value="enterprise">Enterprise Brands</SelectItem>
+                  <SelectItem value="business">Businesses</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -290,6 +314,9 @@ export default function EnhancedClipperMarketplace() {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
+                  {user?.role === "clipper" && (
+                    <SelectItem value="best_fit">Best fit for me</SelectItem>
+                  )}
                   <SelectItem value="latest">Latest</SelectItem>
                   <SelectItem value="budget">Highest Budget</SelectItem>
                   <SelectItem value="reward">Best Rewards</SelectItem>
@@ -322,6 +349,26 @@ export default function EnhancedClipperMarketplace() {
                 20% Commission
               </Badge>
             </div>
+
+            {user?.role === "clipper" && matched && !matched.hasConnectedPlatforms && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <Target className="h-4 w-4 text-amber-700" />
+                <AlertDescription className="flex items-center justify-between gap-3 text-amber-900">
+                  <span>
+                    Connect a social account to see campaigns matched to your platforms first.
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => setLocation("/social-integration")}>
+                    Connect accounts
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {user?.role === "clipper" && matched && matched.hasConnectedPlatforms && sortBy === "best_fit" && (
+              <p className="text-sm text-muted-foreground">
+                Sorted by fit with your connected platforms: {matched.clipperPlatforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(", ")}
+              </p>
+            )}
             {filteredCampaigns.length === 0 ? (
               <Card>
                 <CardContent className="p-12 text-center">
@@ -338,13 +385,17 @@ export default function EnhancedClipperMarketplace() {
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <CardTitle className="text-lg line-clamp-2">{campaign.title}</CardTitle>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge className={getCreatorTypeColor(campaign.creator.userType)}>
-                              {getCreatorTypeLabel(campaign.creator.userType)}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <Badge className={getCreatorTypeColor(campaign.creator.accountType)}>
+                              {getCreatorTypeLabel(campaign.creator.accountType)}
                             </Badge>
                             <Badge variant="outline" className="text-xs">
                               by @{campaign.creator.username}
                             </Badge>
+                            {(() => {
+                              const m = matchByCampaignId.get(campaign.id);
+                              return m ? <CampaignMatchBadge matchScore={m.matchScore} matchedPlatforms={m.matchedPlatforms} /> : null;
+                            })()}
                           </div>
                         </div>
                       </div>

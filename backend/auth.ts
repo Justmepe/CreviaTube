@@ -5,8 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { db } from "./db";
-import { User as SelectUser, enterpriseRequests, adminNotifications } from "../shared/schema.js";
+import { User as SelectUser } from "../shared/schema.js";
 
 declare global {
   namespace Express {
@@ -101,60 +100,13 @@ export function setupAuth(app: Express) {
         password: await hashPassword(userData.password),
       });
 
-      // If this is an enterprise user, create the enterprise request record
-      if (userData.userType === "enterprise") {
-        const { goal, businessDescription } = userData;
-        
-        // Use already imported modules
-        
-        // Create enterprise request record
-        const enterpriseRequest = {
-          id: randomBytes(16).toString('hex'),
-          userId: user.id,
-          contactName: userData.fullName,
-          contactEmail: userData.email,
-          contactPhone: userData.phoneNumber || null,
-          companyName: `${userData.fullName}'s Business`, // Use user's name as company name if not provided
-          companySize: 'startup', // Default value
-          requestType: goal || 'white_label_solution', // Use the goal from signup
-          message: businessDescription || 'Enterprise platform request from signup',
-          preferredMeetingTime: 'anytime',
-          urgency: 'medium',
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          assignedTo: null,
-          meetingScheduled: false,
-          notes: '',
-        };
-
-        // Store enterprise request in database
-        await db.insert(enterpriseRequests).values(enterpriseRequest);
-        
-        // Create admin notification
-        const adminNotification = {
-          id: randomBytes(8).toString('hex'),
-          type: 'enterprise_contact',
-          title: `New Enterprise Signup: ${userData.fullName}`,
-          message: `${userData.fullName} (${userData.email}) has signed up for an enterprise account. Goal: ${goal}`,
-          data: enterpriseRequest,
-          read: false,
-          urgent: false,
-        };
-
-        // Store admin notification in database
-        await db.insert(adminNotifications).values(adminNotification);
-        
-        console.log("Enterprise user registered with request:", {
-          userId: user.id,
-          requestId: enterpriseRequest.id,
-          contactName: userData.fullName,
-          goal: goal
-        });
-      }
-
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        res.status(201).json({ 
+          success: true, 
+          user: user,
+          message: "User registered successfully"
+        });
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -175,7 +127,11 @@ export function setupAuth(app: Express) {
       
       req.login(user, (err) => {
         if (err) return next(err);
-        res.json(user);
+        res.json({ 
+          success: true, 
+          user: user,
+          message: "Login successful"
+        });
       });
     })(req, res, next);
   });
@@ -185,10 +141,5 @@ export function setupAuth(app: Express) {
       if (err) return next(err);
       res.sendStatus(200);
     });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
   });
 }

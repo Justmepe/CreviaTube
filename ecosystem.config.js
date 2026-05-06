@@ -1,7 +1,7 @@
 // PM2 configuration for production deployment
 module.exports = {
   apps: [{
-    name: 'creocash',
+    name: 'CreviaTube',
     script: 'dist/index.js',
     instances: 'max',
     exec_mode: 'cluster',

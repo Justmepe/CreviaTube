@@ -5,15 +5,21 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./core/services/escrow-service";
 import { trackingService } from "./core/services/tracking-service";
 import { campaignCompletionService } from "./core/services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, brokerPrograms, revenueTransactions, payoutRecords, systemHealthMetrics, enterpriseRequests, adminNotifications, enterpriseAccounts, clipperCampaigns, insertPlatformReviewSchema } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, revenueTransactions, payoutRecords, systemHealthMetrics, clipperCampaigns, insertPlatformReviewSchema, geographicData, industryBenchmarks, platformFeatures, supportedPlatforms, supportedCountries, supportedLanguages, staticPages, platformEvents, contactInfo, careerPositions, communityGuidelines, payouts } from "../shared/schema.js";
 import { randomBytes } from "crypto";
-import { sql, eq, gte, count, desc, sum } from "drizzle-orm";
+import { sql, eq, and, gte, count, desc, sum } from "drizzle-orm";
 import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
 import { aiContentDetection } from "./core/services/ai-content-detection";
 import { setupClipperProgressRoutes } from "./api/clipper-progress";
+import { setupWalletAPI } from "./api/wallet";
+import { setupPaymentsAPI } from "./api/payments";
+import { setupCampaignMatchingAPI } from "./api/campaign-matching";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
+import analyticsRoutes from "./analytics/analytics-routes";
+import visualizationRoutes from "./analytics/visualization-routes"; // NEW IMPORT
+import { cacheMiddleware } from "./cache";
 // PesaPal configuration for African payments
 let pesapalConfigured = false;
 
@@ -41,30 +47,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup clipper progress and completion routes
   setupClipperProgressRoutes(app);
+
+  // Web3 wallet binding (Phase 2a)
+  setupWalletAPI(app);
+
+  // USDC payment intents + verify + subscription (Phase 2b)
+  setupPaymentsAPI(app);
+
+  // Clipper-platform fit ranking (campaign matching)
+  setupCampaignMatchingAPI(app);
+  
+  // User API endpoints
+  const fetchUserProfile = async (userId: string) => {
+    const user = await storage.getUser(userId);
+    if (!user) return null;
+    const { password, ...userProfile } = user;
+    return userProfile;
+  };
+
+  app.get("/api/user", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const profile = await fetchUserProfile(req.user.id);
+      if (!profile) return res.status(404).json({ message: "User not found" });
+      res.json(profile);
+    } catch (error: any) {
+      console.error('User fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch user", error: error.message });
+    }
+  });
+
+  app.get("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const profile = await fetchUserProfile(req.user.id);
+      if (!profile) return res.status(404).json({ message: "User not found" });
+      res.json(profile);
+    } catch (error: any) {
+      console.error('User profile fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch user profile", error: error.message });
+    }
+  });
   
   // Setup goal completion API
   const { setupGoalCompletionAPI } = await import("./api/goal-completion");
   setupGoalCompletionAPI(app);
-  
-  // Setup personalized broker links API
-  const { setupPersonalizedBrokerLinksAPI } = await import("./api/personalized-broker-links");
-  setupPersonalizedBrokerLinksAPI(app);
-  
+
   // Setup payments routes for testing PesaPal integration
   app.use("/api/payments", paymentsRoutes);
   
   // Setup review system routes
   const reviewRoutes = await import("./modules/reviews/routes");
   app.use("/api", reviewRoutes.default);
+  
+  // Setup enhanced analytics routes (cached)
+  app.use("/api/analytics", cacheMiddleware(300), analyticsRoutes);
+  
+  // Setup visualization routes // NEW INTEGRATION (cached)
+  app.use("/api/visualization", cacheMiddleware(300), visualizationRoutes);
 
   // Campaign routes
-  
-  // Get single campaign by ID (must be before generic /api/campaigns route)
-  app.get("/api/campaigns/:id", async (req, res) => {
+
+  // Get single campaign by ID. Use next() to fall through when the path segment
+  // is actually a reserved sub-route name (e.g. /api/campaigns/my-campaigns).
+  app.get("/api/campaigns/:id", async (req, res, next) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const { id } = req.params;
+      // UUIDs only — anything else is a sub-route registered later.
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return next();
+      }
       const campaign = await storage.getCampaign(id);
       
       if (!campaign) {
@@ -87,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      console.log(`User ${req.user.username} (${req.user.role}, ${req.user.userType}) requesting campaigns`);
+      console.log(`User ${req.user.username} (${req.user.role}, ${req.user.accountType}) requesting campaigns`);
       
       if (req.user.role === "creator") {
         const campaigns = await storage.getCampaignsByCreator(req.user.id);
@@ -118,26 +172,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const campaigns = await storage.getAvailableCampaigns();
-      // Filter for standard campaigns (not cold outreach)
-      const standardCampaigns = campaigns.filter(c => c.campaignType !== "cold_outreach");
-      res.json(standardCampaigns);
+      res.json(campaigns);
     } catch (error: any) {
       console.error('Available campaigns fetch error:', error);
       res.status(500).json({ message: "Failed to fetch available campaigns", error: error.message });
-    }
-  });
-
-  app.get("/api/campaigns/cold-outreach", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const campaigns = await storage.getAvailableCampaigns();
-      // Filter for cold outreach campaigns only
-      const coldOutreachCampaigns = campaigns.filter(c => c.campaignType === "cold_outreach");
-      res.json(coldOutreachCampaigns);
-    } catch (error: any) {
-      console.error('Cold outreach campaigns fetch error:', error);
-      res.status(500).json({ message: "Failed to fetch cold outreach campaigns", error: error.message });
     }
   });
 
@@ -155,6 +193,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Campaigns with clippers fetch error:', error);
       res.status(500).json({ message: "Failed to fetch campaigns with clippers", error: error.message });
+    }
+  });
+
+  // My campaigns endpoint for creators
+  app.get("/api/campaigns/my-campaigns", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Only creators can view their campaigns" });
+    }
+
+    try {
+      const { clipperCampaigns: clipperCampaignsTable, clipperReviews } = await import("../shared/schema.js");
+      const myCampaigns = await storage.getCampaignsByCreator(req.user.id);
+
+      // Enrich each campaign with its clippers[] (joined with users) +
+      // canReview / hasReview flags so the My Campaigns page can show the Review button.
+      const enriched = await Promise.all(myCampaigns.map(async (campaign) => {
+        const clippers = await db
+          .select({
+            id: clipperCampaignsTable.id,
+            clipperId: clipperCampaignsTable.clipperId,
+            clipperName: users.fullName,
+            clipperUsername: users.username,
+            isApproved: clipperCampaignsTable.isApproved,
+            isCompleted: clipperCampaignsTable.isCompleted,
+            completedAt: clipperCampaignsTable.completedAt,
+            completionMetrics: clipperCampaignsTable.completionMetrics,
+          })
+          .from(clipperCampaignsTable)
+          .innerJoin(users, eq(clipperCampaignsTable.clipperId, users.id))
+          .where(eq(clipperCampaignsTable.campaignId, campaign.id));
+
+        // Batch-fetch existing reviews for this campaign (by this creator)
+        const existingReviews = clippers.length === 0 ? [] : await db
+          .select({ clipperCampaignId: clipperReviews.clipperCampaignId })
+          .from(clipperReviews)
+          .where(and(
+            eq(clipperReviews.creatorId, req.user.id),
+            eq(clipperReviews.campaignId, campaign.id),
+          ));
+        const reviewedSet = new Set(existingReviews.map(r => r.clipperCampaignId));
+
+        return {
+          ...campaign,
+          clippers: clippers.map(c => ({
+            ...c,
+            canReview: c.isCompleted,
+            hasReview: reviewedSet.has(c.id),
+          })),
+        };
+      }));
+
+      res.json(enriched);
+    } catch (error: any) {
+      console.error('My campaigns fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch campaigns", error: error.message });
+    }
+  });
+
+  // Campaign update endpoint
+  app.patch("/api/campaigns/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      
+      if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedCampaign = await storage.updateCampaign(id, req.body);
+      res.json(updatedCampaign);
+    } catch (error: any) {
+      console.error('Campaign update error:', error);
+      res.status(500).json({ message: "Failed to update campaign", error: error.message });
+    }
+  });
+
+  // Clipper management endpoints
+  app.get("/api/clippers", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const clippers = await storage.getAllClippers();
+      res.json(clippers);
+    } catch (error: any) {
+      console.error('Clippers fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch clippers", error: error.message });
+    }
+  });
+
+  app.get("/api/clippers/top", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { filters } = req.query;
+      const topClippers = await storage.getTopClippers(filters);
+      res.json(topClippers);
+    } catch (error: any) {
+      console.error('Top clippers fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch top clippers", error: error.message });
     }
   });
 
@@ -330,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Available campaigns for clippers (excludes cold outreach)
+  // Available campaigns for clippers
   app.get("/api/campaigns/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user.role !== "clipper") {
@@ -350,29 +494,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(filteredCampaigns);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch available campaigns" });
-    }
-  });
-
-  // Cold outreach campaigns - specialized marketplace for B2B lead generation
-  app.get("/api/campaigns/cold-outreach", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (req.user.role !== "clipper") {
-      return res.status(403).json({ message: "Only clippers can view cold outreach campaigns" });
-    }
-
-    try {
-      const coldOutreachCampaigns = await storage.getAvailableColdOutreachCampaigns();
-      // Filter out campaigns this clipper has already joined
-      const filteredCampaigns: typeof coldOutreachCampaigns = [];
-      for (const campaign of coldOutreachCampaigns) {
-        const existing = await storage.getClipperCampaign(req.user.id, campaign.id);
-        if (!existing) {
-          filteredCampaigns.push(campaign);
-        }
-      }
-      res.json(filteredCampaigns);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch cold outreach campaigns" });
     }
   });
 
@@ -717,51 +838,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Available balance for the authenticated clipper.
+  // available = sum(pending+verified events) - sum(pending/processing/completed payouts).
+  app.get("/api/payouts/balance", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "clipper") {
+      return res.status(403).json({ message: "Only clippers have a payout balance" });
+    }
+    try {
+      const earnings = await storage.getClipperEarnings(req.user.id);
+      const existingPayouts = await storage.getPayoutsByClipper(req.user.id);
+      const lockedByPayouts = existingPayouts
+        .filter(p => p.status !== "failed" && p.status !== "rejected")
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const available = Math.max(0, (earnings.pending || 0) - lockedByPayouts);
+      res.json({
+        availableUsdc: available.toFixed(2),
+        totalEarnedUsdc: earnings.total.toFixed(2),
+        paidOutUsdc: earnings.paid.toFixed(2),
+        walletAddress: (req.user as any).walletAddress || null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Request and immediately process a USDC payout to the clipper's bound wallet.
   app.post("/api/payouts", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (req.user.role !== "clipper") {
       return res.status(403).json({ message: "Only clippers can request payouts" });
     }
+    const walletAddress = (req.user as any).walletAddress as string | null;
+    if (!walletAddress) {
+      return res.status(400).json({ message: "Bind a wallet at /settings before requesting a payout" });
+    }
+
+    const { amount } = req.body as { amount?: string | number };
+    const requestedAmount = typeof amount === "number" ? amount : parseFloat(amount || "0");
+    if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      return res.status(400).json({ message: "Amount must be a positive number" });
+    }
+    const MIN_PAYOUT_USDC = 1; // small for testnet; raise to 10 for mainnet
+    if (requestedAmount < MIN_PAYOUT_USDC) {
+      return res.status(400).json({ message: `Minimum payout is ${MIN_PAYOUT_USDC} USDC` });
+    }
 
     try {
-      const { amount, paymentMethod, paymentDetails, notes } = req.body;
-      const requestedAmount = parseFloat(amount);
-
-      // Validate minimum payout
-      if (requestedAmount < 10) {
-        return res.status(400).json({ message: "Minimum payout amount is $10" });
-      }
-
-      // Check clipper's available balance
+      // Re-check balance with same logic as /balance
       const earnings = await storage.getClipperEarnings(req.user.id);
       const existingPayouts = await storage.getPayoutsByClipper(req.user.id);
-      
-      const pendingPayouts = existingPayouts
-        .filter(p => p.status === "pending" || p.status === "processing")
+      const lockedByPayouts = existingPayouts
+        .filter(p => p.status !== "failed" && p.status !== "rejected")
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-      const availableBalance = (earnings.pending || 0) - pendingPayouts;
-
-      if (requestedAmount > availableBalance) {
-        return res.status(400).json({ 
-          message: `Insufficient available balance. Available: $${availableBalance.toFixed(2)}` 
-        });
+      const available = Math.max(0, (earnings.pending || 0) - lockedByPayouts);
+      if (requestedAmount > available) {
+        return res.status(400).json({ message: `Insufficient available balance. Available: ${available.toFixed(2)} USDC` });
       }
 
-      // Create payout request
+      // Create pending row first (locks the amount via the balance check above)
       const payout = await storage.createPayout({
         clipperId: req.user.id,
         amount: requestedAmount,
-        mpesaNumber: paymentDetails?.phoneNumber || paymentDetails?.accountNumber || req.user.email,
-        paymentMethod: paymentMethod || "mobile_money",
-        status: "pending",
+        recipientAddress: walletAddress.toLowerCase(),
+        status: "processing",
+      } as any);
+
+      // Sign and broadcast the on-chain USDC transfer
+      const { sendUsdcPayout, toUsdcUnits } = await import("./lib/web3");
+      const result = await sendUsdcPayout({
+        to: walletAddress as `0x${string}`,
+        amountUnits: toUsdcUnits(requestedAmount.toFixed(2)),
       });
 
-      console.log(`✅ Payout request created: $${requestedAmount} for clipper ${req.user.username}`);
-      res.status(201).json(payout);
-    } catch (error) {
+      if (!result.ok) {
+        await storage.updatePayoutStatus(payout.id, "failed");
+        await db.update(payouts).set({ failureReason: result.reason }).where(eq(payouts.id, payout.id));
+        return res.status(502).json({ message: `Payout failed: ${result.reason}`, payoutId: payout.id });
+      }
+
+      await db.update(payouts).set({
+        txHash: result.txHash,
+        status: "completed",
+        processedAt: new Date(),
+      }).where(eq(payouts.id, payout.id));
+
+      console.log(`✅ Payout sent: ${requestedAmount} USDC → ${walletAddress} (tx ${result.txHash})`);
+      res.status(201).json({
+        success: true,
+        payoutId: payout.id,
+        txHash: result.txHash,
+        amount: requestedAmount.toFixed(2),
+        recipient: walletAddress,
+      });
+    } catch (error: any) {
       console.error('❌ Payout creation error:', error);
-      res.status(400).json({ message: "Failed to create payout request", error: error.message });
+      res.status(500).json({ message: "Failed to create payout request", error: error.message });
     }
   });
 
@@ -880,11 +1052,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      const { socialAccounts, tradingAccounts, businessIntegration } = req.body;
-      
+      const { socialAccounts, businessIntegration } = req.body;
+
       const updatedUser = await storage.updateUserIntegrations(req.user.id, {
         socialAccounts,
-        tradingAccounts,
         businessIntegration,
       });
 
@@ -981,6 +1152,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user social accounts
+  app.get("/api/users/:id/social-accounts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    // Only allow users to view their own social accounts or admins
+    if (req.user.id !== req.params.id && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const socialAccounts = user.socialAccounts || [];
+      res.json(socialAccounts);
+    } catch (error: any) {
+      console.error('Social accounts fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch social accounts", error: error.message });
+    }
+  });
+
   // Campaign management endpoints
   app.post("/api/campaigns/:id/end", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -1002,187 +1196,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const performance = await trackingService.getCampaignPerformance(req.params.id);
       res.json(performance);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Trading account management endpoints
-  app.get("/api/user/trading-accounts", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const tradingAccounts = await storage.getTradingAccounts(req.user.id);
-      res.json(tradingAccounts);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/user/trading-accounts", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const { name, platform, apiKey, accountId, serverUrl } = req.body;
-      
-      if (!name || !platform || !apiKey || !accountId) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      const updatedUser = await storage.addTradingAccount(req.user.id, {
-        name,
-        platform,
-        apiKey,
-        accountId,
-        serverUrl
-      });
-
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json({ message: "Trading account connected successfully" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.delete("/api/user/trading-accounts/:accountId", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const updatedUser = await storage.removeTradingAccount(req.user.id, req.params.accountId);
-      
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User or account not found" });
-      }
-
-      res.json({ message: "Trading account removed successfully" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/user/trading-accounts/:accountId/test", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      // For now, return a simulated test result
-      // In a real implementation, this would test the actual API connection
-      res.json({ 
-        success: true, 
-        message: "Connection test successful. Account is reachable and credentials are valid." 
-      });
-    } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        message: error.message 
-      });
-    }
-  });
-
-  // Broker affiliate marketing endpoints
-  app.get("/api/affiliate/performance", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      // Get REAL affiliate performance from tracking events
-      const [totalStats] = await db
-        .select({
-          totalClicks: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'click' THEN 1 END)`,
-          totalSignups: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'signup' THEN 1 END)`,
-          totalDeposits: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'deposit' THEN 1 END)`,
-          totalEarnings: sql<number>`COALESCE(SUM(${trackingEvents.rewardAmount}), 0)`
-        })
-        .from(trackingEvents)
-        .where(eq(trackingEvents.clipperId, req.user.id));
-
-      // Get breakdown by broker (from metadata or campaign info)
-      const recentActivity = await db
-        .select({
-          date: trackingEvents.createdAt,
-          type: trackingEvents.eventType,
-          broker: sql<string>`COALESCE(${campaigns.name}, 'System')`,
-          amount: trackingEvents.rewardAmount
-        })
-        .from(trackingEvents)
-        .leftJoin(campaigns, eq(trackingEvents.campaignId, campaigns.id))
-        .where(eq(trackingEvents.clipperId, req.user.id))
-        .orderBy(desc(trackingEvents.createdAt))
-        .limit(5);
-
-      const affiliateData = {
-        totalClicks: Number(totalStats.totalClicks) || 0,
-        totalSignups: Number(totalStats.totalSignups) || 0,
-        totalDeposits: Number(totalStats.totalDeposits) || 0,
-        totalEarnings: Number(totalStats.totalEarnings) || 0,
-        breakdown: {
-          // This would be enhanced with real broker tracking
-          oanda: { clicks: 0, signups: 0, deposits: 0, earnings: 0 },
-          alpaca: { clicks: 0, signups: 0, deposits: 0, earnings: 0 },
-          interactiveBrokers: { clicks: 0, signups: 0, deposits: 0, earnings: 0 }
-        },
-        recentActivity: recentActivity.map(activity => ({
-          date: activity.date?.toISOString() || new Date().toISOString(),
-          type: activity.type || "system",
-          broker: activity.broker || "System",
-          amount: Number(activity.amount) || 0
-        }))
-      };
-      
-      res.json(affiliateData);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/affiliate/brokers", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      // Get REAL broker programs from database
-      const programs = await db
-        .select()
-        .from(brokerPrograms)
-        .where(eq(brokerPrograms.isActive, true))
-        .orderBy(brokerPrograms.name);
-
-      // Format with personalized affiliate links
-      const formattedPrograms = programs.map(program => ({
-        id: program.id,
-        name: program.name,
-        signupBonus: program.signupBonus,
-        depositBonus: program.depositBonus,
-        volumeRate: program.volumeRate,
-        description: program.description,
-        affiliateLink: `${program.baseAffiliateLink}${req.user.id}`,
-        trackingCode: `${program.id.toUpperCase()}_REF_${req.user.id.substring(0, 8).toUpperCase()}`,
-        isActive: program.isActive,
-        region: program.region,
-        category: program.category
-      }));
-      
-      res.json(formattedPrograms);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/affiliate/track-click", async (req, res) => {
-    try {
-      const { brokerId, referralCode, userAgent, ipAddress } = req.body;
-      
-      // In a real implementation, this would:
-      // 1. Log the click event to database
-      // 2. Create a tracking session
-      // 3. Forward to the actual broker affiliate link
-      
-      console.log(`Affiliate click tracked: ${brokerId} - ${referralCode}`);
-      
-      res.json({ 
-        success: true, 
-        message: "Click tracked successfully" 
-      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1257,876 +1270,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enterprise branding configuration endpoint
-  app.put("/api/enterprise/branding", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    // Only enterprise users can configure branding
-    if (req.user.userType !== "enterprise") {
-      return res.status(403).json({ message: "Enterprise access required" });
-    }
-
-    try {
-      const { companyName, logoUrl, primaryColor, secondaryColor, customDomain } = req.body;
-      
-      // Validate the branding data
-      if (!companyName || companyName.trim() === "") {
-        return res.status(400).json({ message: "Company name is required" });
-      }
-
-      const enterpriseSettings = {
-        customBranding: {
-          companyName: companyName.trim(),
-          logoUrl: logoUrl || null,
-          primaryColor: primaryColor || "#7c3aed",
-          secondaryColor: secondaryColor || "#3b82f6",
-          customDomain: customDomain || null,
-        },
-        platformSettings: {
-          allowedCreatorTypes: ["trader_creator", "influencer", "entrepreneur"],
-          customPayoutThresholds: {}, // Set by CreoCash team during account setup
-          customCommissionRates: {}, // Negotiated rates, not standard 20%
-          hasCustomPricing: true, // Flag indicating custom pricing is active
-        },
-        adminSettings: {
-          userManagementEnabled: true,
-          customReportingEnabled: true,
-          prioritySupport: true,
-        },
-      };
-
-      // Update user with enterprise settings
-      const updatedUser = await storage.updateUser(req.user.id, {
-        businessIntegration: {
-          website: req.user.businessIntegration?.website,
-          googleAnalyticsId: req.user.businessIntegration?.googleAnalyticsId,
-          conversionGoals: req.user.businessIntegration?.conversionGoals,
-          // enterpriseSettings, // Temporarily commented out
-        },
-      });
-
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json({ 
-        message: "Enterprise branding updated successfully",
-        enterpriseSettings 
-      });
-    } catch (error: any) {
-      console.error("Enterprise branding update error:", error);
-      res.status(500).json({ message: "Failed to update enterprise branding" });
-    }
-  });
-
-  // Get enterprise branding configuration
-  app.get("/api/enterprise/branding", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    if (req.user.userType !== "enterprise") {
-      return res.status(403).json({ message: "Enterprise access required" });
-    }
-
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const businessIntegration = user.businessIntegration as any;
-      const enterpriseSettings = businessIntegration?.enterpriseSettings || {
-        customBranding: {
-          companyName: "Your Company",
-          logoUrl: null,
-          primaryColor: "#7c3aed",
-          secondaryColor: "#3b82f6",
-          customDomain: null,
-        },
-      };
-
-      res.json(enterpriseSettings);
-    } catch (error: any) {
-      console.error("Enterprise branding fetch error:", error);
-      res.status(500).json({ message: "Failed to fetch enterprise branding" });
-    }
-  });
-
-  // Enterprise contact request endpoint
-  app.post("/api/enterprise/contact", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-
-    try {
-      const {
-        contactName,
-        contactEmail,
-        contactPhone,
-        companyName,
-        companySize,
-        requestType,
-        message,
-        preferredMeetingTime,
-        urgency
-      } = req.body;
-
-      // Create enterprise contact request record
-      const contactRequest = {
-        id: randomBytes(16).toString('hex'),
-        userId: req.user.id,
-        contactName: contactName.trim(),
-        contactEmail: contactEmail.trim(),
-        contactPhone: contactPhone?.trim() || null,
-        companyName: companyName.trim(),
-        companySize,
-        requestType,
-        message: message.trim(),
-        preferredMeetingTime,
-        urgency,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        assignedTo: null, // Will be assigned by admin
-        meetingScheduled: false,
-        notes: '',
-      };
-
-      // Store enterprise request in database
-      await db.insert(enterpriseRequests).values({
-        id: contactRequest.id,
-        userId: contactRequest.userId,
-        contactName: contactRequest.contactName,
-        contactEmail: contactRequest.contactEmail,
-        contactPhone: contactRequest.contactPhone,
-        companyName: contactRequest.companyName,
-        companySize: contactRequest.companySize,
-        requestType: contactRequest.requestType,
-        message: contactRequest.message,
-        preferredMeetingTime: contactRequest.preferredMeetingTime,
-        urgency: contactRequest.urgency,
-        status: contactRequest.status,
-        assignedTo: contactRequest.assignedTo,
-        meetingScheduled: contactRequest.meetingScheduled,
-        notes: contactRequest.notes,
-      });
-      
-      console.log('🔔 New Enterprise Contact Request:', {
-        id: contactRequest.id,
-        company: companyName,
-        contact: contactName,
-        email: contactEmail,
-        type: requestType,
-        urgency: urgency,
-        user: req.user.username,
-      });
-
-      // Create admin notification
-      const adminNotification = {
-        id: randomBytes(8).toString('hex'),
-        type: 'enterprise_contact',
-        title: `New Enterprise Request from ${companyName}`,
-        message: `${contactName} (${contactEmail}) has requested ${requestType}. Urgency: ${urgency}`,
-        data: contactRequest,
-        read: false,
-        urgent: urgency === 'urgent' || urgency === 'high',
-      };
-
-      // Store admin notification in database
-      await db.insert(adminNotifications).values(adminNotification);
-      console.log('📧 Admin Notification Created:', adminNotification);
-
-      res.json({
-        message: "Enterprise contact request submitted successfully",
-        requestId: contactRequest.id,
-        estimatedResponse: urgency === 'urgent' ? '4 hours' : urgency === 'high' ? '24 hours' : '48 hours',
-      });
-    } catch (error: any) {
-      console.error("Enterprise contact request error:", error);
-      res.status(500).json({ message: "Failed to submit contact request" });
-    }
-  });
-
-  // Get enterprise requests (Admin only)
-  app.get("/api/admin/enterprise-requests", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      const requests = await db.select().from(enterpriseRequests).orderBy(desc(enterpriseRequests.createdAt));
-      console.log("Admin enterprise requests response:", JSON.stringify(requests, null, 2));
-      res.json(requests);
-    } catch (error: any) {
-      console.error("Failed to fetch enterprise requests:", error);
-      res.status(500).json({ message: "Failed to fetch enterprise requests" });
-    }
-  });
-
-  // Create enterprise account after agreement
-  app.post("/api/admin/enterprise-accounts", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      const accountData = req.body;
-      
-      // Generate unique account ID
-      const accountId = randomBytes(16).toString('hex');
-      
-      const newAccount = {
-        id: accountId,
-        requestId: accountData.requestId,
-        userId: accountData.userId,
-        companyName: accountData.companyName,
-        customDomain: accountData.customDomain,
-        brandingConfig: accountData.brandingConfig,
-        pricingConfig: accountData.pricingConfig,
-        features: accountData.features,
-        status: 'setup',
-        billingCycle: accountData.billingCycle,
-        contractDetails: accountData.contractDetails,
-      };
-
-      await db.insert(enterpriseAccounts).values(newAccount);
-      
-      console.log('🏢 Enterprise Account Created:', {
-        id: accountId,
-        company: accountData.companyName,
-        domain: accountData.customDomain,
-        commission: accountData.pricingConfig.commissionRate
-      });
-
-      res.json(newAccount);
-    } catch (error: any) {
-      console.error('Error creating enterprise account:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Enterprise portal routes for account holders
-  app.get("/api/enterprise/account", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const [account] = await db
-        .select()
-        .from(enterpriseAccounts)
-        .where(eq(enterpriseAccounts.userId, req.user.id));
-
-      if (!account) {
-        return res.status(404).json({ message: "No enterprise account found" });
-      }
-
-      res.json(account);
-    } catch (error: any) {
-      console.error("Error fetching enterprise account:", error);
-      res.status(500).json({ message: "Failed to fetch enterprise account" });
-    }
-  });
-
-  // Get enterprise dashboard data with white-label account integration
-  app.get("/api/enterprise/dashboard", async (req, res) => {
-    console.log('Enterprise dashboard request:', req.isAuthenticated(), req.user?.userType);
-    
-    if (!req.isAuthenticated()) {
-      console.log('Enterprise dashboard: Not authenticated');
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    try {
-      // Check if user is enterprise type or admin
-      if ((req.user as any).userType !== "enterprise" && (req.user as any).role !== "admin") {
-        console.log('Enterprise dashboard: User not enterprise type or admin:', (req.user as any).userType, (req.user as any).role);
-        return res.status(403).json({ message: "Enterprise account or admin access required" });
-      }
-
-      let enterpriseAccount = null;
-      let enterpriseCampaigns: any[] = [];
-      
-      if ((req.user as any).role === "admin") {
-        // For admin users, show aggregated enterprise data
-        const allEnterpriseAccounts = await db
-          .select()
-          .from(enterpriseAccounts);
-        
-        // Get all campaigns from enterprise users
-        if (allEnterpriseAccounts.length > 0) {
-          const enterpriseUserIds = allEnterpriseAccounts.map(acc => acc.userId);
-          enterpriseCampaigns = await db
-            .select()
-            .from(campaigns)
-            .where(sql`creator_id = ANY(${enterpriseUserIds})`)
-            .orderBy(desc(campaigns.createdAt));
-        }
-        
-        // Use first enterprise account as reference for admin view
-        enterpriseAccount = allEnterpriseAccounts[0] || null;
-      } else {
-        // For enterprise users, get their specific account and campaigns
-        const [account] = await db
-          .select()
-          .from(enterpriseAccounts)
-          .where(eq(enterpriseAccounts.userId, (req.user as any).id));
-        
-        enterpriseAccount = account;
-        
-        enterpriseCampaigns = await db
-          .select()
-          .from(campaigns)
-          .where(eq(campaigns.creatorId, (req.user as any).id))
-          .orderBy(desc(campaigns.createdAt));
-      }
-
-      // Get tracking events for enterprise campaigns
-      const campaignIds = enterpriseCampaigns.map(c => c.id);
-      
-      let totalEvents = 0;
-      let totalRevenue = 0;
-      
-      if (campaignIds.length > 0) {
-        const [eventStats] = await db
-          .select({ count: count(trackingEvents.id) })
-          .from(trackingEvents)
-          .where(sql`campaign_id = ANY(${campaignIds})`);
-        
-        totalEvents = eventStats?.count || 0;
-        
-        // Use custom commission rate from enterprise account or default to 15%
-        const commissionRate = (enterpriseAccount as any)?.pricingConfig?.commissionRate || 0.15;
-        totalRevenue = enterpriseCampaigns.reduce((sum, campaign) => 
-          sum + (Number(campaign.budgetUsed || 0) * commissionRate), 0
-        );
-      }
-
-      // Use enterprise account details if available, or admin aggregate info
-      const accountInfo = {
-        company: (req.user as any).role === "admin" 
-          ? "Admin Dashboard - All Enterprise Accounts"
-          : (enterpriseAccount as any)?.companyName || (req.user as any).fullName || (req.user as any).username,
-        domain: (req.user as any).role === "admin" 
-          ? "creocash.com/admin" 
-          : (enterpriseAccount as any)?.customDomain || `${(req.user as any).username}.creocash.app`,
-        status: (req.user as any).role === "admin" ? "admin" : ((enterpriseAccount as any)?.status || "setup"),
-        commissionRate: (enterpriseAccount as any)?.pricingConfig?.commissionRate || 0.15,
-        features: (enterpriseAccount as any)?.features || {
-          whiteLabel: true,
-          customBranding: true,
-          apiAccess: true,
-          customDomains: true,
-          prioritySupport: true,
-          dedicatedManager: false
-        },
-        branding: (enterpriseAccount as any)?.brandingConfig || null
-      };
-
-      const stats = {
-        totalCampaigns: enterpriseCampaigns.length,
-        activeCampaigns: enterpriseCampaigns.filter(c => c.status === 'active').length,
-        totalRevenue: Math.round(totalRevenue),
-        totalEvents,
-        account: accountInfo,
-        isWhiteLabel: !!enterpriseAccount,
-        enterpriseAccountId: (enterpriseAccount as any)?.id || null
-      };
-
-      // For admin users, include additional account info
-      const responseData = {
-        stats,
-        campaigns: enterpriseCampaigns.slice(0, 10), // Limit to recent 10 for admin view
-        account: enterpriseAccount,
-        user: req.user
-      };
-
-      res.json(responseData);
-    } catch (error: any) {
-      console.error("Error fetching enterprise dashboard:", error);
-      res.status(500).json({ message: "Failed to fetch enterprise dashboard" });
-    }
-  });
-
-  // Get platform-wide statistics for enterprise users with white-label consideration
-  app.get("/api/enterprise/platform-stats", async (req, res) => {
-    if (!req.isAuthenticated() || (req.user as any).userType !== "enterprise") {
-      return res.status(403).json({ message: "Enterprise account required" });
-    }
-
-    try {
-      // Get enterprise account to check if white-label 
-      const [enterpriseAccount] = await db
-        .select()
-        .from(enterpriseAccounts)
-        .where(eq(enterpriseAccounts.userId, (req.user as any).id));
-
-      // If white-label enterprise account exists and is active, show their sub-platform stats
-      if (enterpriseAccount && (enterpriseAccount.status === 'active' || enterpriseAccount.status === 'setup')) {
-        // For white-label enterprises, show stats scoped to their platform
-        
-        // Get campaigns created under this enterprise
-        const [enterpriseCampaignsCount] = await db
-          .select({ count: count(campaigns.id) })
-          .from(campaigns)
-          .where(eq(campaigns.creatorId, (req.user as any).id));
-
-        const [enterpriseActiveCampaignsCount] = await db
-          .select({ count: count(campaigns.id) })
-          .from(campaigns)
-          .where(sql`creator_id = ${(req.user as any).id} AND status = 'active'`);
-
-        // Get revenue for this enterprise's campaigns
-        const [enterpriseRevenueQuery] = await db
-          .select({ 
-            totalBudgetUsed: sum(campaigns.budgetUsed)
-          })
-          .from(campaigns)
-          .where(eq(campaigns.creatorId, (req.user as any).id));
-
-        const totalBudgetUsed = Number(enterpriseRevenueQuery?.totalBudgetUsed || 0);
-        const commissionRate = enterpriseAccount.pricingConfig?.commissionRate || 0.15;
-        const enterpriseRevenue = Math.round(totalBudgetUsed * commissionRate);
-
-        // Count users who joined through this enterprise's campaigns (clippers)
-        const enterpriseCampaignIds = await db
-          .select({ id: campaigns.id })
-          .from(campaigns)
-          .where(eq(campaigns.creatorId, (req.user as any).id));
-
-        const campaignIdList = enterpriseCampaignIds.map(c => c.id);
-        
-        let enterpriseUsers = 1; // At least the enterprise user themselves
-        let enterpriseEvents = 0;
-        
-        if (campaignIdList.length > 0) {
-          const [clippersCount] = await db
-            .select({ count: count(sql`DISTINCT clipper_id`) })
-            .from(clipperCampaigns)
-            .where(sql`campaign_id = ANY(${campaignIdList})`);
-
-          const [eventsCount] = await db
-            .select({ count: count(trackingEvents.id) })
-            .from(trackingEvents)
-            .where(sql`campaign_id = ANY(${campaignIdList})`);
-
-          enterpriseUsers += clippersCount?.count || 0;
-          enterpriseEvents = eventsCount?.count || 0;
-        }
-
-        res.json({
-          totalUsers: enterpriseUsers,
-          platformRevenue: enterpriseRevenue,
-          totalCampaigns: enterpriseCampaignsCount?.count || 0,
-          activeCampaigns: enterpriseActiveCampaignsCount?.count || 0,
-          globalReach: Math.max(1, Math.ceil(enterpriseEvents / 50)), // More conservative for enterprise
-          totalEvents: enterpriseEvents,
-          isWhiteLabel: true,
-          enterpriseName: enterpriseAccount.companyName
-        });
-      } else {
-        // Standard enterprise view - global platform stats
-        const [totalUsersCount] = await db
-          .select({ count: count(users.id) })
-          .from(users);
-
-        const [platformRevenueQuery] = await db
-          .select({ 
-            totalBudgetUsed: sum(campaigns.budgetUsed)
-          })
-          .from(campaigns);
-
-        const totalBudgetUsed = Number(platformRevenueQuery?.totalBudgetUsed || 0);
-        const platformRevenue = Math.round(totalBudgetUsed * 0.20); // Platform takes 20%
-
-        const [totalCampaignsCount] = await db
-          .select({ count: count(campaigns.id) })
-          .from(campaigns);
-
-        const [activeCampaignsCount] = await db
-          .select({ count: count(campaigns.id) })
-          .from(campaigns)
-          .where(eq(campaigns.status, 'active'));
-
-        const [trackingEventsQuery] = await db
-          .select({ count: count(trackingEvents.id) })
-          .from(trackingEvents);
-
-        const totalEvents = trackingEventsQuery?.count || 0;
-        const estimatedCountries = Math.max(1, Math.min(195, Math.ceil(totalEvents / 100)));
-
-        res.json({
-          totalUsers: totalUsersCount?.count || 0,
-          platformRevenue,
-          totalCampaigns: totalCampaignsCount?.count || 0,
-          activeCampaigns: activeCampaignsCount?.count || 0,
-          globalReach: estimatedCountries,
-          totalEvents,
-          isWhiteLabel: false
-        });
-      }
-    } catch (error: any) {
-      console.error("Error fetching platform stats:", error);
-      res.status(500).json({ message: "Failed to fetch platform statistics" });
-    }
-  });
-
-  // Get enterprise accounts (Admin only)
-  app.get("/api/admin/enterprise-accounts", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      const accounts = await db.select().from(enterpriseAccounts).orderBy(desc(enterpriseAccounts.createdAt));
-      res.json(accounts);
-    } catch (error: any) {
-      console.error('Error fetching enterprise accounts:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get admin notifications
-  app.get("/api/admin/notifications", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      const notifications = await db.select().from(adminNotifications).orderBy(desc(adminNotifications.createdAt)).limit(50);
-      console.log("Admin notifications response:", JSON.stringify(notifications, null, 2));
-      res.json(notifications);
-    } catch (error: any) {
-      console.error("Failed to fetch admin notifications:", error);
-      res.status(500).json({ message: "Failed to fetch admin notifications" });
-    }
-  });
-
-  // Mark notification as read
-  app.patch("/api/admin/notifications/:id/read", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      await db.update(adminNotifications)
-        .set({ read: true, readAt: new Date() })
-        .where(eq(adminNotifications.id, req.params.id));
-      res.json({ message: "Notification marked as read" });
-    } catch (error: any) {
-      console.error("Failed to mark notification as read:", error);
-      res.status(500).json({ message: "Failed to mark notification as read" });
-    }
-  });
-
-  // Update enterprise request status
-  app.patch("/api/admin/enterprise-requests/:id", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      const { 
-        status, 
-        assignedTo, 
-        notes, 
-        meetingScheduled, 
-        meetingDate, 
-        meetingTime, 
-        meetingLink, 
-        meetingType, 
-        meetingNotes 
-      } = req.body;
-      
-      console.log('Enterprise request update received:', {
-        id: req.params.id,
-        meetingLink,
-        meetingType,
-        meetingDate,
-        meetingTime,
-        fullBody: req.body
-      }); // Debug log
-      
-      const updateData: any = {
-        updatedAt: new Date()
-      };
-      
-      // Only update fields that are provided
-      if (status !== undefined) updateData.status = status;
-      if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
-      if (notes !== undefined) updateData.notes = notes;
-      if (meetingScheduled !== undefined) updateData.meetingScheduled = meetingScheduled;
-      if (meetingDate !== undefined) updateData.meetingDate = meetingDate ? new Date(meetingDate) : null;
-      if (meetingTime !== undefined) updateData.meetingTime = meetingTime;
-      if (meetingLink !== undefined) updateData.meetingLink = meetingLink;
-      if (meetingType !== undefined) updateData.meetingType = meetingType;
-      if (meetingNotes !== undefined) updateData.meetingNotes = meetingNotes;
-      
-      console.log('Updating enterprise request with data:', updateData); // Debug log
-      
-      await db.update(enterpriseRequests)
-        .set(updateData)
-        .where(eq(enterpriseRequests.id, req.params.id));
-      
-      res.json({ message: "Enterprise request updated successfully" });
-    } catch (error: any) {
-      console.error("Failed to update enterprise request:", error);
-      res.status(500).json({ message: "Failed to update enterprise request" });
-    }
-  });
-
-  // Approve enterprise request and create permanent white-label account (Admin only)
-  app.post("/api/admin/enterprise-requests/:id/approve", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    const { id } = req.params;
-    const { customDomain, commissionRate = 0.15, features, brandingConfig } = req.body;
-
-    try {
-      // Get the enterprise request
-      const [request] = await db.select().from(enterpriseRequests).where(eq(enterpriseRequests.id, id));
-      
-      if (!request) {
-        return res.status(404).json({ message: "Enterprise request not found" });
-      }
-
-      if (request.status === "completed") {
-        return res.status(400).json({ message: "Enterprise request already approved" });
-      }
-
-      // Generate unique subdomain if not provided
-      const defaultDomain = customDomain || `${request.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.creocash.com`;
-
-      // Create comprehensive enterprise account with full white-label configuration
-      const [enterpriseAccount] = await db.insert(enterpriseAccounts).values({
-        id: randomBytes(16).toString('hex'),
-        requestId: id,
-        userId: request.userId,
-        companyName: request.companyName,
-        customDomain: defaultDomain,
-        status: "active", // Automatically activate for immediate white-label access
-        activatedAt: new Date(),
-        
-        // Default pricing configuration with custom commission rate
-        pricingConfig: {
-          commissionRate: commissionRate,
-          payoutThreshold: 100,
-          customRates: {}
-        },
-        
-        // Full enterprise features enabled by default for all approved accounts
-        features: features || {
-          whiteLabel: true,
-          customBranding: true,
-          apiAccess: true,
-          customDomains: true,
-          prioritySupport: true,
-          dedicatedManager: true
-        },
-        
-        // Default branding configuration that can be customized later
-        brandingConfig: brandingConfig || {
-          primaryColor: "#6366f1",
-          secondaryColor: "#8b5cf6",
-          companyName: request.companyName
-        },
-        
-        billingCycle: "monthly",
-        contractDetails: {
-          approvedBy: req.user.id,
-          approvedAt: new Date().toISOString(),
-          contractType: "white_label_enterprise",
-          autoRenewal: true,
-          approvedByAdmin: req.user.username || req.user.fullName
-        }
-      }).returning();
-
-      // Update the request status to completed
-      await db.update(enterpriseRequests).set({
-        status: "completed",
-        assignedTo: req.user.id,
-        notes: `Approved and activated as white-label enterprise account. Domain: ${defaultDomain}. Commission rate: ${commissionRate * 100}%`,
-        updatedAt: new Date()
-      }).where(eq(enterpriseRequests.id, id));
-
-      // Update user to enterprise type to enable enterprise features
-      await db.update(users).set({
-        userType: "enterprise",
-        updatedAt: new Date()
-      }).where(eq(users.id, request.userId));
-
-      // Create admin notification for successful activation
-      await db.insert(adminNotifications).values({
-        id: randomBytes(16).toString('hex'),
-        type: "enterprise_activated",
-        title: "Enterprise White-Label Account Activated",
-        message: `${request.companyName} white-label platform is now live at ${defaultDomain}`,
-        data: {
-          enterpriseAccountId: enterpriseAccount.id,
-          companyName: request.companyName,
-          domain: defaultDomain,
-          userId: request.userId,
-          commissionRate: commissionRate,
-          approvedBy: req.user.id
-        },
-        urgent: false
-      });
-
-      console.log(`✅ Enterprise white-label account activated: ${request.companyName} at ${defaultDomain} (Commission: ${commissionRate * 100}%)`);
-
-      res.json({
-        message: "Enterprise request approved and white-label platform activated",
-        enterpriseAccount,
-        whiteLabelUrl: `https://${defaultDomain}`,
-        features: enterpriseAccount.features,
-        commissionRate: enterpriseAccount.pricingConfig?.commissionRate,
-        status: "active",
-        isWhiteLabel: true
-      });
-    } catch (error: any) {
-      console.error('Error approving enterprise request:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Activate existing enterprise accounts that were created in setup mode
-  app.post("/api/admin/enterprise-accounts/:id/activate", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    const { id } = req.params;
-    const { commissionRate = 0.15, brandingConfig } = req.body;
-
-    try {
-      // Get the enterprise account
-      const [account] = await db.select().from(enterpriseAccounts).where(eq(enterpriseAccounts.id, id));
-      
-      if (!account) {
-        return res.status(404).json({ message: "Enterprise account not found" });
-      }
-
-      // Update enterprise account to active status with full configuration
-      const [updatedAccount] = await db.update(enterpriseAccounts).set({
-        status: "active",
-        activatedAt: new Date(),
-        pricingConfig: {
-          commissionRate: commissionRate,
-          payoutThreshold: 100,
-          customRates: {}
-        },
-        features: {
-          whiteLabel: true,
-          customBranding: true,
-          apiAccess: true,
-          customDomains: true,
-          prioritySupport: true,
-          dedicatedManager: true
-        },
-        brandingConfig: brandingConfig || account.brandingConfig || {
-          primaryColor: "#6366f1",
-          secondaryColor: "#8b5cf6",
-          companyName: account.companyName
-        }
-      }).where(eq(enterpriseAccounts.id, id)).returning();
-
-      console.log(`✅ Enterprise account manually activated: ${account.companyName}`);
-
-      res.json({
-        message: "Enterprise account activated successfully",
-        enterpriseAccount: updatedAccount,
-        isWhiteLabel: true
-      });
-    } catch (error: any) {
-      console.error('Error activating enterprise account:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Enterprise request submission endpoint
-  app.post("/api/enterprise/request", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const { companyName, contactName, email, phone, website, description } = req.body;
-
-      // Check if user already has a pending request
-      const existingRequest = await db.select().from(enterpriseRequests)
-        .where(eq(enterpriseRequests.userId, (req.user as any).id));
-
-      if (existingRequest.length > 0) {
-        return res.status(400).json({ message: "You already have a pending enterprise request" });
-      }
-
-      // Create new enterprise request
-      const [request] = await db.insert(enterpriseRequests).values({
-        id: randomBytes(16).toString('hex'),
-        userId: (req.user as any).id,
-        companyName,
-        contactName,
-        email,
-        phone,
-        website,
-        description,
-        status: "pending"
-      }).returning();
-
-      // Create admin notification
-      await db.insert(adminNotifications).values({
-        id: randomBytes(16).toString('hex'),
-        type: "enterprise_request",
-        title: "New Enterprise Request",
-        message: `${companyName} has submitted an enterprise request`,
-        data: { requestId: request.id, companyName, contactName },
-        urgent: true
-      });
-
-      res.json({ message: "Enterprise request submitted successfully", request });
-    } catch (error: any) {
-      console.error('Error submitting enterprise request:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get user's enterprise request
-  app.get("/api/enterprise/my-request", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const [request] = await db.select().from(enterpriseRequests)
-        .where(eq(enterpriseRequests.userId, (req.user as any).id));
-
-      if (!request) {
-        return res.status(404).json({ message: "No enterprise request found" });
-      }
-
-      res.json(request);
-    } catch (error: any) {
-      console.error('Error fetching enterprise request:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get user's enterprise account
-  app.get("/api/enterprise/my-account", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const [account] = await db.select().from(enterpriseAccounts)
-        .where(eq(enterpriseAccounts.userId, (req.user as any).id));
-
-      if (!account) {
-        return res.status(404).json({ message: "No enterprise account found" });
-      }
-
-      res.json(account);
-    } catch (error: any) {
-      console.error('Error fetching enterprise account:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
 
   // Admin dashboard endpoints
   app.get("/api/admin/stats", async (req, res) => {
@@ -2175,9 +1318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Real creator type distribution
         creatorTypeDistribution: await db.select({
-          userType: users.userType,
+          accountType: users.accountType,
           count: sql`count(*)::int`
-        }).from(users).where(eq(users.role, 'creator')).groupBy(users.userType),
+        }).from(users).where(eq(users.role, 'creator')).groupBy(users.accountType),
 
         // Real monthly data (simplified for now)
         monthlyStats: [{
@@ -2605,10 +1748,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { cohort: "2024-04", month0: 100, month1: 82, month2: 78, month3: 73 },
           { cohort: "2024-03", month0: 100, month1: 83, month2: 79, month3: 75 }
         ],
-        revenueByUserType: [
-          { userType: "trader_creator", totalRevenue: 18720, avgRevenue: 604, count: 31 },
-          { userType: "influencer", totalRevenue: 15840, avgRevenue: 720, count: 22 },
-          { userType: "entrepreneur", totalRevenue: 11120, avgRevenue: 741, count: 15 }
+        revenueByAccountType: [
+          { accountType: "influencer", totalRevenue: 15840, avgRevenue: 720, count: 22 },
+          { accountType: "business", totalRevenue: 11120, avgRevenue: 741, count: 15 }
         ]
       };
       
@@ -2692,6 +1834,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin withdrawals management
+  app.get("/api/admin/withdrawals", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    try {
+      const withdrawals = await storage.getAllWithdrawals();
+      res.json(withdrawals);
+    } catch (error: any) {
+      console.error('Withdrawals fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch withdrawals", error: error.message });
+    }
+  });
+
   // Admin platform withdrawal
   app.post("/api/admin/withdraw", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
@@ -2744,29 +1901,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Platform configuration endpoints
   app.get("/api/platform/features", async (req, res) => {
     try {
-      const features = [
-        {
-          icon: "TrendingUp",
-          title: "Global Creator Network",
-          description: "Connect with 10,000+ creators worldwide across trading, social media, and business sectors"
-        },
-        {
-          icon: "DollarSign",
-          title: "Automated Escrow System",
-          description: "Secure payments with automatic goal completion and instant payouts via M-Pesa, PayPal & more"
-        },
-        {
-          icon: "Shield",
-          title: "AI-Powered Content Protection",
-          description: "Advanced bot detection and AI content filtering ensures authentic user-generated content only"
-        },
-        {
-          icon: "Globe",
-          title: "Multi-Platform Integration",
-          description: "Track performance across Instagram, TikTok, YouTube, Twitter, and 25+ trading brokers"
-        }
-      ];
-      res.json(features);
+      // Get platform features from database
+      const features = await db.select({
+        icon: platformFeatures.icon,
+        title: platformFeatures.title,
+        description: platformFeatures.description,
+        category: platformFeatures.category
+      })
+      .from(platformFeatures)
+      .where(eq(platformFeatures.isActive, true))
+      .orderBy(platformFeatures.order);
+      
+      if (features.length > 0) {
+        res.json(features);
+      } else {
+        // Fallback to default features if not found in database
+        const defaultFeatures = [
+          {
+            icon: "TrendingUp",
+            title: "Global Creator Network",
+            description: "Connect with 10,000+ creators worldwide across trading, social media, and business sectors"
+          },
+          {
+            icon: "DollarSign",
+            title: "Automated Escrow System",
+            description: "Secure payments with automatic goal completion and instant payouts via M-Pesa, PayPal & more"
+          },
+          {
+            icon: "Shield",
+            title: "AI-Powered Content Protection",
+            description: "Advanced bot detection and AI content filtering ensures authentic user-generated content only"
+          },
+          {
+            icon: "Globe",
+            title: "Multi-Platform Integration",
+            description: "Track performance across Instagram, TikTok, YouTube, Twitter, and other major social platforms"
+          }
+        ];
+        res.json(defaultFeatures);
+      }
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2806,19 +1979,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/platform/supported-platforms", async (req, res) => {
     try {
-      const platforms = [
-        { value: "instagram", label: "Instagram", category: "social" },
-        { value: "tiktok", label: "TikTok", category: "social" },
-        { value: "youtube", label: "YouTube", category: "social" },
-        { value: "twitter", label: "Twitter/X", category: "social" },
-        { value: "facebook", label: "Facebook", category: "social" },
-        { value: "linkedin", label: "LinkedIn", category: "professional" },
-        { value: "telegram", label: "Telegram", category: "messaging" },
-        { value: "discord", label: "Discord", category: "messaging" },
-        { value: "website", label: "Website/Blog", category: "web" },
-        { value: "email", label: "Email Marketing", category: "web" }
-      ];
-      res.json(platforms);
+      // Get supported platforms from database
+      const platforms = await db.select({
+        value: supportedPlatforms.value,
+        label: supportedPlatforms.label,
+        category: supportedPlatforms.category,
+        icon: supportedPlatforms.icon
+      })
+      .from(supportedPlatforms)
+      .where(eq(supportedPlatforms.isActive, true))
+      .orderBy(supportedPlatforms.order);
+      
+      if (platforms.length > 0) {
+        res.json(platforms);
+      } else {
+        // Fallback to default platforms if not found in database
+        const defaultPlatforms = [
+          { value: "instagram", label: "Instagram", category: "social" },
+          { value: "tiktok", label: "TikTok", category: "social" },
+          { value: "youtube", label: "YouTube", category: "social" },
+          { value: "twitter", label: "Twitter/X", category: "social" },
+          { value: "facebook", label: "Facebook", category: "social" },
+          { value: "linkedin", label: "LinkedIn", category: "professional" },
+          { value: "telegram", label: "Telegram", category: "messaging" },
+          { value: "discord", label: "Discord", category: "messaging" },
+          { value: "website", label: "Website/Blog", category: "web" },
+          { value: "email", label: "Email Marketing", category: "web" }
+        ];
+        res.json(defaultPlatforms);
+      }
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2826,29 +2015,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/platform/supported-countries", async (req, res) => {
     try {
-      const countries = [
-        { value: "US", label: "United States" },
-        { value: "CA", label: "Canada" },
-        { value: "GB", label: "United Kingdom" },
-        { value: "AU", label: "Australia" },
-        { value: "DE", label: "Germany" },
-        { value: "FR", label: "France" },
-        { value: "JP", label: "Japan" },
-        { value: "KR", label: "South Korea" },
-        { value: "CN", label: "China" },
-        { value: "IN", label: "India" },
-        { value: "BR", label: "Brazil" },
-        { value: "MX", label: "Mexico" },
-        { value: "AR", label: "Argentina" },
-        { value: "CL", label: "Chile" },
-        { value: "ZA", label: "South Africa" },
-        { value: "KE", label: "Kenya" },
-        { value: "NG", label: "Nigeria" },
-        { value: "EG", label: "Egypt" },
-        { value: "AE", label: "UAE" },
-        { value: "SG", label: "Singapore" }
-      ];
-      res.json(countries);
+      // Get supported countries from database
+      const countries = await db.select({
+        value: supportedCountries.value,
+        label: supportedCountries.label,
+        region: supportedCountries.region,
+        currency: supportedCountries.currency
+      })
+      .from(supportedCountries)
+      .where(eq(supportedCountries.isActive, true))
+      .orderBy(supportedCountries.order);
+      
+      if (countries.length > 0) {
+        res.json(countries);
+      } else {
+        // Fallback to default countries if not found in database
+        const defaultCountries = [
+          { value: "US", label: "United States" },
+          { value: "CA", label: "Canada" },
+          { value: "GB", label: "United Kingdom" },
+          { value: "AU", label: "Australia" },
+          { value: "DE", label: "Germany" },
+          { value: "FR", label: "France" },
+          { value: "JP", label: "Japan" },
+          { value: "KR", label: "South Korea" },
+          { value: "CN", label: "China" },
+          { value: "IN", label: "India" },
+          { value: "BR", label: "Brazil" },
+          { value: "MX", label: "Mexico" },
+          { value: "AR", label: "Argentina" },
+          { value: "CL", label: "Chile" },
+          { value: "ZA", label: "South Africa" },
+          { value: "KE", label: "Kenya" },
+          { value: "NG", label: "Nigeria" },
+          { value: "EG", label: "Egypt" },
+          { value: "AE", label: "UAE" },
+          { value: "SG", label: "Singapore" }
+        ];
+        res.json(defaultCountries);
+      }
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2856,59 +2061,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/platform/supported-languages", async (req, res) => {
     try {
-      const languages = [
-        { value: "en", label: "English" },
-        { value: "es", label: "Spanish" },
-        { value: "fr", label: "French" },
-        { value: "de", label: "German" },
-        { value: "it", label: "Italian" },
-        { value: "pt", label: "Portuguese" },
-        { value: "ru", label: "Russian" },
-        { value: "zh", label: "Chinese" },
-        { value: "ja", label: "Japanese" },
-        { value: "ko", label: "Korean" },
-        { value: "ar", label: "Arabic" },
-        { value: "hi", label: "Hindi" },
-        { value: "sw", label: "Swahili" },
-        { value: "af", label: "Afrikaans" }
-      ];
-      res.json(languages);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Broker programs endpoint - from database
-  app.get("/api/broker-programs", async (req, res) => {
-    try {
-      const programs = await db.select().from(brokerPrograms).where(eq(brokerPrograms.isActive, true));
-      res.json(programs);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get enterprise contact requests for current user
-  app.get("/api/enterprise/contact-requests", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.sendStatus(401);
-    }
-
-    try {
-      const userId = req.user.id;
+      // Get supported languages from database
+      const languages = await db.select({
+        value: supportedLanguages.value,
+        label: supportedLanguages.label,
+        nativeName: supportedLanguages.nativeName
+      })
+      .from(supportedLanguages)
+      .where(eq(supportedLanguages.isActive, true))
+      .orderBy(supportedLanguages.order);
       
-      // Fetch enterprise contact requests for this user
-      const requests = await db.select()
-        .from(enterpriseRequests)
-        .where(eq(enterpriseRequests.userId, userId))
-        .orderBy(sql`${enterpriseRequests.createdAt} DESC`);
-
-      res.json(requests);
+      if (languages.length > 0) {
+        res.json(languages);
+      } else {
+        // Fallback to default languages if not found in database
+        const defaultLanguages = [
+          { value: "en", label: "English" },
+          { value: "es", label: "Spanish" },
+          { value: "fr", label: "French" },
+          { value: "de", label: "German" },
+          { value: "it", label: "Italian" },
+          { value: "pt", label: "Portuguese" },
+          { value: "ru", label: "Russian" },
+          { value: "zh", label: "Chinese" },
+          { value: "ja", label: "Japanese" },
+          { value: "ko", label: "Korean" },
+          { value: "ar", label: "Arabic" },
+          { value: "hi", label: "Hindi" },
+          { value: "sw", label: "Swahili" },
+          { value: "af", label: "Afrikaans" }
+        ];
+        res.json(defaultLanguages);
+      }
     } catch (error: any) {
-      console.error('Error fetching enterprise contact requests:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ message: error.message });
     }
   });
+
 
   // Platform Reviews API Routes
   
@@ -2944,7 +2133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalEarnings: userMilestones.totalEarnings,
           payoutsReceived: userMilestones.payoutsReceived,
           userRole: userMilestones.userRole,
-          userType: userMilestones.userType,
+          accountType: userMilestones.accountType,
         },
         status: 'published',
         isVerified: true,
@@ -3091,6 +2280,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching user milestones:', error);
       res.status(500).json({ error: error.message });
     }
+  });
+
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "healthy", 
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || "1.0.0"
+    });
+  });
+
+  // API info endpoint - always returns JSON
+  app.get("/api", (req, res) => {
+    res.json({
+      message: "CreviaTube API Server",
+      version: process.env.npm_package_version || "1.0.0",
+      status: "running",
+      endpoints: {
+        health: "/api/health",
+        auth: "/api/auth",
+        users: "/api/users",
+        campaigns: "/api/campaigns",
+        payments: "/api/payments",
+        analytics: "/api/analytics",
+        enterprise: "/api/enterprise"
+      },
+      documentation: "/api/docs"
+    });
+  });
+
+  // Favicon handler - return 204 No Content to stop browser requests
+  app.get("/favicon.ico", (req, res) => {
+    res.status(204).end();
+  });
+
+  // Root endpoint - serve API info only if explicitly requested (via Accept header or query param)
+  // Otherwise, let Vite serve the frontend in development
+  app.get("/", (req, res, next) => {
+    // Only return JSON if:
+    // 1. Request explicitly asks for JSON (Accept header)
+    // 2. Query parameter ?format=json or ?api is present
+    // 3. In production (where static files are served separately)
+    const wantsJson = req.headers.accept?.includes('application/json') ||
+                     req.query.format === 'json' ||
+                     req.query.api !== undefined;
+    
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (wantsJson || isProduction) {
+      return res.json({
+        message: "CreviaTube API Server",
+        version: process.env.npm_package_version || "1.0.0",
+        status: "running",
+        endpoints: {
+          health: "/api/health",
+          auth: "/api/auth",
+          users: "/api/users",
+          campaigns: "/api/campaigns",
+          payments: "/api/payments",
+          analytics: "/api/analytics",
+          enterprise: "/api/enterprise"
+        },
+        documentation: "/api/docs"
+      });
+    }
+    
+    // In development, let Vite handle the request and serve the frontend
+    next();
+  });
+
+  // 404 handler for undefined API routes only
+  // Don't catch all routes - let Vite handle non-API routes in development
+  app.use((req, res, next) => {
+    // Only handle 404 for API routes, let Vite handle frontend routes
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Endpoint not found",
+        path: req.originalUrl 
+      });
+    }
+    // For non-API routes, pass to next middleware (Vite)
+    next();
   });
 
   return httpServer;

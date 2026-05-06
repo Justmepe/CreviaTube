@@ -16,8 +16,8 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=creocash
-      - POSTGRES_USER=creocash
+      - POSTGRES_DB=CreviaTube
+      - POSTGRES_USER=CreviaTube
       - POSTGRES_PASSWORD=secure_password_change_me
     volumes:
       - postgres_data:/var/lib/postgresql/data

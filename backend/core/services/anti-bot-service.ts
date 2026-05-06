@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { trackingEvents, users } from "../../shared/schema.js";
+import { db } from "../../db";
+import { trackingEvents, users } from "../../../shared/schema.js";
 import { eq, and, gte, count, desc } from "drizzle-orm";
 
 interface BotDetectionResult {

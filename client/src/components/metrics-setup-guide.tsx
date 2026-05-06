@@ -18,19 +18,12 @@ import {
 import { SiTiktok, SiGoogleanalytics, SiHubspot } from "react-icons/si";
 
 interface MetricsSetupGuideProps {
-  userType?: string;
+  accountType?: string;
 }
 
-export function MetricsSetupGuide({ userType = "creator" }: MetricsSetupGuideProps) {
+export function MetricsSetupGuide({ accountType = "creator" }: MetricsSetupGuideProps) {
   const getRecommendedAPIs = () => {
-    if (userType === "trader_creator") {
-      return [
-        { name: "MetaTrader 4/5", icon: TrendingUp, priority: "high", description: "Connect trading accounts for volume and performance tracking" },
-        { name: "OANDA API", icon: TrendingUp, priority: "high", description: "Real-time trading metrics and account statistics" },
-        { name: "Instagram", icon: Instagram, priority: "medium", description: "Track follower growth and engagement for trading education content" },
-        { name: "YouTube", icon: Youtube, priority: "medium", description: "Monitor trading course views and subscriber growth" },
-      ];
-    } else if (userType === "influencer") {
+    if (accountType === "influencer") {
       return [
         { name: "Instagram", icon: Instagram, priority: "high", description: "Track followers, likes, comments, and story engagement" },
         { name: "TikTok", icon: SiTiktok, priority: "high", description: "Monitor viral content performance and follower growth" },
@@ -99,7 +92,7 @@ export function MetricsSetupGuide({ userType = "creator" }: MetricsSetupGuidePro
       <Card>
         <CardHeader>
           <CardTitle>How Automatic Metrics Work</CardTitle>
-          <CardDescription>Once connected, CreoCash automatically syncs your data</CardDescription>
+          <CardDescription>Once connected, CreviaTube automatically syncs your data</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -168,7 +161,7 @@ export function MetricsSetupGuide({ userType = "creator" }: MetricsSetupGuidePro
                 3
               </div>
               <div>
-                <h4 className="font-semibold">Add to CreoCash</h4>
+                <h4 className="font-semibold">Add to CreviaTube</h4>
                 <p className="text-sm text-gray-600">Go to Social Integration page and enter your API credentials securely</p>
               </div>
             </div>

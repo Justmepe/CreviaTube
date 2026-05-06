@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# CreoCash Deployment Helper Script
+# CreviaTube Deployment Helper Script
 # Make this file executable: chmod +x deploy.sh
 
-echo "🚀 CreoCash Deployment Helper"
+echo "🚀 CreviaTube Deployment Helper"
 echo "=============================="
 
 # Check if .env exists
@@ -72,9 +72,9 @@ case "$1" in
         ;;
     "docker")
         echo "🐳 Building Docker image..."
-        docker build -t creocash .
+        docker build -t CreviaTube .
         echo "✅ Docker image built. Run with:"
-        echo "   docker run -p 5000:5000 --env-file .env creocash"
+        echo "   docker run -p 5000:5000 --env-file .env CreviaTube"
         ;;
     "local")
         echo "🏠 Starting local production server..."

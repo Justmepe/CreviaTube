@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -12,9 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ChevronLeft, ChevronRight, Target, DollarSign, Settings, TrendingUp, Users, Calendar, Globe, Zap, ExternalLink, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Target, DollarSign, Settings, TrendingUp, Users, Calendar, Globe, Zap } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { getQueryFn } from "@/lib/queryClient";
 
 // Step schemas
 const basicInfoSchema = z.object({
@@ -28,20 +26,16 @@ const budgetSchema = z.object({
   rewardRates: z.object({
     click: z.number().min(0.01, "Minimum click reward is $0.01"),
     signup: z.number().min(0.10, "Minimum signup reward is $0.10"),
-    deposit: z.number().optional(),
-    trade: z.number().optional(),
     view: z.number().min(0.001, "Minimum view reward is $0.001"),
     conversion: z.number().optional(),
   }),
 });
 
 const goalsSchema = z.object({
-  primaryGoal: z.enum(["views", "clicks", "signups", "deposits", "trades", "conversions"]),
+  primaryGoal: z.enum(["views", "clicks", "signups", "conversions"]),
   viewsGoal: z.number().optional(),
   clicksGoal: z.number().optional(),
   signupsGoal: z.number().optional(),
-  depositsGoal: z.number().optional(),
-  tradesGoal: z.number().optional(),
   conversionsGoal: z.number().optional(),
 });
 
@@ -57,17 +51,10 @@ const targetingSchema = z.object({
   }),
 });
 
-const brokerLinkSchema = z.object({
-  selectedBrokerLinks: z.array(z.string()).optional(),
-});
-
-// Combined schema for final submission - make broker links optional initially
-const baseCampaignWizardSchema = basicInfoSchema
+const campaignWizardSchema = basicInfoSchema
   .merge(budgetSchema)
   .merge(goalsSchema)
   .merge(targetingSchema);
-
-const campaignWizardSchema = baseCampaignWizardSchema.merge(brokerLinkSchema);
 
 type CampaignWizardData = z.infer<typeof campaignWizardSchema>;
 
@@ -101,16 +88,8 @@ const languages = [
 export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, isEditMode = false }: CampaignWizardProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  
-  // Dynamic total steps based on user type
-  const totalSteps = user?.userType === "trader_creator" ? 5 : 4;
-  
-  // Fetch personalized broker links for trader creators
-  const { data: brokerLinks = [], isLoading: brokerLinksLoading } = useQuery({
-    queryKey: ["/api/broker-links/personal"],
-    queryFn: getQueryFn({ on401: "throw" }),
-    enabled: user?.userType === "trader_creator",
-  });
+
+  const totalSteps = 4;
 
   // Helper function to parse initial data for editing
   const getDefaultValues = (): Partial<CampaignWizardData> => {
@@ -130,16 +109,12 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
             click: rewardRates.click || 0.05,
             signup: rewardRates.signup || 2.00,
             view: rewardRates.view || 0.01,
-            deposit: rewardRates.deposit,
-            trade: rewardRates.trade,
             conversion: rewardRates.conversion,
           },
           primaryGoal: initialData.campaignGoals?.primaryGoal || "views",
           viewsGoal: initialData.campaignGoals?.viewsGoal,
           clicksGoal: initialData.campaignGoals?.clicksGoal,
           signupsGoal: initialData.campaignGoals?.signupsGoal,
-          depositsGoal: initialData.campaignGoals?.depositsGoal,
-          tradesGoal: initialData.campaignGoals?.tradesGoal,
           conversionsGoal: initialData.campaignGoals?.conversionsGoal,
           targetPlatforms: targetPlatforms,
           targetCountries: requirements.targetCountries || ["Global"],
@@ -147,7 +122,6 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
           minFollowers: requirements.minFollowers || 1000,
           maxFollowers: requirements.maxFollowers,
           ageRange: requirements.ageRange || { min: 18, max: 45 },
-          selectedBrokerLinks: [],
         };
       } catch (error) {
         console.error('Error parsing initial data:', error);
@@ -164,9 +138,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
         click: 0.05,
         signup: 2.00,
         view: 0.01,
-        deposit: user?.userType === "trader_creator" ? 10.00 : undefined,
-        trade: user?.userType === "trader_creator" ? 0.50 : undefined,
-        conversion: (user?.userType === "entrepreneur" || user?.userType === "enterprise") ? 5.00 : undefined,
+        conversion: user?.accountType === "business" ? 5.00 : undefined,
       },
       primaryGoal: "views",
       targetPlatforms: [],
@@ -175,7 +147,6 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
       minFollowers: 1000,
       maxFollowers: undefined,
       ageRange: { min: 18, max: 45 },
-      selectedBrokerLinks: [],
     };
   };
 
@@ -215,11 +186,6 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
       description: "Choose platforms and clipper requirements",
       icon: <Users className="h-5 w-5" />,
     },
-    ...(user?.userType === "trader_creator" ? [{
-      title: "Broker Links",
-      description: "Select your personalized broker affiliate links",
-      icon: <ExternalLink className="h-5 w-5" />,
-    }] : []),
   ];
 
   const nextStep = async () => {
@@ -232,25 +198,15 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
         break;
       case 2: // Budget & Rewards
         fieldsToValidate = ["budget", "rewardRates.click", "rewardRates.signup", "rewardRates.view"];
-        if (user?.userType === "trader_creator") {
-          fieldsToValidate.push("rewardRates.deposit", "rewardRates.trade");
-        }
-        if (user?.userType === "entrepreneur" || user?.userType === "enterprise") {
+        if (user?.accountType === "business") {
           fieldsToValidate.push("rewardRates.conversion");
         }
         break;
       case 3: // Goals & Metrics
         fieldsToValidate = ["primaryGoal"];
-        // Note: Goal values are optional in schema, so we don't need to validate them here
-        // Users can set them but they're not required for progression
         break;
       case 4: // Targeting & Requirements
         fieldsToValidate = ["targetPlatforms", "targetCountries", "targetLanguages", "minFollowers", "ageRange.min", "ageRange.max"];
-        break;
-      case 5: // Broker Links (Trader Creators Only)
-        if (user?.userType === "trader_creator") {
-          fieldsToValidate = ["selectedBrokerLinks"];
-        }
         break;
       default:
         fieldsToValidate = [];
@@ -270,7 +226,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
 
   const handleCreateCampaign = () => {
     console.log('=== CREATE CAMPAIGN FUNCTION CALLED ===');
-    console.log('User type:', user?.userType);
+    console.log('User type:', user?.accountType);
     console.log('Current step:', currentStep);
     console.log('Total steps:', totalSteps);
     
@@ -531,53 +487,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
                         )}
                       />
 
-                      {user?.userType === "trader_creator" && (
-                        <>
-                          <FormField
-                            control={form.control}
-                            name="rewardRates.deposit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Per Deposit</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number"
-                                    step="1.00"
-                                    min="0"
-                                    placeholder="10.00"
-                                    {...field}
-                                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="rewardRates.trade"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Per Trade</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number"
-                                    step="0.10"
-                                    min="0"
-                                    placeholder="0.50"
-                                    {...field}
-                                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </>
-                      )}
-
-                      {(user?.userType === "entrepreneur" || user?.userType === "enterprise") && (
+                      {user?.accountType === "business" && (
                         <FormField
                           control={form.control}
                           name="rewardRates.conversion"
@@ -635,13 +545,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
                           <SelectItem value="views">Views - Content engagement</SelectItem>
                           <SelectItem value="clicks">Clicks - Link interactions</SelectItem>
                           <SelectItem value="signups">Signups - New registrations</SelectItem>
-                          {user?.userType === "trader_creator" && (
-                            <>
-                              <SelectItem value="deposits">Deposits - Funding accounts</SelectItem>
-                              <SelectItem value="trades">Trades - Trading activity</SelectItem>
-                            </>
-                          )}
-                          {(user?.userType === "entrepreneur" || user?.userType === "enterprise") && (
+                          {user?.accountType === "business" && (
                             <SelectItem value="conversions">Conversions - Final actions</SelectItem>
                           )}
                         </SelectContent>
@@ -718,51 +622,7 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
                       )}
                     />
 
-                    {user?.userType === "trader_creator" && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="depositsGoal"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Deposits Goal</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number"
-                                  min="0"
-                                  placeholder="25"
-                                  {...field}
-                                  onChange={e => field.onChange(parseInt(e.target.value) || undefined)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="tradesGoal"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Trades Goal</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number"
-                                  min="0"
-                                  placeholder="100"
-                                  {...field}
-                                  onChange={e => field.onChange(parseInt(e.target.value) || undefined)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
-
-                    {(user?.userType === "entrepreneur" || user?.userType === "enterprise") && (
+                    {user?.accountType === "business" && (
                       <FormField
                         control={form.control}
                         name="conversionsGoal"
@@ -1028,111 +888,6 @@ export function CampaignWizard({ onSubmit, isSubmitting = false, initialData, is
                     )}
                   />
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 5: Broker Links (Trader Creators Only) */}
-          {currentStep === 5 && user?.userType === "trader_creator" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <ExternalLink className="h-5 w-5 text-primary" />
-                  <CardTitle>Select Your Broker Affiliate Links</CardTitle>
-                </div>
-                <CardDescription>
-                  Choose which of your personalized broker affiliate links to use for this campaign. 
-                  Clippers will promote your selected brokers to earn commissions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {brokerLinksLoading ? (
-                  <div className="animate-pulse space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                    ))}
-                  </div>
-                ) : (brokerLinks as any[])?.length === 0 ? (
-                  <div className="text-center py-8">
-                    <ExternalLink className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Broker Links Found</h3>
-                    <p className="text-muted-foreground mb-4">
-                      You need to add your personalized broker affiliate links before creating trading campaigns.
-                    </p>
-                    <Button 
-                      type="button" 
-                      onClick={() => window.open('/broker-links', '_blank')}
-                      variant="outline"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Broker Links
-                    </Button>
-                  </div>
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="selectedBrokerLinks"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Available Broker Links</FormLabel>
-                        <FormDescription>
-                          Select the broker affiliate links you want to include in this campaign
-                        </FormDescription>
-                        <div className="grid grid-cols-1 gap-4">
-                          {(brokerLinks as any[])?.map((brokerLink: any) => (
-                            <div
-                              key={brokerLink.id}
-                              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                                field.value?.includes(brokerLink.id)
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover:border-primary/50"
-                              }`}
-                              onClick={() => {
-                                const current = field.value || [];
-                                if (current.includes(brokerLink.id)) {
-                                  field.onChange(current.filter((id: string) => id !== brokerLink.id));
-                                } else {
-                                  field.onChange([...current, brokerLink.id]);
-                                }
-                              }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <Checkbox
-                                    checked={field.value?.includes(brokerLink.id)}
-                                  />
-                                  <div>
-                                    <h4 className="font-semibold">{brokerLink.brokerName}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      {brokerLink.brokerType.toUpperCase()} • 
-                                      {brokerLink.isActive ? " Active" : " Inactive"}
-                                    </p>
-                                    {brokerLink.description && (
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        {brokerLink.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right text-sm">
-                                  <div className="text-muted-foreground">Performance</div>
-                                  <div>
-                                    {brokerLink.trackingStats?.totalClicks || 0} clicks • 
-                                    {brokerLink.trackingStats?.totalSignups || 0} signups
-                                  </div>
-                                  <div className="text-primary font-semibold">
-                                    {brokerLink.trackingStats?.conversionRate || 0}% conversion
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
               </CardContent>
             </Card>
           )}

@@ -95,6 +95,34 @@
   }
 }
 
+/* ===== MOBILE OPTIMIZATION (full) ===== */
+:root { --mobile: 480px; --tablet: 768px; --desktop: 1024px; --large-desktop: 1200px; --touch-target: 44px; --touch-spacing: 8px; --mobile-padding: 16px; --mobile-margin: 12px; --mobile-font-size: 14px; --mobile-line-height: 1.4; --mobile-heading-size: 20px; --mobile-primary: #4CAF50; --mobile-secondary: #2196F3; --mobile-accent: #FF9800; --mobile-background: #f5f5f5; --mobile-surface: #ffffff; --mobile-text: #333333; --mobile-text-secondary: #666666; }
+* { box-sizing: border-box; }
+body { font-size: var(--mobile-font-size); line-height: var(--mobile-line-height); color: var(--mobile-text); background-color: var(--mobile-background); }
+button, .btn, input[type="button"], input[type="submit"], input[type="reset"], a.button, .nav-link, .menu-item { min-height: var(--touch-target); min-width: var(--touch-target); padding: 12px 16px; margin: var(--touch-spacing); border-radius: 8px; font-size: 16px; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; -webkit-tap-highlight-color: transparent; }
+button:active, .btn:active, input[type="button"]:active, input[type="submit"]:active, input[type="reset"]:active, a.button:active, .nav-link:active, .menu-item:active { transform: scale(0.98); opacity: 0.8; }
+.mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--mobile-surface); border-top: 1px solid #e0e0e0; padding: 8px 0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+.mobile-nav-item { display: flex; flex-direction: column; align-items: center; padding: 8px; min-height: 60px; text-decoration: none; color: var(--mobile-text-secondary); font-size: 12px; gap: 4px; }
+.mobile-nav-item.active { color: var(--mobile-primary); }
+.mobile-header { position: fixed; top: 0; left: 0; right: 0; background: var(--mobile-surface); border-bottom: 1px solid #e0e0e0; padding: 12px var(--mobile-padding); z-index: 999; display: flex; align-items: center; justify-content: space-between; min-height: 56px; }
+.mobile-form { padding: var(--mobile-padding); margin: var(--mobile-margin); background: var(--mobile-surface); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.mobile-input, .mobile-textarea, .mobile-select { width: 100%; min-height: var(--touch-target); padding: 12px 16px; margin: var(--touch-spacing) 0; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; background: var(--mobile-surface); }
+.mobile-input:focus, .mobile-textarea:focus, .mobile-select:focus { border-color: var(--mobile-primary); box-shadow: 0 0 0 3px rgba(76,175,80,0.1); outline: none; }
+.mobile-content { padding: 80px var(--mobile-padding) 80px var(--mobile-padding); min-height: 100vh; }
+.mobile-card { background: var(--mobile-surface); border-radius: 12px; padding: var(--mobile-padding); margin: var(--mobile-margin) 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; }
+.mobile-grid { display: grid; grid-template-columns: 1fr; gap: var(--mobile-margin); padding: var(--mobile-padding); }
+.mobile-list { background: var(--mobile-surface); border-radius: 12px; overflow: hidden; margin: var(--mobile-margin) 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.mobile-list-item { padding: 16px var(--mobile-padding); border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; min-height: var(--touch-target); }
+.mobile-image { max-width: 100%; height: auto; border-radius: 8px; display: block; }
+.mobile-image-lazy { opacity: 0; transition: opacity 0.3s ease; }
+.mobile-image-lazy.loaded { opacity: 1; }
+.mobile-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--mobile-text-secondary); }
+.mobile-spinner { width: 24px; height: 24px; border: 2px solid #e0e0e0; border-top: 2px solid var(--mobile-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@media (min-width: 768px) { .mobile-grid-2 { grid-template-columns: repeat(2, 1fr); } .mobile-grid-3 { grid-template-columns: repeat(3, 1fr); } .mobile-content { padding: 80px 24px 80px 24px; } .mobile-nav { display: none; } }
+@media (min-width: 1024px) { .mobile-grid-2 { grid-template-columns: repeat(2, 1fr); } .mobile-grid-3 { grid-template-columns: repeat(3, 1fr); } .mobile-grid-4 { grid-template-columns: repeat(4, 1fr); } .mobile-content { padding: 80px 32px 80px 32px; max-width: 1200px; margin: 0 auto; } .mobile-nav { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
@@ -117,7 +145,7 @@
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.75rem;
 
-  /* Custom theme colors for CreoCash - Teal family complementing CreoHub's orange */
+  /* Custom theme colors for CreviaTube - Teal family complementing CreoHub's orange */
   --primary-50: hsl(174, 100%, 94%);
   --primary-100: hsl(174, 100%, 84%);
   --primary-500: hsl(174, 100%, 29%);

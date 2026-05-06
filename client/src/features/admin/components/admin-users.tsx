@@ -38,7 +38,7 @@ interface User {
   email: string;
   fullName: string;
   role: "creator" | "clipper" | "admin";
-  userType: string;
+  accountType: string;
   isActive: boolean;
   createdAt: string;
   lastLoginAt?: string;
@@ -103,12 +103,10 @@ export default function AdminUsers() {
     }
   };
 
-  const getUserTypeColor = (userType: string) => {
-    switch (userType) {
-      case "trader_creator": return "bg-blue-100 text-blue-800";
+  const getAccountTypeColor = (accountType: string) => {
+    switch (accountType) {
       case "influencer": return "bg-purple-100 text-purple-800";
-      case "entrepreneur": return "bg-green-100 text-green-800";
-      case "enterprise": return "bg-orange-100 text-orange-800";
+      case "business": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -292,9 +290,9 @@ export default function AdminUsers() {
                           <Badge className={getRoleColor(user.role)}>
                             {user.role}
                           </Badge>
-                          {user.userType && (
-                            <Badge variant="outline" className={getUserTypeColor(user.userType)}>
-                              {user.userType.replace('_', ' ')}
+                          {user.accountType && (
+                            <Badge variant="outline" className={getAccountTypeColor(user.accountType)}>
+                              {user.accountType.replace('_', ' ')}
                             </Badge>
                           )}
                           {!user.isActive && (

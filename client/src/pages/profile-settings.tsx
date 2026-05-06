@@ -364,7 +364,7 @@ export default function ProfileSettings() {
               <div>
                 <span className="text-gray-500">Account Type:</span>
                 <span className="ml-2 font-medium capitalize">
-                  {user?.userType?.replace('_', ' ') || user?.role}
+                  {user?.accountType?.replace('_', ' ') || user?.role}
                 </span>
               </div>
               <div>

@@ -8,6 +8,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ClipperRating } from "@/features/reviews/clipper-rating";
+import { ClipperProfileBlock } from "@/features/reviews/clipper-profile-block";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { AiVerdictBanner, AiVerdictPill, AiSignalsBreakdown, verdictFromConfidence, type AiVerdict } from "@/features/reviews/ai-verdict";
 import { 
   CheckCircle, 
   XCircle, 
@@ -49,13 +54,22 @@ interface ClipperApplication {
   joinedAt: string;
   creatorReviewNotes?: string;
   rejectionReason?: string;
+  // Reputation enrichment from clipper_stats (null for new clippers)
+  clipperRating?: string | null;
+  clipperReviewCount?: number | null;
+  clipperTier?: string | null;
 }
+
+type SortMode = "newest" | "rating_desc" | "reviews_desc" | "ai_safe";
 
 export default function CreatorApplicationReview() {
   const { toast } = useToast();
   const [selectedApplication, setSelectedApplication] = useState<ClipperApplication | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [activeTab, setActiveTab] = useState("pending");
+  const [sortBy, setSortBy] = useState<SortMode>("newest");
+  const [minRating, setMinRating] = useState<string>("any");
+  const [verdictFilter, setVerdictFilter] = useState<"all" | AiVerdict>("all");
 
   // Fetch pending applications
   const { data: applications, isLoading } = useQuery<ClipperApplication[]>({
@@ -129,14 +143,38 @@ export default function CreatorApplicationReview() {
     return "text-green-600";
   };
 
-  const pendingApplications = applications?.filter(app => 
-    app.applicationStatus === 'creator_review' || 
+  const rawPending = applications?.filter(app =>
+    app.applicationStatus === 'creator_review' ||
     (app.applicationStatus === 'ai_scanning' && app.aiDetectionResult?.recommendation === 'review')
   ) || [];
 
-  const reviewedApplications = applications?.filter(app => 
-    app.applicationStatus === 'approved' || 
-    app.applicationStatus === 'rejected' || 
+  // Apply min-rating filter (treats "no rating yet" as 0) and verdict filter
+  const minRatingFloat = minRating === "any" ? 0 : parseFloat(minRating);
+  const filteredPending = rawPending.filter(app => {
+    const r = parseFloat(app.clipperRating || "0");
+    if (r < minRatingFloat) return false;
+    if (verdictFilter !== "all" && verdictFromConfidence(app.aiConfidence) !== verdictFilter) return false;
+    return true;
+  });
+
+  // Sort by chosen mode
+  const pendingApplications = [...filteredPending].sort((a, b) => {
+    switch (sortBy) {
+      case "rating_desc":
+        return parseFloat(b.clipperRating || "0") - parseFloat(a.clipperRating || "0");
+      case "reviews_desc":
+        return (b.clipperReviewCount || 0) - (a.clipperReviewCount || 0);
+      case "ai_safe":
+        return (a.aiConfidence || 0) - (b.aiConfidence || 0);
+      case "newest":
+      default:
+        return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
+    }
+  });
+
+  const reviewedApplications = applications?.filter(app =>
+    app.applicationStatus === 'approved' ||
+    app.applicationStatus === 'rejected' ||
     app.applicationStatus === 'ai_flagged'
   ) || [];
 
@@ -180,13 +218,61 @@ export default function CreatorApplicationReview() {
         </TabsList>
 
         <TabsContent value="pending">
+          {/* Sort + filter controls */}
+          {rawPending.length > 0 && (
+            <div className="flex flex-wrap items-end gap-3 mb-4 p-3 bg-muted/30 rounded-md">
+              <div className="space-y-1">
+                <Label className="text-xs">Sort by</Label>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortMode)}>
+                  <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest first</SelectItem>
+                    <SelectItem value="rating_desc">Highest rated clipper</SelectItem>
+                    <SelectItem value="reviews_desc">Most reviewed clipper</SelectItem>
+                    <SelectItem value="ai_safe">Lowest AI confidence</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Min rating</Label>
+                <Select value={minRating} onValueChange={setMinRating}>
+                  <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any (incl. unrated)</SelectItem>
+                    <SelectItem value="3.0">3.0+ stars</SelectItem>
+                    <SelectItem value="3.5">3.5+ stars</SelectItem>
+                    <SelectItem value="4.0">4.0+ stars</SelectItem>
+                    <SelectItem value="4.5">4.5+ stars</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">AI verdict</Label>
+                <Select value={verdictFilter} onValueChange={(v) => setVerdictFilter(v as any)}>
+                  <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="safe">Safe only</SelectItem>
+                    <SelectItem value="review">Needs review</SelectItem>
+                    <SelectItem value="flagged">Flagged</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="text-xs text-muted-foreground ml-auto">
+                Showing {pendingApplications.length} of {rawPending.length}
+              </div>
+            </div>
+          )}
+
           {pendingApplications.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Clock className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">No Pending Applications</h3>
+                <h3 className="text-lg font-medium">{rawPending.length === 0 ? "No Pending Applications" : "No applications match your filters"}</h3>
                 <p className="text-muted-foreground text-center">
-                  All clipper applications have been reviewed or are in AI scanning.
+                  {rawPending.length === 0
+                    ? "All clipper applications have been reviewed or are in AI scanning."
+                    : "Try lowering the minimum rating to include unrated clippers."}
                 </p>
               </CardContent>
             </Card>
@@ -203,22 +289,26 @@ export default function CreatorApplicationReview() {
                     onClick={() => setSelectedApplication(application)}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{application.clipperUsername}</span>
                         </div>
                         {getStatusBadge(application.applicationStatus)}
                       </div>
-                      
+
+                      <div className="mb-3">
+                        <ClipperRating clipperId={application.clipperId} asLink />
+                      </div>
+
                       <h4 className="font-medium mb-2">{application.campaignTitle}</h4>
                       
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>Content: {application.contentType}</span>
-                        <div className="flex items-center space-x-2">
-                          <Brain className="h-3 w-3" />
+                        <div className="flex items-center gap-2">
+                          <AiVerdictPill confidence={application.aiConfidence} />
                           <span className={getAIScoreColor(application.aiConfidence)}>
-                            {(application.aiConfidence * 100).toFixed(0)}% AI
+                            {(application.aiConfidence * 100).toFixed(0)}%
                           </span>
                         </div>
                       </div>
@@ -256,31 +346,23 @@ export default function CreatorApplicationReview() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* AI Detection Summary */}
+                      {/* Clipper Reputation */}
+                      <ClipperProfileBlock clipperId={selectedApplication.clipperId} showProfileLink reviewLimit={3} />
+
+                      {/* AI Detection */}
                       <div className="space-y-3">
                         <h4 className="font-medium flex items-center space-x-2">
                           <Shield className="h-4 w-4" />
-                          <span>AI Detection Summary</span>
+                          <span>AI Detection</span>
                         </h4>
-                        
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <span>AI Confidence</span>
-                            <span className={`font-bold ${getAIScoreColor(selectedApplication.aiConfidence)}`}>
-                              {(selectedApplication.aiConfidence * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                          
-                          <div className="text-sm text-muted-foreground">
-                            Recommendation: <span className="font-medium">
-                              {selectedApplication.aiDetectionResult?.recommendation || 'review'}
-                            </span>
-                          </div>
-                        </div>
 
-                        {selectedApplication.aiDetectionResult?.flags && (
+                        <AiVerdictBanner confidence={selectedApplication.aiConfidence} />
+
+                        <AiSignalsBreakdown analysis={selectedApplication.aiDetectionResult?.analysis} />
+
+                        {selectedApplication.aiDetectionResult?.flags && selectedApplication.aiDetectionResult.flags.length > 0 && (
                           <div>
-                            <p className="text-sm font-medium mb-2">Detection Flags:</p>
+                            <p className="text-xs font-medium mb-1.5 text-muted-foreground">Specific patterns detected</p>
                             <div className="flex flex-wrap gap-1">
                               {selectedApplication.aiDetectionResult.flags.map((flag, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">

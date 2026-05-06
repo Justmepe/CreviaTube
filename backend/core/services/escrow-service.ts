@@ -439,7 +439,7 @@ export class EscrowService {
         Amount: Math.round(amount * 130), // Convert USD to KES
         PartyA: process.env.MPESA_SHORTCODE,
         PartyB: formattedPhone,
-        Remarks: `CreoCash Clipper Payout - $${amount}`,
+        Remarks: `CreviaTube Clipper Payout - $${amount}`,
         QueueTimeOutURL: `${process.env.REPLIT_DEV_DOMAIN || 'https://localhost:5000'}/api/mpesa/timeout`,
         ResultURL: `${process.env.REPLIT_DEV_DOMAIN || 'https://localhost:5000'}/api/mpesa/result`,
         Occasion: "Affiliate Commission Payment"
@@ -656,9 +656,9 @@ export class EscrowService {
       // Create payout batch
       const payoutBatch = {
         sender_batch_header: {
-          sender_batch_id: `CreoCash_${Date.now()}`,
-          email_subject: "CreoCash Affiliate Commission Payment",
-          email_message: "You have received a commission payment from CreoCash affiliate marketing platform."
+          sender_batch_id: `CreviaTube_${Date.now()}`,
+          email_subject: "CreviaTube Affiliate Commission Payment",
+          email_message: "You have received a commission payment from CreviaTube affiliate marketing platform."
         },
         items: [{
           recipient_type: "EMAIL",
@@ -667,7 +667,7 @@ export class EscrowService {
             currency: "USD"
           },
           receiver: email,
-          note: "CreoCash Clipper Commission Payment",
+          note: "CreviaTube Clipper Commission Payment",
           sender_item_id: `clipper_payout_${Date.now()}`
         }]
       };
@@ -790,9 +790,9 @@ export class EscrowService {
         body: JSON.stringify({
           targetAccount: recipient.id,
           quoteUuid: await this.getWiseQuote(amount, transferDetails.currency),
-          customerTransactionId: `creocash_${Date.now()}`,
+          customerTransactionId: `creviatube_${Date.now()}`,
           details: {
-            reference: 'CreoCash Clipper Payout',
+            reference: 'CreviaTube Clipper Payout',
             transferPurpose: 'verification.transfers.purpose.pay.bills',
           },
         }),
@@ -852,7 +852,7 @@ export class EscrowService {
         country: payoutDetails.country,
         currency: payoutDetails.currency,
         entity_type: 'individual',
-        merchant_reference_id: `creocash_${Date.now()}`,
+        merchant_reference_id: `creviatube_${Date.now()}`,
         payout_method_type: payoutDetails.payoutMethodType,
         ...payoutDetails.beneficiaryDetails,
       });
@@ -865,7 +865,7 @@ export class EscrowService {
         payout_method_type: payoutDetails.payoutMethodType,
         sender_amount: amount,
         sender_currency: 'USD',
-        description: 'CreoCash Clipper Commission',
+        description: 'CreviaTube Clipper Commission',
         merchant_reference_id: `payout_${Date.now()}`,
       });
 

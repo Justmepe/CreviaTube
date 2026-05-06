@@ -52,7 +52,7 @@ export default function Careers() {
         {/* Company Culture */}
         <Card className="mb-12">
           <CardContent className="p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">Why Work at CreoCash?</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">Why Work at CreviaTube?</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {careersData?.content?.benefits?.map((benefit: any, index: number) => {
                 const IconComponent = index === 0 ? Heart : index === 1 ? Users : Clock;

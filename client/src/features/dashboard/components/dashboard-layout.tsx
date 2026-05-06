@@ -16,7 +16,9 @@ import {
   Settings,
   Building,
   Star,
-  Folder
+  Folder,
+  Crown,
+  Users as UsersIcon
 } from "lucide-react";
 
 interface NavigationItem {
@@ -45,6 +47,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
         { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
+                    { name: "Communities", href: "/communities", icon: UsersIcon },
+            { name: "Premium", href: "/premium", icon: Crown },
+            { name: "Commissions", href: "/commissions", icon: DollarSign },
         { name: "Enterprise", href: "/enterprise", icon: Building },
         { name: "Enterprise Accounts", href: "/enterprise-accounts", icon: Building },
         { name: "Payouts", href: "/payouts", icon: DollarSign },
@@ -56,6 +61,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       return [
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Marketplace", href: "/marketplace", icon: TrendingUp },
+                    { name: "Discover Communities", href: "/communities", icon: UsersIcon },
+            { name: "Premium Plans", href: "/premium", icon: Crown },
+            { name: "Commission Dashboard", href: "/commissions", icon: DollarSign },
         { name: "My Campaigns", href: "/campaigns", icon: Users },
         { name: "Top Clippers", href: "/clipper-directory", icon: Star },
         { name: "Payouts", href: "/payouts", icon: Wallet },
@@ -70,12 +78,10 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       { name: "My Campaigns", href: "/my-campaigns", icon: Folder },
       { name: "Clippers", href: "/clippers", icon: Users },
       { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
+                { name: "My Communities", href: "/my-communities", icon: UsersIcon },
+          { name: "Premium Plans", href: "/premium", icon: Crown },
+          { name: "Commission Dashboard", href: "/commissions", icon: DollarSign },
     ];
-
-    // Add specific items based on creator type
-    if (user?.userType === "trader_creator") {
-      baseNavigation.push({ name: "Broker Links", href: "/broker-links", icon: Wallet });
-    }
 
     baseNavigation.push({ name: "Payouts", href: "/payouts", icon: DollarSign });
 
@@ -99,9 +105,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
           <div className="flex h-16 shrink-0 items-center px-6 border-b">
             <div className="flex items-center">
               <div className="h-8 w-8 bg-teal-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CC</span>
+                <span className="text-white font-bold text-sm">CT</span>
               </div>
-              <span className="ml-2 text-xl font-bold text-gray-900">CreoCash</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">CreviaTube</span>
             </div>
           </div>
 
@@ -154,7 +160,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
                   {user?.fullName || user?.username}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">
-                  {user?.userType?.replace('_', ' ') || user?.role}
+                  {user?.accountType?.replace('_', ' ') || user?.role}
                 </p>
               </div>
             </div>

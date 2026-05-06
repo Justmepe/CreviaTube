@@ -20,9 +20,15 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const port = parseInt(process.env.PORT || '5000', 10);
+  const host = process.env.HOST || 'localhost';
+  const hmrHost = host === '0.0.0.0' ? 'localhost' : host;
+  
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    // Disable HMR to prevent constant refresh issues
+    // HMR can be re-enabled once WebSocket conflicts are resolved
+    hmr: false,
     allowedHosts: true as const,
   };
 

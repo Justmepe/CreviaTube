@@ -51,7 +51,7 @@ interface Campaign {
     id: string;
     username: string;
     fullName: string;
-    userType: string;
+    accountType: string;
   };
   _count?: {
     clipperCampaigns: number;
@@ -127,12 +127,10 @@ export default function ClipperMarketplace() {
     return icons[platform as keyof typeof icons] || "🌐";
   };
 
-  const getCreatorTypeColor = (userType: string) => {
-    switch (userType) {
-      case "trader_creator": return "bg-blue-100 text-blue-800";
+  const getCreatorTypeColor = (accountType: string) => {
+    switch (accountType) {
       case "influencer": return "bg-purple-100 text-purple-800";
-      case "entrepreneur": return "bg-green-100 text-green-800";
-      case "enterprise": return "bg-orange-100 text-orange-800";
+      case "business": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -179,8 +177,8 @@ export default function ClipperMarketplace() {
             <div className="flex-1">
               <CardTitle className="text-lg line-clamp-1">{campaign.title}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={getCreatorTypeColor(campaign.creator.userType)}>
-                  {campaign.creator.userType.replace('_', ' ')}
+                <Badge className={getCreatorTypeColor(campaign.creator.accountType)}>
+                  {campaign.creator.accountType.replace('_', ' ')}
                 </Badge>
                 <span className="text-sm text-muted-foreground">by {campaign.creator.fullName}</span>
               </div>

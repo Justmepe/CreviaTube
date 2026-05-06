@@ -1,4 +1,4 @@
-PS D:\CreoCash\ClipperRewards> npm run dev
+PS D:\CreviaTube\ClipperRewards> npm run dev
 
 > rest-express@1.0.0 dev
 > cross-env NODE_ENV=development tsx backend/index.ts
@@ -6,7 +6,7 @@ PS D:\CreoCash\ClipperRewards> npm run dev
 1:10:11 PM [express] serving on 0.0.0.0:5000
 1:10:11 PM [express] environment: development
 1:10:11 PM [express] database: connected
-🔄 Initializing CreoCash Auto-Sync Service...
+🔄 Initializing CreviaTube Auto-Sync Service...
 Environment: Development
 Platform: External Hosting
 🔧 Development mode: Auto-sync disabled. Use manual sync endpoints.
@@ -18,7 +18,7 @@ Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
 1:10:40 PM [express] GET /api/platform/stats 500 in 341ms :: {"message":"Received network error or n…
 1:10:40 PM [express] GET /api/platform-reviews/[object%20Object] 200 in 29ms
 
-file:///D:/CreoCash/ClipperRewards/node_modules/@neondatabase/serverless/index.mjs:1345
+file:///D:/CreviaTube/ClipperRewards/node_modules/@neondatabase/serverless/index.mjs:1345
 o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
                                                                          ^
 ErrorEvent {
@@ -140,7 +140,7 @@ ErrorEvent {
 }
 
 Node.js v22.16.0
-PS D:\CreoCash\ClipperRewards> npm run dev
+PS D:\CreviaTube\ClipperRewards> npm run dev
 
 > rest-express@1.0.0 dev
 > cross-env NODE_ENV=development tsx backend/index.ts
@@ -151,7 +151,7 @@ PS D:\CreoCash\ClipperRewards> npm run dev
 Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
   npx update-browserslist-db@latest
   Why you should do it regularly: https://github.com/browserslist/update-db#readme
-🔄 Initializing CreoCash Auto-Sync Service...
+🔄 Initializing CreviaTube Auto-Sync Service...
 Environment: Development
 Platform: External Hosting
 🔧 Development mode: Auto-sync disabled. Use manual sync endpoints.
@@ -160,7 +160,7 @@ Platform: External Hosting
 1:11:42 PM [express] GET /api/platform/stats 500 in 196ms :: {"message":"Received network error or n…
 1:11:42 PM [express] GET /api/platform-reviews/[object%20Object] 200 in 94ms
 
-file:///D:/CreoCash/ClipperRewards/node_modules/@neondatabase/serverless/index.mjs:1345
+file:///D:/CreviaTube/ClipperRewards/node_modules/@neondatabase/serverless/index.mjs:1345
 o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
                                                                          ^
 ErrorEvent {
@@ -283,4 +283,4 @@ ErrorEvent {
 }
 
 Node.js v22.16.0
-PS D:\CreoCash\ClipperRewards> 
+PS D:\CreviaTube\ClipperRewards> 

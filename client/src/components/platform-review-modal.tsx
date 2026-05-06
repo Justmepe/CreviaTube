@@ -80,7 +80,7 @@ export function PlatformReviewModal({
       queryClient.invalidateQueries({ queryKey: ["/api/platform-reviews"] });
       toast({
         title: "Review Submitted!",
-        description: "Thank you for your feedback. Your review helps us improve CreoCash.",
+        description: "Thank you for your feedback. Your review helps us improve CreviaTube.",
       });
       onClose();
     },
@@ -136,7 +136,7 @@ export function PlatformReviewModal({
     {
       key: "easeOfUse" as const,
       label: "Ease of Use",
-      description: "How easy is it to navigate and use CreoCash?",
+      description: "How easy is it to navigate and use CreviaTube?",
       icon: Zap,
     },
     {
@@ -166,7 +166,7 @@ export function PlatformReviewModal({
     {
       key: "platformFeatures" as const,
       label: "Platform Features",
-      description: "Overall satisfaction with CreoCash features",
+      description: "Overall satisfaction with CreviaTube features",
       icon: Heart,
     },
   ];
@@ -175,14 +175,14 @@ export function PlatformReviewModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Rate Your CreoCash Experience</DialogTitle>
+          <DialogTitle className="text-xl">Rate Your CreviaTube Experience</DialogTitle>
           <DialogDescription>
             {triggerType && triggerValue && (
               <span className="text-teal-600 font-medium">
                 🎉 Congratulations on reaching this milestone! 
               </span>
             )}
-            Your feedback helps us improve CreoCash for everyone. Please share your honest experience.
+            Your feedback helps us improve CreviaTube for everyone. Please share your honest experience.
           </DialogDescription>
         </DialogHeader>
         
@@ -197,7 +197,7 @@ export function PlatformReviewModal({
                 size="lg"
               />
             </div>
-            <p className="text-sm text-gray-600 mt-1">How would you rate CreoCash overall?</p>
+            <p className="text-sm text-gray-600 mt-1">How would you rate CreviaTube overall?</p>
           </div>
           
           <Separator />
@@ -249,7 +249,7 @@ export function PlatformReviewModal({
                 id="reviewText"
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Share your detailed experience with CreoCash. What did you like? What could be improved?"
+                placeholder="Share your detailed experience with CreviaTube. What did you like? What could be improved?"
                 rows={4}
                 maxLength={2000}
                 required
@@ -274,8 +274,8 @@ export function PlatformReviewModal({
           
           {/* NPS Score */}
           <div>
-            <Label className="text-base font-medium">Would you recommend CreoCash to others?</Label>
-            <p className="text-sm text-gray-600 mb-3">On a scale of 0-10, how likely are you to recommend CreoCash?</p>
+            <Label className="text-base font-medium">Would you recommend CreviaTube to others?</Label>
+            <p className="text-sm text-gray-600 mb-3">On a scale of 0-10, how likely are you to recommend CreviaTube?</p>
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-500">Not likely</span>
               <div className="flex gap-1">

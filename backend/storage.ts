@@ -1,6 +1,6 @@
-import { 
-  users, campaigns, clipperCampaigns, trackingEvents, payouts, socialMetrics, tradingMetrics, websiteMetrics,
-  platformReviews, reviewPrompts,
+import {
+  users, campaigns, clipperCampaigns, trackingEvents, payouts, socialMetrics, websiteMetrics,
+  platformReviews, reviewPrompts, clipperStats,
   type User, type InsertUser, type Campaign, type InsertCampaign,
   type ClipperCampaign, type InsertClipperCampaign,
   type TrackingEvent, type InsertTrackingEvent,
@@ -74,15 +74,12 @@ export interface IStorage {
   // User integration updates
   updateUserIntegrations(userId: string, integrations: {
     socialAccounts?: any;
-    tradingAccounts?: any;
     businessIntegration?: any;
   }): Promise<User | undefined>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   updateUserStatus(userId: string, status: string): Promise<User | undefined>;
 
-  // Cold outreach campaign access
-  getAvailableColdOutreachCampaigns(): Promise<Campaign[]>;
   deleteUser(userId: string): Promise<boolean>;
   
   // Platform review system
@@ -103,23 +100,15 @@ export interface IStorage {
     payoutsReceived: number;
     campaignsCompleted: number;
     userRole: string;
-    userType: string;
+    accountType: string;
     lastPromptedAt?: Date;
   }>;
   
-  // Trading account operations
-  addTradingAccount(userId: string, account: {
-    name: string;
-    platform: string;
-    apiKey: string;
-    accountId: string;
-    serverUrl?: string;
-  }): Promise<User | undefined>;
-  
-  removeTradingAccount(userId: string, accountId: string): Promise<User | undefined>;
-  
-  getTradingAccounts(userId: string): Promise<any>;
-  
+  // Missing storage methods
+  getAllWithdrawals(): Promise<any[]>;
+  getAllClippers(): Promise<User[]>;
+  getTopClippers(filters?: any): Promise<any[]>;
+
   sessionStore: any;
 }
 
@@ -153,7 +142,6 @@ export class DatabaseStorage implements IStorage {
     const userData = {
       ...insertUser,
       socialAccounts: insertUser.socialAccounts as any || null,
-      tradingAccounts: insertUser.tradingAccounts as any || null,
       businessIntegration: insertUser.businessIntegration as any || null,
     };
     
@@ -192,30 +180,14 @@ export class DatabaseStorage implements IStorage {
 
   async getAvailableCampaigns(): Promise<Campaign[]> {
     return await db.select().from(campaigns)
-      .where(and(
-        eq(campaigns.status, "active"),
-        // Exclude cold outreach campaigns from general clipper marketplace
-        sql`(${campaigns.campaignType} IS NULL OR ${campaigns.campaignType} != 'cold_outreach')`
-      ))
-      .orderBy(desc(campaigns.createdAt));
-  }
-
-  // Separate method for cold outreach campaigns - for specialized clippers
-  async getAvailableColdOutreachCampaigns(): Promise<Campaign[]> {
-    return await db.select().from(campaigns)
-      .where(and(
-        eq(campaigns.status, "active"),
-        eq(campaigns.campaignType, "cold_outreach")
-      ))
+      .where(eq(campaigns.status, "active"))
       .orderBy(desc(campaigns.createdAt));
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
-    // Safely handle JSON fields for campaign goals
     const campaignData = {
       ...campaign,
       campaignGoals: campaign.campaignGoals as any || null,
-      outreachConfig: campaign.outreachConfig as any || null,
     };
     
     const [newCampaign] = await db
@@ -459,83 +431,14 @@ export class DatabaseStorage implements IStorage {
     return stats;
   }
 
-  async addTradingAccount(userId: string, account: {
-    name: string;
-    platform: string;
-    apiKey: string;
-    accountId: string;
-    serverUrl?: string;
-  }): Promise<User | undefined> {
-    const user = await this.getUser(userId);
-    if (!user) return undefined;
-
-    const existingAccounts = user.tradingAccounts ? 
-      (typeof user.tradingAccounts === 'string' ? JSON.parse(user.tradingAccounts) : user.tradingAccounts) : 
-      { brokers: [] };
-    const newAccount = {
-      id: randomUUID(),
-      ...account,
-      isConnected: true,
-      lastSync: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    };
-
-    existingAccounts.brokers.push(newAccount);
-
-    const [updated] = await db
-      .update(users)
-      .set({ tradingAccounts: JSON.stringify(existingAccounts) as any })
-      .where(eq(users.id, userId))
-      .returning();
-    
-    return updated || undefined;
-  }
-
-  async removeTradingAccount(userId: string, accountId: string): Promise<User | undefined> {
-    const user = await this.getUser(userId);
-    if (!user) return undefined;
-
-    const existingAccounts = user.tradingAccounts ? 
-      (typeof user.tradingAccounts === 'string' ? JSON.parse(user.tradingAccounts) : user.tradingAccounts) : 
-      { brokers: [] };
-    existingAccounts.brokers = existingAccounts.brokers.filter((broker: any) => broker.id !== accountId);
-
-    const [updated] = await db
-      .update(users)
-      .set({ tradingAccounts: JSON.stringify(existingAccounts) as any })
-      .where(eq(users.id, userId))
-      .returning();
-    
-    return updated || undefined;
-  }
-
-  async getTradingAccounts(userId: string): Promise<any> {
-    const user = await this.getUser(userId);
-    if (!user || !user.tradingAccounts) {
-      return { brokers: [] };
-    }
-
-    try {
-      return typeof user.tradingAccounts === 'string' ? 
-        JSON.parse(user.tradingAccounts) : 
-        user.tradingAccounts;
-    } catch {
-      return { brokers: [] };
-    }
-  }
-
   async updateUserIntegrations(userId: string, integrations: {
     socialAccounts?: any;
-    tradingAccounts?: any;
     businessIntegration?: any;
   }): Promise<User | undefined> {
     const updateData: any = {};
-    
+
     if (integrations.socialAccounts !== undefined) {
       updateData.socialAccounts = integrations.socialAccounts;
-    }
-    if (integrations.tradingAccounts !== undefined) {
-      updateData.tradingAccounts = integrations.tradingAccounts;
     }
     if (integrations.businessIntegration !== undefined) {
       updateData.businessIntegration = integrations.businessIntegration;
@@ -546,7 +449,7 @@ export class DatabaseStorage implements IStorage {
       .set(updateData)
       .where(eq(users.id, userId))
       .returning();
-    
+
     return updatedUser || undefined;
   }
 
@@ -692,10 +595,15 @@ export class DatabaseStorage implements IStorage {
         joinedAt: clipperCampaigns.joinedAt,
         creatorReviewNotes: clipperCampaigns.creatorReviewNotes,
         rejectionReason: clipperCampaigns.rejectionReason,
+        // Reputation enrichment (LEFT JOIN — null for clippers with no stats yet)
+        clipperRating: clipperStats.averageRating,
+        clipperReviewCount: clipperStats.totalReviews,
+        clipperTier: clipperStats.tier,
       })
       .from(clipperCampaigns)
       .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
       .innerJoin(users, eq(clipperCampaigns.clipperId, users.id))
+      .leftJoin(clipperStats, eq(clipperCampaigns.clipperId, clipperStats.clipperId))
       .where(and(
         eq(campaigns.creatorId, creatorId),
         sql`${clipperCampaigns.applicationStatus} IN ('creator_review', 'ai_scanning', 'approved', 'rejected', 'ai_flagged')`
@@ -868,7 +776,7 @@ export class DatabaseStorage implements IStorage {
           username: users.username,
           fullName: users.fullName,
           role: users.role,
-          userType: users.userType,
+          accountType: users.accountType,
         }
       })
       .from(platformReviews)
@@ -1008,7 +916,7 @@ export class DatabaseStorage implements IStorage {
     payoutsReceived: number;
     campaignsCompleted: number;
     userRole: string;
-    userType: string;
+    accountType: string;
     lastPromptedAt?: Date;
   }> {
     const user = await this.getUser(userId);
@@ -1045,10 +953,90 @@ export class DatabaseStorage implements IStorage {
       payoutsReceived: userPayouts.length,
       campaignsCompleted: completedCampaigns.length,
       userRole: user.role,
-      userType: user.userType || 'unknown',
+      accountType: user.accountType || 'unknown',
       lastPromptedAt: lastPrompt ? new Date(lastPrompt.promptedAt) : undefined,
     };
   }
+
+  // ===== MISSING STORAGE METHODS IMPLEMENTATION =====
+
+  // 1. Admin withdrawal management
+  async getAllWithdrawals(): Promise<any[]> {
+    try {
+      const withdrawals = await db
+        .select({
+          id: payouts.id,
+          clipperId: payouts.clipperId,
+          campaignId: payouts.campaignId,
+          amount: payouts.amount,
+          method: payouts.method,
+          status: payouts.status,
+          createdAt: payouts.createdAt,
+          // Join with users to get clipper info
+          clipperUsername: users.username,
+          clipperEmail: users.email,
+          // Join with campaigns to get campaign info
+          campaignName: campaigns.name,
+        })
+        .from(payouts)
+        .leftJoin(users, eq(payouts.clipperId, users.id))
+        .leftJoin(campaigns, eq(payouts.campaignId, campaigns.id))
+        .orderBy(desc(payouts.createdAt));
+
+      return withdrawals;
+    } catch (error) {
+      console.error('Error fetching all withdrawals:', error);
+      throw new Error('Failed to fetch withdrawals');
+    }
+  }
+
+  // 2. Clipper management
+  async getAllClippers(): Promise<User[]> {
+    try {
+      const clippers = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, 'clipper'))
+        .orderBy(desc(users.createdAt));
+
+      return clippers;
+    } catch (error) {
+      console.error('Error fetching all clippers:', error);
+      throw new Error('Failed to fetch clippers');
+    }
+  }
+
+  async getTopClippers(filters?: any): Promise<any[]> {
+    try {
+      // Get clippers with their performance metrics
+      const clipperStats = await db
+        .select({
+          userId: users.id,
+          username: users.username,
+          email: users.email,
+          totalEarnings: sql<number>`COALESCE(SUM(${payouts.amount}), 0)`,
+          totalPayouts: sql<number>`COUNT(${payouts.id})`,
+          completedCampaigns: sql<number>`COUNT(DISTINCT ${clipperCampaigns.campaignId})`,
+          avgRating: sql<number>`COALESCE(AVG(${platformReviews.overallRating}), 0)`,
+          totalReviews: sql<number>`COUNT(${platformReviews.id})`,
+          joinedAt: users.createdAt,
+        })
+        .from(users)
+        .leftJoin(payouts, eq(users.id, payouts.clipperId))
+        .leftJoin(clipperCampaigns, eq(users.id, clipperCampaigns.clipperId))
+        .leftJoin(platformReviews, eq(users.id, platformReviews.userId))
+        .where(eq(users.role, 'clipper'))
+        .groupBy(users.id, users.username, users.email, users.createdAt)
+        .orderBy(desc(sql`COALESCE(SUM(${payouts.amount}), 0)`))
+        .limit(50);
+
+      return clipperStats;
+    } catch (error) {
+      console.error('Error fetching top clippers:', error);
+      throw new Error('Failed to fetch top clippers');
+    }
+  }
+
 }
 
 export const storage = new DatabaseStorage();

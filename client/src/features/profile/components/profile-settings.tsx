@@ -16,6 +16,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { User, Mail, Phone, Globe, Briefcase, Shield, Key, Bell } from "lucide-react";
+import { ConnectWalletButton } from "@/features/wallet/connect-wallet-button";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -364,7 +365,7 @@ export default function ProfileSettings() {
               <div>
                 <span className="text-gray-500">Account Type:</span>
                 <span className="ml-2 font-medium capitalize">
-                  {user?.userType?.replace('_', ' ') || user?.role}
+                  {user?.accountType?.replace('_', ' ') || user?.role}
                 </span>
               </div>
               <div>
@@ -378,6 +379,21 @@ export default function ProfileSettings() {
                 <span className="ml-2 font-medium text-green-600">Active</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Web3 Wallet */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Web3 Wallet
+            </CardTitle>
+            <CardDescription>
+              Bind a Base network wallet to receive USDC payouts and pay for premium features.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ConnectWalletButton />
           </CardContent>
         </Card>
       </div>

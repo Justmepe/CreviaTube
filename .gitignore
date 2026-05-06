@@ -4,3 +4,25 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# --- Secrets ---
+.env
+.env.local
+env.txt
+
+# --- Claude Code / Replit local state ---
+.claude/
+.local/
+
+# --- Local dev scaffolding (Windows-specific, not for the repo) ---
+postgresql-installer.exe
+setup_postgres.ps1
+setup_database.sql
+run-app.bat
+start-server.bat
+
+# --- Ad-hoc test scripts at the repo root ---
+test-*.js
+simple-test.js
+basic-api-test.js
+api-connection-test-report.json

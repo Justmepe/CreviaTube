@@ -1,4 +1,4 @@
-# CreoCash Frontend
+# CreviaTube Frontend
 
 ## Architecture Overview
 

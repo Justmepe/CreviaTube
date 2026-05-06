@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Welcome back!",
-        description: "You have successfully logged in to CreoCash.",
+        description: "You have successfully logged in to CreviaTube.",
         variant: "default",
       });
     },
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser & { enterpriseRequestData?: any }) => {
+    mutationFn: async (credentials: InsertUser) => {
       const res = await apiRequest("POST", "/api/register", credentials);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: "Registration failed" }));
@@ -89,20 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.clear();
       queryClient.setQueryData(["/api/user"], user);
       
-      // Show different welcome messages based on user type
-      if (user.userType === "enterprise") {
-        toast({
-          title: "Enterprise Account Created!",
-          description: "Please complete your enterprise request to activate your white-label platform.",
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Account created successfully!",
-          description: "Welcome to CreoCash. You can now start creating campaigns.",
-          variant: "default",
-        });
-      }
+      toast({
+        title: "Account created successfully!",
+        description: "Welcome to CreviaTube. You can now start creating campaigns.",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({

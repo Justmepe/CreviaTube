@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Star, Filter, Users, TrendingUp, Clock, Award } from 'lucide-react';
+import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -151,9 +152,9 @@ function ClipperCard({ clipper }: { clipper: ClipperProfile }) {
           </div>
         </div>
 
-        <Button className="w-full" size="sm">
-          View Profile & Reviews
-        </Button>
+        <Link href={`/clippers/${clipper.clipperId}`}>
+          <Button className="w-full" size="sm">View Profile & Reviews</Button>
+        </Link>
       </CardContent>
     </Card>
   );
@@ -169,7 +170,7 @@ export function ClipperDirectory() {
 
   const { data: clippers, isLoading } = useQuery<ClipperProfile[]>({
     queryKey: ['/api/clippers/top', filters],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn<ClipperProfile[]>({ on401: 'throw' }),
   });
 
   const filteredClippers = clippers?.filter(clipper => {

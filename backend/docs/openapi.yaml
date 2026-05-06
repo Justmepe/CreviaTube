@@ -1,0 +1,967 @@
+openapi: 3.0.3
+info:
+  title: CreviaTube API
+  description: |
+    Advanced content creator platform API for monetizing content and managing campaigns.
+    
+    ## Authentication
+    Most endpoints require authentication. Include your session cookie or use the login endpoint to authenticate.
+    
+    ## Rate Limiting
+    - Authentication endpoints: 5 attempts per 15 minutes
+    - API endpoints: 100 requests per 15 minutes
+    - Sensitive operations: 10 requests per hour
+    - Tracking events: 30 events per minute
+    - Admin operations: 50 requests per 15 minutes
+    
+    ## Error Codes
+    - `400` - Bad Request
+    - `401` - Unauthorized
+    - `403` - Forbidden
+    - `404` - Not Found
+    - `429` - Too Many Requests
+    - `500` - Internal Server Error
+  version: 1.0.0
+  contact:
+    name: CreviaTube Support
+    email: support@creviatube.com
+    url: https://creviatube.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api.creviatube.com
+    description: Production server
+
+security:
+  - sessionAuth: []
+
+paths:
+  # ===== AUTHENTICATION ENDPOINTS =====
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                password:
+                  type: string
+                  description: User's password
+                  minLength: 6
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Logout current user and clear session
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  # ===== USER ENDPOINTS =====
+  /api/user:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieve the authenticated user's profile information
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/user/profile:
+    get:
+      tags:
+        - Users
+      summary: Get user profile (alias)
+      description: Alias for /api/user endpoint
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/users/{id}/social-accounts:
+    get:
+      tags:
+        - Users
+      summary: Get user social accounts
+      description: Retrieve social media accounts linked to a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Social accounts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  socialAccounts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SocialAccount'
+
+  # ===== CAMPAIGN ENDPOINTS =====
+  /api/campaigns:
+    get:
+      tags:
+        - Campaigns
+      summary: Get all campaigns
+      description: Retrieve all campaigns with optional filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, completed, draft]
+          description: Filter by campaign status
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Campaigns retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/campaigns/my-campaigns:
+    get:
+      tags:
+        - Campaigns
+      summary: Get user's campaigns
+      description: Retrieve campaigns created by the authenticated user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User's campaigns retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/campaigns/{id}:
+    get:
+      tags:
+        - Campaigns
+      summary: Get campaign by ID
+      description: Retrieve a specific campaign by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Campaign retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags:
+        - Campaigns
+      summary: Update campaign
+      description: Update an existing campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Campaign ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignUpdate'
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '403':
+          description: Not authorized to update this campaign
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== CLIPPER ENDPOINTS =====
+  /api/clippers:
+    get:
+      tags:
+        - Clippers
+      summary: Get all clippers
+      description: Retrieve all clipper users with optional filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [earnings, campaigns, rating, joined]
+            default: earnings
+          description: Sort field
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Clippers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  clippers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Clipper'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/clippers/top:
+    get:
+      tags:
+        - Clippers
+      summary: Get top clippers
+      description: Retrieve top-performing clipper users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: Number of top clippers to retrieve
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, year, all]
+            default: month
+          description: Time period for ranking
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Top clippers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  clippers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Clipper'
+
+  # ===== ADMIN ENDPOINTS =====
+  /api/admin/withdrawals:
+    get:
+      tags:
+        - Admin
+      summary: Get all withdrawals
+      description: Retrieve all withdrawal requests (admin only)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, completed]
+          description: Filter by withdrawal status
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Withdrawals retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  withdrawals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Withdrawal'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== ANALYTICS ENDPOINTS =====
+  /api/analytics/stats:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics statistics
+      description: Retrieve overall analytics statistics
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Analytics statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsStats'
+
+  /api/analytics/dashboard:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics dashboard
+      description: Retrieve analytics dashboard data
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [overview, funnels, cohorts, geographic, predictions]
+            default: overview
+          description: Dashboard type
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+          description: Time period
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Dashboard data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardData'
+
+  # ===== VISUALIZATION ENDPOINTS =====
+  /api/visualization/charts:
+    get:
+      tags:
+        - Visualization
+      summary: Get all charts
+      description: Retrieve all available charts
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Charts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  charts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chart'
+
+  /api/visualization/reports:
+    get:
+      tags:
+        - Visualization
+      summary: Get all reports
+      description: Retrieve all custom reports
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Reports retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Report'
+
+  # ===== PERFORMANCE ENDPOINTS =====
+  /api/performance/stats:
+    get:
+      tags:
+        - Performance
+      summary: Get performance statistics
+      description: Retrieve system performance statistics
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Performance statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceStats'
+
+  # ===== CACHE ENDPOINTS =====
+  /api/cache/stats:
+    get:
+      tags:
+        - Cache
+      summary: Get cache statistics
+      description: Retrieve Redis cache statistics
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Cache statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+
+  /api/cache/clear:
+    post:
+      tags:
+        - Cache
+      summary: Clear cache
+      description: Clear all cached data
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Cache cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Cache cleared successfully"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, creator, clipper]
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        bio:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+          format: uri
+
+    SocialAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        platform:
+          type: string
+          enum: [youtube, tiktok, instagram, twitter, facebook, linkedin]
+        username:
+          type: string
+        url:
+          type: string
+          format: uri
+        followers:
+          type: integer
+        verified:
+          type: boolean
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, paused, completed]
+        budget:
+          type: number
+        spent:
+          type: number
+        creatorId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CampaignUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, paused, completed]
+        budget:
+          type: number
+
+  # ===== ENTERPRISE ENDPOINTS =====
+  /api/enterprise/dashboard:
+    get:
+      tags:
+        - Enterprise
+      summary: Get enterprise dashboard data
+      description: Returns enterprise account summary, stats, and basic campaign info
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Enterprise dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: object
+                    properties:
+                      totalCampaigns:
+                        type: integer
+                      activeCampaigns:
+                        type: integer
+                      totalRevenue:
+                        type: number
+                      totalEvents:
+                        type: integer
+                      account:
+                        type: object
+                        properties:
+                          company:
+                            type: string
+                          domain:
+                            type: string
+                          status:
+                            type: string
+                          commissionRate:
+                            type: number
+                  campaigns:
+                    type: array
+                    items:
+                      type: object
+                  account:
+                    type: object
+                  user:
+                    $ref: '#/components/schemas/User'
+
+    Clipper:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        avatar:
+          type: string
+          format: uri
+        totalEarnings:
+          type: number
+        totalCampaigns:
+          type: integer
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+        joinedAt:
+          type: string
+          format: date-time
+
+    Withdrawal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [pending, approved, rejected, completed]
+        paymentMethod:
+          type: string
+        paymentDetails:
+          type: object
+        requestedAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+    AnalyticsStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalCampaigns:
+          type: integer
+        totalRevenue:
+          type: number
+        activeClippers:
+          type: integer
+        conversionRate:
+          type: number
+        averageEarnings:
+          type: number
+
+    DashboardData:
+      type: object
+      properties:
+        type:
+          type: string
+        period:
+          type: string
+        data:
+          type: object
+        lastUpdated:
+          type: string
+          format: date-time
+
+    Chart:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [line, bar, pie, area, scatter, heatmap]
+        config:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        template:
+          type: string
+        schedule:
+          type: object
+        lastExecuted:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    PerformanceStats:
+      type: object
+      properties:
+        apiResponseTime:
+          type: number
+        databaseQueryTime:
+          type: number
+        memoryUsage:
+          type: object
+        cpuUsage:
+          type: object
+        uptime:
+          type: number
+
+    CacheStats:
+      type: object
+      properties:
+        totalKeys:
+          type: integer
+        memoryUsage:
+          type: string
+        hitRate:
+          type: number
+        connectedClients:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time

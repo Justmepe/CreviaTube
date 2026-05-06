@@ -60,12 +60,12 @@ export class AdminService {
     // Get real creator type distribution
     const creatorTypeDistribution = await db
       .select({
-        userType: users.userType,
+        accountType: users.accountType,
         count: count(users.id)
       })
       .from(users)
       .where(eq(users.role, "creator"))
-      .groupBy(users.userType);
+      .groupBy(users.accountType);
 
     // Get revenue analytics correlation data
     const revenueAnalytics = await revenueAnalyticsService.getRevenueVsUserGrowthCorrelation();

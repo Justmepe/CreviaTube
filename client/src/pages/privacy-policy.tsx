@@ -68,8 +68,8 @@ export default function PrivacyPolicy() {
                 <h3 className="text-lg font-semibold text-slate-800 mb-2">Questions about this policy?</h3>
                 <p className="text-slate-600">
                   If you have any questions about this Privacy Policy, please contact us at{" "}
-                  <a href="mailto:privacy@creocash.com" className="text-blue-600 hover:underline">
-                    privacy@creocash.com
+                  <a href="mailto:privacy@creviatube.com" className="text-blue-600 hover:underline">
+                    privacy@creviatube.com
                   </a>
                 </p>
               </div>

@@ -171,7 +171,7 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">CreoCash</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">CreviaTube</span>
             </div>
             
             {/* Navigation Links */}
@@ -398,7 +398,7 @@ export default function LandingPage() {
             <div id="how-it-works" className="mt-16 mb-16">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-                  How CreoCash Works
+                  How CreviaTube Works
                 </h2>
                 <p className="text-lg text-slate-600 max-w-3xl mx-auto">
                   Whether you're a creator or clipper, get started in minutes with our simple 3-step process
@@ -505,7 +505,7 @@ export default function LandingPage() {
                 </div>
                 
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                  Join thousands of successful creators who are already earning with CreoCash. 
+                  Join thousands of successful creators who are already earning with CreviaTube. 
                   See what they have to say about their experience.
                 </p>
                 
@@ -579,7 +579,7 @@ export default function LandingPage() {
                       id: 1,
                       rating: 5,
                       title: "Game-changing platform for creators",
-                      text: "CreoCash has completely transformed how I monetize my trading content. The automated escrow system gives me peace of mind, and the analytics help me optimize my campaigns perfectly.",
+                      text: "CreviaTube has completely transformed how I monetize my trading content. The automated escrow system gives me peace of mind, and the analytics help me optimize my campaigns perfectly.",
                       author: "Sarah Chen",
                       role: "Trading Educator",
                       verified: true
@@ -588,7 +588,7 @@ export default function LandingPage() {
                       id: 2,
                       rating: 5,
                       title: "Incredible earning potential",
-                      text: "As a clipper, I've earned more in 3 months with CreoCash than I did in a year with other platforms. The goal-based system is transparent and the payouts are instant.",
+                      text: "As a clipper, I've earned more in 3 months with CreviaTube than I did in a year with other platforms. The goal-based system is transparent and the payouts are instant.",
                       author: "Marcus Johnson",
                       role: "Content Clipper",
                       verified: true
@@ -699,7 +699,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent">CreoCash</span>
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent">CreviaTube</span>
               </div>
               <p className="text-slate-300 text-sm leading-relaxed mb-4">
                 Advanced affiliate marketing platform for the global creator economy.
@@ -769,7 +769,7 @@ export default function LandingPage() {
           <div className="border-t border-slate-700 pt-6">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="flex items-center space-x-6 mb-3 md:mb-0">
-                <p className="text-slate-400 text-sm">© 2025 CreoCash. All rights reserved.</p>
+                <p className="text-slate-400 text-sm">© 2025 CreviaTube. All rights reserved.</p>
                 <div className="flex items-center space-x-2 text-slate-400 text-xs">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span>All systems operational</span>

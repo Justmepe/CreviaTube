@@ -131,34 +131,30 @@ export class RevenueAnalyticsService {
     // Get real creator type distribution from database
     const creatorDistribution = await db
       .select({
-        userType: users.userType,
+        accountType: users.accountType,
         count: count(users.id)
       })
       .from(users)
       .where(eq(users.role, "creator"))
-      .groupBy(users.userType);
+      .groupBy(users.accountType);
 
     // Calculate total creators for percentage calculation
     const totalCreators = creatorDistribution.reduce((sum, item) => sum + item.count, 0);
 
     return creatorDistribution.map(item => ({
-      type: item.userType || 'undefined',
+      type: item.accountType || 'undefined',
       count: item.count,
       percentage: totalCreators > 0 ? Math.round((item.count / totalCreators) * 100) : 0,
-      displayName: this.getCreatorTypeDisplayName(item.userType)
+      displayName: this.getCreatorTypeDisplayName(item.accountType)
     }));
   }
 
-  private getCreatorTypeDisplayName(userType: string | null): string {
-    switch (userType) {
-      case 'trader_creator':
-        return 'Trading Educators';
+  private getCreatorTypeDisplayName(accountType: string | null): string {
+    switch (accountType) {
       case 'influencer':
         return 'Social Influencers';
-      case 'entrepreneur':
-        return 'Entrepreneurs';
-      case 'enterprise':
-        return 'Enterprise';
+      case 'business':
+        return 'Businesses';
       default:
         return 'Other';
     }

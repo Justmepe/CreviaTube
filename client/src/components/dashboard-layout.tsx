@@ -72,11 +72,6 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
     ];
 
-    // Add specific items based on creator type
-    if (user?.userType === "trader_creator") {
-      baseNavigation.push({ name: "Broker Links", href: "/broker-links", icon: Wallet });
-    }
-
     baseNavigation.push({ name: "Payouts", href: "/payouts", icon: DollarSign });
 
     return baseNavigation;
@@ -99,9 +94,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
           <div className="flex h-16 shrink-0 items-center px-6 border-b">
             <div className="flex items-center">
               <div className="h-8 w-8 bg-teal-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CC</span>
+                <span className="text-white font-bold text-sm">CT</span>
               </div>
-              <span className="ml-2 text-xl font-bold text-gray-900">CreoCash</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">CreviaTube</span>
             </div>
           </div>
 
@@ -154,7 +149,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
                   {user?.fullName || user?.username}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">
-                  {user?.userType?.replace('_', ' ') || user?.role}
+                  {user?.accountType?.replace('_', ' ') || user?.role}
                 </p>
               </div>
             </div>

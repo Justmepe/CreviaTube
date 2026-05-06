@@ -6,31 +6,12 @@ import { z } from "zod";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["creator", "clipper", "admin"]);
-export const userTypeEnum = pgEnum("user_type", ["trader_creator", "influencer", "entrepreneur", "enterprise"]);
+export const accountTypeEnum = pgEnum("account_type", ["influencer", "business"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "inactive", "suspended"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["active", "paused", "completed", "draft"]);
-export const campaignTypeEnum = pgEnum("campaign_type", ["content_promotion", "cold_outreach"]);
-export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "deposit", "trade", "view", "conversion", "outreach_contact", "outreach_response"]);
+export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "view", "conversion"]);
 export const eventStatusEnum = pgEnum("event_status", ["pending", "verified", "paid", "rejected"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
-export const brokerTypeEnum = pgEnum("broker_type", ["forex", "crypto", "stocks", "futures", "options", "cfds"]);
-
-// Users table
-// Broker affiliate programs table
-export const brokerPrograms = pgTable("broker_programs", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  signupBonus: integer("signup_bonus").notNull().default(0),
-  depositBonus: integer("deposit_bonus").notNull().default(0),
-  volumeRate: real("volume_rate").notNull().default(0),
-  description: text("description"),
-  baseAffiliateLink: text("base_affiliate_link").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
-  region: text("region").notNull(),
-  category: text("category").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
 
 // Revenue transactions table
 export const revenueTransactions = pgTable("revenue_transactions", {
@@ -69,87 +50,13 @@ export const systemHealthMetrics = pgTable("system_health_metrics", {
   metadata: json("metadata"),
 });
 
-// Enterprise contact requests table
-export const enterpriseRequests = pgTable("enterprise_requests", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  contactName: text("contact_name").notNull(),
-  contactEmail: text("contact_email").notNull(),
-  contactPhone: text("contact_phone"),
-  companyName: text("company_name").notNull(),
-  companySize: text("company_size").notNull(),
-  requestType: text("request_type").notNull(), // pricing, demo, technical, custom_setup, other
-  message: text("message").notNull(),
-  preferredMeetingTime: text("preferred_meeting_time").notNull(),
-  urgency: text("urgency").notNull(), // low, medium, high, urgent
-  status: text("status").notNull().default("pending"), // pending, contacted, in_progress, completed
-  assignedTo: text("assigned_to"), // admin user id
-  meetingScheduled: boolean("meeting_scheduled").default(false),
-  meetingDate: timestamp("meeting_date"),
-  meetingTime: text("meeting_time"),
-  meetingNotes: text("meeting_notes"),
-  meetingType: text("meeting_type"), // zoom, google_meet, teams, phone
-  meetingLink: text("meeting_link"),
-  notes: text("notes").default(""),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Admin notifications table
-export const adminNotifications = pgTable("admin_notifications", {
-  id: text("id").primaryKey(),
-  type: text("type").notNull(), // enterprise_contact, system_alert, user_issue, etc.
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  data: json("data"), // Additional structured data
-  read: boolean("read").default(false),
-  urgent: boolean("urgent").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  readAt: timestamp("read_at"),
-});
-
-// Enterprise accounts table for white-label clients
-export const enterpriseAccounts = pgTable("enterprise_accounts", {
-  id: text("id").primaryKey(),
-  requestId: text("request_id").notNull(), // reference to enterprise_requests
-  userId: text("user_id").notNull(), // main contact user ID
-  companyName: text("company_name").notNull(),
-  customDomain: text("custom_domain"), // e.g., partner.creocash.com
-  brandingConfig: json("branding_config").$type<{
-    logo?: string;
-    primaryColor?: string;
-    secondaryColor?: string;
-    customCss?: string;
-    companyName?: string;
-  }>(),
-  pricingConfig: json("pricing_config").$type<{
-    commissionRate: number; // e.g., 0.15 for 15%
-    payoutThreshold: number; // minimum payout amount
-    customRates?: { [key: string]: number }; // per campaign type
-  }>(),
-  features: json("features").$type<{
-    whiteLabel: boolean;
-    customBranding: boolean;
-    apiAccess: boolean;
-    customDomains: boolean;
-    prioritySupport: boolean;
-    dedicatedManager: boolean;
-  }>(),
-  status: text("status").notNull().default("setup"), // setup, active, suspended, cancelled
-  activatedAt: timestamp("activated_at"),
-  billingCycle: text("billing_cycle"), // monthly, quarterly, yearly
-  contractDetails: json("contract_details"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: userRoleEnum("role").notNull().default("clipper"),
-  userType: userTypeEnum("user_type"),
+  accountType: accountTypeEnum("account_type"),
   status: userStatusEnum("status").notNull().default("active"),
   fullName: text("full_name").notNull(),
   phoneNumber: text("phone_number"),
@@ -157,7 +64,10 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  
+
+  // Web3 wallet (lowercase 0x... EVM address). Null until user binds via Reown AppKit.
+  walletAddress: varchar("wallet_address", { length: 42 }).unique(),
+
   // Social Media Integration
   socialAccounts: json("social_accounts").$type<{
     instagram?: { username: string; accessToken?: string; businessAccount?: boolean };
@@ -165,16 +75,6 @@ export const users = pgTable("users", {
     youtube?: { channelId: string; accessToken?: string };
     twitter?: { username: string; accessToken?: string };
     facebook?: { pageId: string; accessToken?: string };
-  }>(),
-  
-  // Trading Integration  
-  tradingAccounts: json("trading_accounts").$type<{
-    brokers?: Array<{
-      name: string;
-      accountId: string;
-      apiKey?: string;
-      platform?: 'mt4' | 'mt5' | 'ctrader' | 'proprietary';
-    }>;
   }>(),
   
   // Website/Business Integration
@@ -210,32 +110,15 @@ export const campaigns = pgTable("campaigns", {
   targetPlatforms: text("target_platforms").notNull(), // JSON array
   requirements: text("requirements"),
   duration: integer("duration").notNull().default(30), // campaign duration in days
-  
-  // Campaign type and goals for individual clipper completion
-  campaignType: text("campaign_type").notNull().default("content_promotion"), // content_promotion, cold_outreach
+
   campaignGoals: json("campaign_goals").$type<{
     viewsGoal?: number;
     clicksGoal?: number;
     signupsGoal?: number;
-    depositsGoal?: number;
-    tradesGoal?: number;
     conversionsGoal?: number;
-    outreachContactsGoal?: number; // For cold outreach campaigns
-    outreachResponsesGoal?: number; // For cold outreach campaigns
-    primaryGoal?: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions' | 'outreach_contacts' | 'outreach_responses';
+    primaryGoal?: 'views' | 'clicks' | 'signups' | 'conversions';
   }>(),
-  
-  // Cold outreach specific configuration
-  outreachConfig: json("outreach_config").$type<{
-    type?: 'email' | 'linkedin' | 'phone' | 'instagram_dm' | 'twitter_dm' | 'mixed';
-    targetAudience?: string;
-    messageTemplate?: string;
-    targetIndustries?: string[];
-    targetJobTitles?: string[];
-    responseRequirements?: string;
-    complianceNotes?: string;
-    premiumCommissionRate?: number; // Higher rate for outreach (e.g., 0.25-0.30)
-  }>(),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -256,13 +139,9 @@ export const clipperCampaigns = pgTable("clipper_campaigns", {
     totalViews?: number;
     totalClicks?: number;
     totalSignups?: number;
-    totalDeposits?: number;
-    totalTrades?: number;
     totalConversions?: number;
-    totalOutreachContacts?: number; // For cold outreach campaigns
-    totalOutreachResponses?: number; // For cold outreach campaigns
     goalReached?: {
-      type: 'views' | 'clicks' | 'signups' | 'deposits' | 'trades' | 'conversions' | 'outreach_contacts' | 'outreach_responses';
+      type: 'views' | 'clicks' | 'signups' | 'conversions';
       target: number;
       achieved: number;
       reachedAt: string;
@@ -312,43 +191,6 @@ export const trackingEvents = pgTable("tracking_events", {
   flaggedAsBot: boolean("flagged_as_bot").default(false),
   deviceFingerprint: text("device_fingerprint"), // JSON string for device info
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// Cold outreach tracking table for business campaigns
-export const outreachContacts = pgTable("outreach_contacts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clipperId: varchar("clipper_id").notNull().references(() => users.id),
-  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
-  clipperCampaignId: varchar("clipper_campaign_id").notNull().references(() => clipperCampaigns.id),
-  
-  // Contact details
-  contactMethod: text("contact_method").notNull(), // email, linkedin, phone, instagram_dm, twitter_dm
-  contactTarget: text("contact_target").notNull(), // email address, linkedin profile, phone number, etc.
-  contactName: text("contact_name"), // Name of the person contacted
-  contactCompany: text("contact_company"), // Company they work for
-  contactJobTitle: text("contact_job_title"), // Their job title
-  
-  // Outreach content
-  messageSubject: text("message_subject"),
-  messageContent: text("message_content").notNull(),
-  
-  // Response tracking
-  hasResponse: boolean("has_response").notNull().default(false),
-  responseContent: text("response_content"), // Response received
-  responseAt: timestamp("response_at"),
-  leadQuality: text("lead_quality"), // hot, warm, cold, no_interest
-  
-  // Reward calculation
-  contactReward: decimal("contact_reward", { precision: 10, scale: 2 }), // Payment for making contact
-  responseReward: decimal("response_reward", { precision: 10, scale: 2 }), // Bonus for getting response
-  
-  // Compliance and verification
-  isVerified: boolean("is_verified").notNull().default(false),
-  verificationProof: text("verification_proof"), // Screenshot or proof of outreach
-  complianceNotes: text("compliance_notes"), // GDPR, CAN-SPAM compliance notes
-  
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Clipper ratings and reviews table
@@ -450,10 +292,15 @@ export const payouts = pgTable("payouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clipperId: varchar("clipper_id").notNull().references(() => users.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  mpesaNumber: text("mpesa_number").notNull(),
+  // Legacy fiat fields (kept nullable for backwards-compat with old PesaPal records)
+  mpesaNumber: text("mpesa_number"),
+  mpesaTransactionId: text("mpesa_transaction_id"),
+  // Web3 fields (Phase 2e)
+  recipientAddress: varchar("recipient_address", { length: 42 }),
+  txHash: varchar("tx_hash", { length: 66 }).unique(),
+  failureReason: text("failure_reason"),
   status: payoutStatusEnum("status").notNull().default("pending"),
   transactionId: text("transaction_id"),
-  mpesaTransactionId: text("mpesa_transaction_id"),
   processedAt: timestamp("processed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -484,27 +331,7 @@ export const socialMetrics = pgTable("social_metrics", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Trading Metrics table
-export const tradingMetrics = pgTable("trading_metrics", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  brokerId: text("broker_id").notNull(),
-  metrics: json("metrics").$type<{
-    totalDeposits?: number;
-    totalWithdrawals?: number;
-    totalTrades?: number;
-    profitLoss?: number;
-    winRate?: number;
-    activeClients?: number;
-    referredUsers?: number;
-    accountBalance?: number;
-    tradingVolume?: number;
-  }>().notNull(),
-  lastSyncAt: timestamp("last_sync_at").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// Platform Reviews table - Users rating CreoCash platform itself
+// Platform Reviews table - Users rating CreviaTube platform itself
 export const platformReviews = pgTable("platform_reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -532,7 +359,7 @@ export const platformReviews = pgTable("platform_reviews", {
     totalEarnings: number;
     payoutsReceived: number;
     userRole: 'creator' | 'clipper';
-    userType?: string;
+    accountType?: string;
   }>(),
   
   // Improvement suggestions
@@ -548,7 +375,7 @@ export const platformReviews = pgTable("platform_reviews", {
   isVerified: boolean("is_verified").notNull().default(true), // Auto-verified for active users
   moderationNotes: text("moderation_notes"),
   
-  // Response from CreoCash team
+  // Response from CreviaTube team
   adminResponse: text("admin_response"),
   adminRespondedAt: timestamp("admin_responded_at"),
   adminResponseBy: varchar("admin_response_by").references(() => users.id),
@@ -608,13 +435,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   trackingEvents: many(trackingEvents),
   payouts: many(payouts),
   socialMetrics: many(socialMetrics),
-  tradingMetrics: many(tradingMetrics),
   websiteMetrics: many(websiteMetrics),
-  personalizedBrokerLinks: many(personalizedBrokerLinks),
   clipperReviewsAsClippper: many(clipperReviews, { relationName: "clipperReviews" }),
   clipperReviewsAsCreator: many(clipperReviews, { relationName: "creatorReviews" }),
   clipperStats: many(clipperStats),
-  outreachContacts: many(outreachContacts),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -625,7 +449,6 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   clipperCampaigns: many(clipperCampaigns),
   trackingEvents: many(trackingEvents),
   clipperReviews: many(clipperReviews),
-  outreachContacts: many(outreachContacts),
 }));
 
 export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, many }) => ({
@@ -639,22 +462,6 @@ export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, man
   }),
   trackingEvents: many(trackingEvents),
   clipperReviews: many(clipperReviews),
-  outreachContacts: many(outreachContacts),
-}));
-
-export const outreachContactsRelations = relations(outreachContacts, ({ one }) => ({
-  clipper: one(users, {
-    fields: [outreachContacts.clipperId],
-    references: [users.id],
-  }),
-  campaign: one(campaigns, {
-    fields: [outreachContacts.campaignId],
-    references: [campaigns.id],
-  }),
-  clipperCampaign: one(clipperCampaigns, {
-    fields: [outreachContacts.clipperCampaignId],
-    references: [clipperCampaigns.id],
-  }),
 }));
 
 // Clipper reviews relations
@@ -716,21 +523,12 @@ export const socialMetricsRelations = relations(socialMetrics, ({ one }) => ({
   }),
 }));
 
-export const tradingMetricsRelations = relations(tradingMetrics, ({ one }) => ({
-  user: one(users, {
-    fields: [tradingMetrics.userId],
-    references: [users.id],
-  }),
-}));
-
 export const websiteMetricsRelations = relations(websiteMetrics, ({ one }) => ({
   user: one(users, {
     fields: [websiteMetrics.userId],
     references: [users.id],
   }),
 }));
-
-
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -835,33 +633,6 @@ export const autoPayments = pgTable("auto_payments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Personalized Broker Links table
-export const personalizedBrokerLinks = pgTable("personalized_broker_links", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  brokerName: text("broker_name").notNull(),
-  brokerType: brokerTypeEnum("broker_type").notNull(),
-  affiliateLink: text("affiliate_link").notNull(),
-  description: text("description"),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const personalizedBrokerLinksRelations = relations(personalizedBrokerLinks, ({ one }) => ({
-  user: one(users, {
-    fields: [personalizedBrokerLinks.userId],
-    references: [users.id],
-  }),
-}));
-
-// Insert schemas
-export const insertPersonalizedBrokerLinkSchema = createInsertSchema(personalizedBrokerLinks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
@@ -874,30 +645,14 @@ export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
 export type AutoPayment = typeof autoPayments.$inferSelect;
-export type PersonalizedBrokerLink = typeof personalizedBrokerLinks.$inferSelect;
-export type InsertPersonalizedBrokerLink = z.infer<typeof insertPersonalizedBrokerLinkSchema>;
 
 // New review system types
 export type ClipperReview = typeof clipperReviews.$inferSelect;
 export type InsertClipperReview = z.infer<typeof insertClipperReviewSchema>;
 export type ClipperStats = typeof clipperStats.$inferSelect;
-export type OutreachContact = typeof outreachContacts.$inferSelect;
 export type InsertClipperStats = z.infer<typeof insertClipperStatsSchema>;
 
-export const insertOutreachContactSchema = createInsertSchema(outreachContacts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertOutreachContact = z.infer<typeof insertOutreachContactSchema>;
-
 // Insert schemas for new tables
-export const insertBrokerProgramSchema = createInsertSchema(brokerPrograms).omit({
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const insertRevenueTransactionSchema = createInsertSchema(revenueTransactions).omit({
   createdAt: true,
 });
@@ -910,8 +665,6 @@ export const insertSystemHealthMetricSchema = createInsertSchema(systemHealthMet
   lastChecked: true,
 });
 
-export type BrokerProgram = typeof brokerPrograms.$inferSelect;
-export type InsertBrokerProgram = z.infer<typeof insertBrokerProgramSchema>;
 export type RevenueTransaction = typeof revenueTransactions.$inferSelect;
 export type InsertRevenueTransaction = z.infer<typeof insertRevenueTransactionSchema>;
 export type PayoutRecord = typeof payoutRecords.$inferSelect;
@@ -951,3 +704,284 @@ export const insertReviewPromptSchema = createInsertSchema(reviewPrompts).omit({
 
 export type InsertReviewPrompt = z.infer<typeof insertReviewPromptSchema>;
 export type SelectReviewPrompt = typeof reviewPrompts.$inferSelect;
+
+// Geographic data table for analytics
+export const geographicData = pgTable("geographic_data", {
+  id: text("id").primaryKey(),
+  country: text("country").notNull(),
+  region: text("region"),
+  city: text("city"),
+  users: integer("users").notNull().default(0),
+  campaigns: integer("campaigns").notNull().default(0),
+  revenue: integer("revenue").notNull().default(0), // in cents
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  conversions: integer("conversions").notNull().default(0),
+  period: text("period").notNull(), // daily, weekly, monthly
+  date: timestamp("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Industry benchmarks table
+export const industryBenchmarks = pgTable("industry_benchmarks", {
+  id: text("id").primaryKey(),
+  category: text("category").notNull(), // conversion_rates, engagement_rates, revenue_metrics, user_retention
+  metric: text("metric").notNull(),
+  value: real("value").notNull(),
+  unit: text("unit"), // percentage, number, currency
+  source: text("source"), // industry_average, platform_data, external_research
+  period: text("period").notNull(), // monthly, quarterly, yearly
+  date: timestamp("date").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Platform features table
+export const platformFeatures = pgTable("platform_features", {
+  id: text("id").primaryKey(),
+  icon: text("icon").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // core, advanced, enterprise
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Supported platforms table
+export const supportedPlatforms = pgTable("supported_platforms", {
+  id: text("id").primaryKey(),
+  value: text("value").notNull(),
+  label: text("label").notNull(),
+  category: text("category").notNull(), // social, professional, messaging, web
+  icon: text("icon"),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Supported countries table
+export const supportedCountries = pgTable("supported_countries", {
+  id: text("id").primaryKey(),
+  value: text("value").notNull(), // ISO country code
+  label: text("label").notNull(),
+  region: text("region"),
+  currency: text("currency"),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Supported languages table
+export const supportedLanguages = pgTable("supported_languages", {
+  id: text("id").primaryKey(),
+  value: text("value").notNull(), // ISO language code
+  label: text("label").notNull(),
+  nativeName: text("native_name"),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Static pages content table
+export const staticPages = pgTable("static_pages", {
+  id: text("id").primaryKey(),
+  page: text("page").notNull(), // help-center, privacy-policy, terms-of-service, etc.
+  title: text("title").notNull(),
+  content: json("content").notNull(), // JSON structure for page content
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Platform events table
+export const platformEvents = pgTable("platform_events", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  date: timestamp("date").notNull(),
+  time: text("time"),
+  location: text("location"),
+  type: text("type").notNull(), // conference, webinar, workshop, meetup, launch
+  attendees: text("attendees"),
+  topics: json("topics"), // JSON array of topics
+  registrationOpen: boolean("registration_open").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Contact information table
+export const contactInfo = pgTable("contact_info", {
+  id: text("id").primaryKey(),
+  department: text("department").notNull(), // support, business, press, technical
+  title: text("title").notNull(),
+  email: text("email").notNull(),
+  description: text("description"),
+  hours: text("hours"),
+  response: text("response"),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Career positions table
+export const careerPositions = pgTable("career_positions", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  department: text("department").notNull(),
+  location: text("location").notNull(),
+  type: text("type").notNull(), // full-time, part-time, contract, internship
+  description: text("description").notNull(),
+  skills: json("skills"), // JSON array of skills
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Community guidelines table
+export const communityGuidelines = pgTable("community_guidelines", {
+  id: text("id").primaryKey(),
+  section: text("section").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  rules: json("rules"), // JSON array of rules
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// --- Payments (Phase 2b) ---
+// On-chain USDC payment intents. Created when the user opens the PaymentModal
+// (status=pending, 15-min TTL); transitions to paid when the on-chain Transfer is verified.
+export const paymentIntents = pgTable("payment_intents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  kind: text("kind").notNull(), // 'subscription' | 'campaign_funding'
+  pathway: text("pathway").notNull().default("usdc_direct"), // 'usdc_direct' | 'nexapay'
+  referenceId: text("reference_id"), // campaign_id (kind=campaign_funding) or plan id (kind=subscription)
+  expectedUsdcUnits: text("expected_usdc_units").notNull(), // bigint as string (USDC has 6 decimals)
+  senderAddress: varchar("sender_address", { length: 42 }),
+  receiveAddress: varchar("receive_address", { length: 42 }).notNull(),
+  nexapayOrderId: text("nexapay_order_id"),
+  txHash: varchar("tx_hash", { length: 66 }).unique(),
+  status: text("status").notNull().default("pending"),
+  paidAt: timestamp("paid_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  userId: varchar("user_id").primaryKey().references(() => users.id),
+  tier: text("tier").notNull(),
+  status: text("status").notNull().default("active"),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  lastPaymentIntentId: varchar("last_payment_intent_id").references(() => paymentIntents.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PaymentIntent = typeof paymentIntents.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Insert schemas for new tables
+export const insertGeographicDataSchema = createInsertSchema(geographicData).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIndustryBenchmarkSchema = createInsertSchema(industryBenchmarks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlatformFeatureSchema = createInsertSchema(platformFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportedPlatformSchema = createInsertSchema(supportedPlatforms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportedCountrySchema = createInsertSchema(supportedCountries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportedLanguageSchema = createInsertSchema(supportedLanguages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStaticPageSchema = createInsertSchema(staticPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlatformEventSchema = createInsertSchema(platformEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContactInfoSchema = createInsertSchema(contactInfo).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCareerPositionSchema = createInsertSchema(careerPositions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCommunityGuidelineSchema = createInsertSchema(communityGuidelines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Export types for new tables
+export type GeographicData = typeof geographicData.$inferSelect;
+export type InsertGeographicData = z.infer<typeof insertGeographicDataSchema>;
+export type IndustryBenchmark = typeof industryBenchmarks.$inferSelect;
+export type InsertIndustryBenchmark = z.infer<typeof insertIndustryBenchmarkSchema>;
+export type PlatformFeature = typeof platformFeatures.$inferSelect;
+export type InsertPlatformFeature = z.infer<typeof insertPlatformFeatureSchema>;
+export type SupportedPlatform = typeof supportedPlatforms.$inferSelect;
+export type InsertSupportedPlatform = z.infer<typeof insertSupportedPlatformSchema>;
+export type SupportedCountry = typeof supportedCountries.$inferSelect;
+export type InsertSupportedCountry = z.infer<typeof insertSupportedCountrySchema>;
+export type SupportedLanguage = typeof supportedLanguages.$inferSelect;
+export type InsertSupportedLanguage = z.infer<typeof insertSupportedLanguageSchema>;
+export type StaticPage = typeof staticPages.$inferSelect;
+export type InsertStaticPage = z.infer<typeof insertStaticPageSchema>;
+export type PlatformEvent = typeof platformEvents.$inferSelect;
+export type InsertPlatformEvent = z.infer<typeof insertPlatformEventSchema>;
+export type ContactInfo = typeof contactInfo.$inferSelect;
+export type InsertContactInfo = z.infer<typeof insertContactInfoSchema>;
+export type CareerPosition = typeof careerPositions.$inferSelect;
+export type InsertCareerPosition = z.infer<typeof insertCareerPositionSchema>;
+export type CommunityGuideline = typeof communityGuidelines.$inferSelect;
+export type InsertCommunityGuideline = z.infer<typeof insertCommunityGuidelineSchema>;

@@ -145,21 +145,14 @@ export default function EnhancedCampaignCreation() {
           <AlertDescription>
             <div className="flex items-center justify-between">
               <span>
-                {isEditMode ? "Editing" : "Creating"} campaign as <strong>{user?.userType?.replace('_', ' ').toUpperCase()}</strong>. 
+                {isEditMode ? "Editing" : "Creating"} campaign as <strong>{user?.accountType?.replace('_', ' ').toUpperCase()}</strong>.
                 Reward options are customized for your creator type.
               </span>
-              {user?.userType === "trader_creator" && (
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <CheckCircle className="h-4 w-4" />
-                  Trading rewards enabled
-                </div>
-              )}
             </div>
           </AlertDescription>
         </Alert>
 
         {/* Campaign Wizard */}
-        {console.log('Rendering CampaignWizard with:', { isEditMode, editCampaign })}
         <CampaignWizard
           onSubmit={handleCampaignSubmit}
           isSubmitting={createCampaignMutation.isPending}

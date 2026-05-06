@@ -110,7 +110,7 @@ export default function PlatformReviews() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <p className="text-gray-600">
-              See what our community thinks about CreoCash. Real reviews from creators and clippers.
+              See what our community thinks about CreviaTube. Real reviews from creators and clippers.
             </p>
           </div>
           
@@ -293,7 +293,7 @@ export default function PlatformReviews() {
                 <p className="text-gray-600 mb-4">
                   {searchTerm || filterBy !== "all" 
                     ? "Try adjusting your search or filters" 
-                    : "Be the first to review CreoCash!"}
+                    : "Be the first to review CreviaTube!"}
                 </p>
                 {user && !hasUserReviewed && (
                   <Button 

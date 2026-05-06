@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { campaigns, clipperCampaigns, trackingEvents, users } from "../../shared/schema";
+import { db } from "../../db";
+import { campaigns, clipperCampaigns, trackingEvents, users } from "../../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { EscrowService } from "./escrow-service";
 

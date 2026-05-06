@@ -1,6 +1,6 @@
-PS D:\CreoCash\ClipperRewards> Get-ChildItem -Recurse -Include *.ts | Select-String "metrics/social"
-PS D:\CreoCash\ClipperRewards> 
-PS D:\CreoCash\ClipperRewards> npm start
+PS D:\CreviaTube\ClipperRewards> Get-ChildItem -Recurse -Include *.ts | Select-String "metrics/social"
+PS D:\CreviaTube\ClipperRewards> 
+PS D:\CreviaTube\ClipperRewards> npm start
 
 > rest-express@1.0.0 start
 > cross-env NODE_ENV=production node dist/index.js
@@ -8,7 +8,7 @@ PS D:\CreoCash\ClipperRewards> npm start
 12:11:15 PM [express] serving on 0.0.0.0:5000
 12:11:15 PM [express] environment: production
 12:11:15 PM [express] database: connected
-🔄 Initializing CreoCash Auto-Sync Service...
+🔄 Initializing CreviaTube Auto-Sync Service...
 Environment: Production
 Platform: External Hosting
 🚀 Starting full production auto-sync...
@@ -94,7 +94,7 @@ Registration error: ErrorEvent {
   timeStamp: 1271341.9517
 }
 12:32:23 PM [express] POST /api/register 500 in 19ms :: {"message":"Registration failed. Please try a…
-PS D:\CreoCash\ClipperRewards> npm run build
+PS D:\CreviaTube\ClipperRewards> npm run build
 
 > rest-express@1.0.0 build
 > vite build && esbuild backend/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
@@ -116,7 +116,7 @@ transforming (4) src\App.tsxBrowserslist: browsers data (caniuse-lite) is 10 mon
   dist\index.js  336.7kb
 
 Done in 90ms
-PS D:\CreoCash\ClipperRewards> npm start
+PS D:\CreviaTube\ClipperRewards> npm start
 
 > rest-express@1.0.0 start
 > cross-env NODE_ENV=production node dist/index.js
@@ -124,7 +124,7 @@ PS D:\CreoCash\ClipperRewards> npm start
 12:58:24 PM [express] serving on 0.0.0.0:5000
 12:58:24 PM [express] environment: production
 12:58:24 PM [express] database: connected
-🔄 Initializing CreoCash Auto-Sync Service...
+🔄 Initializing CreviaTube Auto-Sync Service...
 Environment: Production
 Platform: External Hosting
 🚀 Starting full production auto-sync...

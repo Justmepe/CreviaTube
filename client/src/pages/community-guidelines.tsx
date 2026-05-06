@@ -143,8 +143,8 @@ export default function CommunityGuidelines() {
           <AlertDescription>
             <strong>Report Violations:</strong> If you encounter content that violates these guidelines, 
             please report it to our moderation team at{" "}
-            <a href="mailto:moderation@creocash.com" className="text-blue-600 hover:underline">
-              moderation@creocash.com
+            <a href="mailto:moderation@creviatube.com" className="text-blue-600 hover:underline">
+              moderation@creviatube.com
             </a>
           </AlertDescription>
         </Alert>

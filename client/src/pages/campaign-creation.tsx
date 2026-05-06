@@ -108,9 +108,7 @@ export default function CampaignCreation() {
       rewardRates: {
         click: 0.05,
         signup: 2.00,
-        deposit: user?.userType === "trader_creator" ? 10.00 : undefined,
-        trade: user?.userType === "trader_creator" ? 0.50 : undefined,
-        conversion: (user?.userType === "entrepreneur" || user?.userType === "enterprise") ? 5.00 : undefined,
+        conversion: user?.accountType === "business" ? 5.00 : undefined,
       },
       requirements: "",
       duration: 7,
@@ -367,49 +365,7 @@ export default function CampaignCreation() {
                       )}
                     />
                     
-                    {user?.userType === "trader_creator" && (
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="rewardRates.deposit"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Per Deposit ($)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  step="0.01"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="rewardRates.trade"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Per Trade ($)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  step="0.01"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
-                    
-                    {(user?.userType === "entrepreneur" || user?.userType === "enterprise") && (
+                    {user?.accountType === "business" && (
                       <FormField
                         control={form.control}
                         name="rewardRates.conversion"

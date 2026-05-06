@@ -132,7 +132,7 @@ export default function AdminDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout title="CreoCash Admin Control Center" navigation={navigation}>
+      <DashboardLayout title="CreviaTube Admin Control Center" navigation={navigation}>
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">
-                  CreoCash Admin Control Center
+                  CreviaTube Admin Control Center
                 </h1>
               </div>
               <p className="text-slate-600 text-lg font-medium">Platform overview and management dashboard</p>
@@ -493,26 +493,26 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {stats?.userDistribution?.map((userType, index) => (
+                  {stats?.userDistribution?.map((accountType, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${
-                          userType.role === 'admin' ? 'bg-red-500' :
-                          userType.role === 'creator' ? 'bg-blue-500' :
+                          accountType.role === 'admin' ? 'bg-red-500' :
+                          accountType.role === 'creator' ? 'bg-blue-500' :
                           'bg-green-500'
                         }`}></div>
-                        <span className="font-medium text-gray-900 capitalize">{userType.role}s</span>
+                        <span className="font-medium text-gray-900 capitalize">{accountType.role}s</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold text-purple-600">{userType.count}</div>
+                        <div className="font-semibold text-purple-600">{accountType.count}</div>
                         <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
                           <div 
                             className={`h-2 rounded-full ${
-                              userType.role === 'admin' ? 'bg-red-500' :
-                              userType.role === 'creator' ? 'bg-blue-500' :
+                              accountType.role === 'admin' ? 'bg-red-500' :
+                              accountType.role === 'creator' ? 'bg-blue-500' :
                               'bg-green-500'
                             }`}
-                            style={{ width: `${(userType.count / ((stats as any)?.totalUsers || 1)) * 100}%` }}
+                            style={{ width: `${(accountType.count / ((stats as any)?.totalUsers || 1)) * 100}%` }}
                           ></div>
                         </div>
                       </div>

@@ -11,9 +11,17 @@ export class AutoSyncService {
 
   // Initialize automatic sync based on environment
   async initialize() {
-    console.log('🔄 Initializing CreoCash Auto-Sync Service...');
+    console.log('🔄 Initializing CreviaTube Auto-Sync Service...');
     console.log(`Environment: ${isProduction ? 'Production' : 'Development'}`);
     console.log(`Platform: ${isReplit ? 'Replit' : 'External Hosting'}`);
+
+    // Check if auto-sync is explicitly enabled
+    const autoSyncEnabled = process.env.AUTO_SYNC_ENABLED === 'true';
+    
+    if (!autoSyncEnabled) {
+      console.log('🔧 Auto-sync disabled: Set AUTO_SYNC_ENABLED=true to enable.');
+      return;
+    }
 
     // Check if required API keys are present for sync services
     const hasRequiredKeys = process.env.INSTAGRAM_ACCESS_TOKEN || 
@@ -35,8 +43,8 @@ export class AutoSyncService {
       // Replit environment - lighter sync
       await this.startLightAutoSync();
     } else {
-      // Development - manual sync only
-      console.log('🔧 Development mode: Auto-sync disabled. Use manual sync endpoints.');
+      // Development - manual sync only (but enabled if flag is set)
+      console.log('🔧 Development mode: Auto-sync enabled by flag. Use manual sync endpoints.');
     }
   }
 
@@ -82,40 +90,31 @@ export class AutoSyncService {
       setTimeout(async () => {
         console.log('🎯 Running initial light sync...');
         try {
-          // Sync only active creators to reduce load
-          const traderResult = await metricsSyncService.syncByCreatorType('trader_creator');
           const influencerResult = await metricsSyncService.syncByCreatorType('influencer');
-          
-          const successful = traderResult.filter(r => r.success).length + influencerResult.filter(r => r.success).length;
-          const failed = traderResult.filter(r => !r.success).length + influencerResult.filter(r => !r.success).length;
-          
+
+          const successful = influencerResult.filter(r => r.success).length;
+          const failed = influencerResult.filter(r => !r.success).length;
+
           console.log(`✅ Light sync completed: ${successful} successful, ${failed} failed`);
         } catch (error) {
           console.error('❌ Light sync failed:', error);
         }
-      }, 15000); // 15 second delay for Replit
+      }, 15000);
 
-      // Set up less frequent sync for Replit
-      const lightIntervalMinutes = 120; // 2 hours for Replit
+      const lightIntervalMinutes = 120;
       this.syncInterval = setInterval(async () => {
         console.log('🔄 Running scheduled light sync...');
         try {
-          // Stagger syncs to avoid hitting API limits
-          const traderResult = await metricsSyncService.syncByCreatorType('trader_creator');
-          await new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
-          
           const influencerResult = await metricsSyncService.syncByCreatorType('influencer');
-          await new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
-          
-          const entrepreneurResult = await metricsSyncService.syncByCreatorType('entrepreneur');
-          
-          const successful = traderResult.filter(r => r.success).length + 
-                           influencerResult.filter(r => r.success).length +
-                           entrepreneurResult.filter(r => r.success).length;
-          const failed = traderResult.filter(r => !r.success).length + 
-                        influencerResult.filter(r => !r.success).length +
-                        entrepreneurResult.filter(r => !r.success).length;
-          
+          await new Promise(resolve => setTimeout(resolve, 30000));
+
+          const businessResult = await metricsSyncService.syncByCreatorType('business');
+
+          const successful = influencerResult.filter(r => r.success).length +
+                           businessResult.filter(r => r.success).length;
+          const failed = influencerResult.filter(r => !r.success).length +
+                        businessResult.filter(r => !r.success).length;
+
           console.log(`✅ Light scheduled sync completed: ${successful} successful, ${failed} failed`);
         } catch (error) {
           console.error('❌ Light scheduled sync failed:', error);

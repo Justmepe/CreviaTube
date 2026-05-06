@@ -2,21 +2,37 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import http from "http";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupAuth } from "./auth";
-import { setupAPIs } from "./api";
+import { registerRoutes } from "./routes";
+import { autoSyncService } from "./core/services/auto-sync";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Request logging and pretty-print JSON middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
+  
+  // Override res.json to capture response and optionally pretty-print
+  res.json = function (bodyJson: any, ...args: any[]) {
     capturedJsonResponse = bodyJson;
+    
+    // Check if pretty printing is requested via query param or default in development
+    const pretty = req.query.pretty !== undefined || 
+                   req.query.format === 'pretty' ||
+                   (process.env.NODE_ENV === 'development' && !req.query.minify);
+    
+    // If pretty printing is requested, format the JSON
+    if (pretty && typeof bodyJson === 'object' && bodyJson !== null) {
+      res.setHeader('Content-Type', 'application/json');
+      return res.send(JSON.stringify(bodyJson, null, 2));
+    }
+    
+    // Otherwise use the original json method
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
@@ -40,70 +56,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Setup authentication
-  setupAuth(app);
+  // Setup all routes including authentication and APIs
+  const server = await registerRoutes(app);
+
+  // Initialize auto-sync service
+  await autoSyncService.initialize();
   
-  // Setup organized API routes
-  setupAPIs(app);
-  
-  // Setup core enterprise dashboard route directly to avoid import issues
-  app.get("/api/enterprise/dashboard", async (req, res) => {
-    console.log('Enterprise dashboard request:', req.isAuthenticated(), req.user?.role);
-    
-    if (!req.isAuthenticated()) {
-      console.log('Enterprise dashboard: Not authenticated');
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    try {
-      // Check if user is enterprise type or admin
-      if ((req.user as any).userType !== "enterprise" && (req.user as any).role !== "admin") {
-        console.log('Enterprise dashboard: User not enterprise type or admin:', (req.user as any).userType, (req.user as any).role);
-        return res.status(403).json({ message: "Enterprise account or admin access required" });
-      }
-
-      // Simple response for now - this fixes the JSON parsing error
-      const mockStats = {
-        totalCampaigns: 5,
-        activeCampaigns: 3,
-        totalRevenue: 2500,
-        totalEvents: 1250,
-        account: {
-          company: (req.user as any).role === "admin" 
-            ? "Admin Dashboard - All Enterprise Accounts"
-            : (req.user as any).fullName || (req.user as any).username,
-          domain: (req.user as any).role === "admin" 
-            ? "creocash.com/admin" 
-            : `${(req.user as any).username}.creocash.app`,
-          status: (req.user as any).role === "admin" ? "admin" : "setup",
-          commissionRate: 0.15,
-          features: {
-            whiteLabel: true,
-            customBranding: true,
-            apiAccess: true,
-            customDomains: true,
-            prioritySupport: true,
-            dedicatedManager: false
-          }
-        }
-      };
-
-      const responseData = {
-        stats: mockStats,
-        campaigns: [],
-        account: null,
-        user: req.user
-      };
-
-      res.json(responseData);
-    } catch (error: any) {
-      console.error("Error fetching enterprise dashboard:", error);
-      res.status(500).json({ message: "Failed to fetch enterprise dashboard" });
-    }
-  });
-  
-  const server = http.createServer(app);
-
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

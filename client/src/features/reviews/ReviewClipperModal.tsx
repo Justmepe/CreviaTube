@@ -109,15 +109,12 @@ export function ReviewClipperModal({ open, onOpenChange, clipperCampaign }: Revi
 
   const submitReviewMutation = useMutation({
     mutationFn: async (data: ReviewFormData) => {
-      return apiRequest('/api/reviews', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...data,
-          clipperCampaignId: clipperCampaign?.id,
-          clipperId: clipperCampaign?.clipperId,
-          campaignId: clipperCampaign?.campaignId,
-          tags: selectedTags,
-        }),
+      return apiRequest('POST', '/api/reviews', {
+        ...data,
+        clipperCampaignId: clipperCampaign?.id,
+        clipperId: clipperCampaign?.clipperId,
+        campaignId: clipperCampaign?.campaignId,
+        tags: selectedTags,
       });
     },
     onSuccess: () => {

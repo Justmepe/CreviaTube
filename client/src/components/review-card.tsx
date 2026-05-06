@@ -37,7 +37,7 @@ interface PlatformReview {
     totalEarnings: number;
     payoutsReceived: number;
     userRole: string;
-    userType?: string;
+    accountType?: string;
   };
   improvementSuggestions?: string;
   npsScore: number;
@@ -51,7 +51,7 @@ interface PlatformReview {
     username: string;
     fullName: string;
     role: string;
-    userType?: string;
+    accountType?: string;
   };
   adminResponse?: string;
   adminRespondedAt?: string;
@@ -67,19 +67,15 @@ export function ReviewCard({ review, showFullDetails = false, onHelpfulVote }: R
   const [showAllRatings, setShowAllRatings] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
   
-  const getUserTypeLabel = (userType?: string, role?: string) => {
-    if (userType === "trader_creator") return "Trading Educator";
-    if (userType === "influencer") return "Social Influencer";
-    if (userType === "entrepreneur") return "Entrepreneur";
-    if (userType === "enterprise") return "Enterprise";
+  const getAccountTypeLabel = (accountType?: string, role?: string) => {
+    if (accountType === "influencer") return "Social Influencer";
+    if (accountType === "business") return "Business";
     return role === "creator" ? "Creator" : "Clipper";
   };
-  
-  const getUserTypeColor = (userType?: string, role?: string) => {
-    if (userType === "trader_creator") return "bg-blue-100 text-blue-800";
-    if (userType === "influencer") return "bg-pink-100 text-pink-800";
-    if (userType === "entrepreneur") return "bg-green-100 text-green-800";
-    if (userType === "enterprise") return "bg-purple-100 text-purple-800";
+
+  const getAccountTypeColor = (accountType?: string, role?: string) => {
+    if (accountType === "influencer") return "bg-pink-100 text-pink-800";
+    if (accountType === "business") return "bg-green-100 text-green-800";
     return role === "creator" ? "bg-orange-100 text-orange-800" : "bg-teal-100 text-teal-800";
   };
   
@@ -138,8 +134,8 @@ export function ReviewCard({ review, showFullDetails = false, onHelpfulVote }: R
                 <span>{review.user.fullName}</span>
               </div>
               
-              <Badge className={getUserTypeColor(review.user.userType, review.user.role)}>
-                {getUserTypeLabel(review.user.userType, review.user.role)}
+              <Badge className={getAccountTypeColor(review.user.accountType, review.user.role)}>
+                {getAccountTypeLabel(review.user.accountType, review.user.role)}
               </Badge>
               
               <Badge variant="outline" className={getTriggerColor(review.reviewTrigger)}>
@@ -155,7 +151,7 @@ export function ReviewCard({ review, showFullDetails = false, onHelpfulVote }: R
           
           {review.wouldRecommend && (
             <Badge className="bg-green-100 text-green-800">
-              Recommends CreoCash
+              Recommends CreviaTube
             </Badge>
           )}
         </div>
@@ -263,7 +259,7 @@ export function ReviewCard({ review, showFullDetails = false, onHelpfulVote }: R
         {/* Admin Response */}
         {review.adminResponse && (
           <div className="bg-teal-50 rounded-lg p-4 border-l-4 border-teal-400">
-            <h4 className="font-medium text-teal-900 mb-2">CreoCash Response</h4>
+            <h4 className="font-medium text-teal-900 mb-2">CreviaTube Response</h4>
             <p className="text-teal-800 text-sm mb-2">{review.adminResponse}</p>
             <p className="text-teal-600 text-xs">
               Responded {formatDistanceToNow(new Date(review.adminRespondedAt!), { addSuffix: true })}
