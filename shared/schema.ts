@@ -69,6 +69,18 @@ export const users = pgTable("users", {
   // Web3 wallet (lowercase 0x... EVM address). Null until user binds via Reown AppKit.
   walletAddress: varchar("wallet_address", { length: 42 }).unique(),
 
+  // Persona lifecycle stage. Captured at signup; mutable via Settings.
+  // Values are constrained at the DB level (see migration 0012):
+  //   founder_prelaunch | early_brand | established_brand | solo_creator
+  // Resolved into a Persona (see client/src/features/personas/resolver.ts).
+  campaignerStage: text("campaigner_stage"),
+
+  // Region targeting (Phase 3.5). country_iso is ISO 3166-1 alpha-2; auto-detected
+  // at signup via IP geolocation, may be self-attested. country_verified_at is
+  // stamped when verification (login-IP match, phone country code, KYC) succeeds.
+  countryIso: varchar("country_iso", { length: 2 }),
+  countryVerifiedAt: timestamp("country_verified_at"),
+
   // Social Media Integration
   socialAccounts: json("social_accounts").$type<{
     instagram?: { username: string; accessToken?: string; businessAccount?: boolean };
