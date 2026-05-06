@@ -25,19 +25,41 @@ export default function AuthPage() {
     fullName: "",
     role: "clipper" as "creator" | "clipper",
     accountType: undefined as "influencer" | "business" | undefined,
+    campaignerStage: undefined as
+      | "founder_prelaunch"
+      | "early_brand"
+      | "established_brand"
+      | "solo_creator"
+      | undefined,
     phoneNumber: "",
   });
 
   // Single dropdown drives both `role` and `accountType` so users don't need
   // to understand the schema. The three personas match the landing page.
+  // For brands we ask a follow-up stage question; for influencers we set
+  // solo_creator implicitly; for clippers stage is null.
   const handlePersonaChange = (persona: string) => {
     if (persona === "business") {
-      setRegisterData(prev => ({ ...prev, role: "creator", accountType: "business" }));
+      setRegisterData(prev => ({
+        ...prev,
+        role: "creator",
+        accountType: "business",
+        campaignerStage: undefined, // they'll pick one in the follow-up
+      }));
     } else if (persona === "influencer") {
-      setRegisterData(prev => ({ ...prev, role: "creator", accountType: "influencer" }));
+      setRegisterData(prev => ({
+        ...prev,
+        role: "creator",
+        accountType: "influencer",
+        campaignerStage: "solo_creator",
+      }));
     } else if (persona === "clipper") {
-      // Clippers default to `influencer` accountType so the column is non-null.
-      setRegisterData(prev => ({ ...prev, role: "clipper", accountType: "influencer" }));
+      setRegisterData(prev => ({
+        ...prev,
+        role: "clipper",
+        accountType: "influencer",
+        campaignerStage: undefined,
+      }));
     }
   };
 
@@ -235,12 +257,40 @@ export default function AuthPage() {
                         <SelectValue placeholder="Choose your role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="business">Brand or business — running campaigns</SelectItem>
-                        <SelectItem value="influencer">Creator / influencer — running campaigns</SelectItem>
-                        <SelectItem value="clipper">Clipper — earning from campaigns</SelectItem>
+                        <SelectItem value="business">Brand or business, running campaigns</SelectItem>
+                        <SelectItem value="influencer">Creator / influencer, running campaigns</SelectItem>
+                        <SelectItem value="clipper">Clipper, earning from campaigns</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Stage follow-up. Only shown for the brand path; influencer
+                      and clipper don't need it (influencer = solo_creator
+                      implicitly, clipper has no stage). */}
+                  {registerData.accountType === "business" && registerData.role === "creator" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="stage" className="text-slate-700 font-medium">What stage is your company at?</Label>
+                      <Select
+                        value={registerData.campaignerStage || ""}
+                        onValueChange={(v) =>
+                          setRegisterData(prev => ({
+                            ...prev,
+                            campaignerStage: v as typeof prev.campaignerStage,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl">
+                          <SelectValue placeholder="Pick the closest fit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="founder_prelaunch">Pre-launch / founder — haven't shipped yet</SelectItem>
+                          <SelectItem value="early_brand">Early-stage — launched, growing</SelectItem>
+                          <SelectItem value="established_brand">Established — have customers and revenue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500">You can change this anytime from Settings as your business grows.</p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="registerPassword" className="text-slate-700 font-medium">Password</Label>

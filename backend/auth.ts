@@ -7,6 +7,17 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "../shared/schema.js";
 import { issueVerificationEmail } from "./api/email-verification";
+import { detectCountryIso } from "./lib/geolocation";
+
+// Whitelist of values accepted for users.campaigner_stage. Mirrors the CHECK
+// constraint in migrations/0012_personas_and_region.sql so we reject bad
+// inputs before they hit the DB.
+const VALID_STAGES = new Set([
+  "founder_prelaunch",
+  "early_brand",
+  "established_brand",
+  "solo_creator",
+]);
 
 declare global {
   namespace Express {
@@ -83,8 +94,8 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { enterpriseRequestData, ...userData } = req.body;
-      
+      const { enterpriseRequestData, campaignerStage, countryIso: claimedCountry, ...userData } = req.body;
+
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
@@ -96,9 +107,22 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email already exists" });
       }
 
+      // Validate optional campaigner stage. Falls through silently if not set.
+      const stage = typeof campaignerStage === "string" && VALID_STAGES.has(campaignerStage)
+        ? campaignerStage
+        : null;
+
+      // Auto-detect country from request headers (CF / proxy). Caller may
+      // override via payload but we prefer CF header when present.
+      const detectedCountry = detectCountryIso(req, claimedCountry);
+
       const user = await storage.createUser({
         ...userData,
         password: await hashPassword(userData.password),
+        campaignerStage: stage,
+        countryIso: detectedCountry,
+        // country_verified_at left null; verification happens later (login-IP
+        // re-check, phone country code, KYC).
       });
 
       // Fire-and-forget: send verification email. Failures here shouldn't block signup.
