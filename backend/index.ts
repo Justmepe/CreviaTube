@@ -4,6 +4,7 @@ import http from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { registerRoutes } from "./routes";
 import { autoSyncService } from "./core/services/auto-sync";
+import { startScheduler } from "./lib/scheduler";
 
 const app = express();
 app.use(express.json());
@@ -61,6 +62,9 @@ app.use((req, res, next) => {
 
   // Initialize auto-sync service
   await autoSyncService.initialize();
+
+  // Daily scheduler (subscription expiry warnings, etc.)
+  startScheduler();
   
   // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

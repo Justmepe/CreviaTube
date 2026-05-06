@@ -1,7 +1,11 @@
 import { db } from "../../db";
-import { campaigns, clipperCampaigns, trackingEvents } from "../../../shared/schema";
+import { campaigns, clipperCampaigns, trackingEvents, users } from "../../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
+import * as React from "react";
 import { EscrowService } from "./escrow-service";
+import { sendEmail, APP_URL } from "../../lib/email";
+import { CampaignGoalReached } from "../../emails/campaign-goal-reached";
+import { CampaignCompletedCreator } from "../../emails/campaign-completed-creator";
 
 export interface CampaignCompletionService {
   checkAndUpdateClipperCompletion(clipperCampaignId: string): Promise<boolean>;
@@ -279,9 +283,87 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
       );
 
       console.log(`✅ Clipper campaign ${clipperCampaignId} marked as complete. Goal: ${goalType} (${achievedValue}/${targetValue}). Completion payout: $${completionReward}`);
+
+      // Notify both sides (fire-and-forget — failures don't unwind completion)
+      void this.notifyCampaignCompletion({
+        clipperCampaignId,
+        clipperId: clipperCampaign.clipperId,
+        campaignId: clipperCampaign.campaignId,
+        goalType,
+        target: targetValue,
+        achieved: achievedValue,
+        completionReward,
+      });
     } catch (error) {
       console.error('Error marking clipper campaign complete:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Notify clipper + creator that the campaign goal was reached. Each side gets
+   * a tailored template; both deduped on clipperCampaignId so retries no-op.
+   */
+  private async notifyCampaignCompletion(opts: {
+    clipperCampaignId: string;
+    clipperId: string;
+    campaignId: string;
+    goalType: string;
+    target: number;
+    achieved: number;
+    completionReward: number;
+  }): Promise<void> {
+    try {
+      const [clipper] = await db
+        .select({ id: users.id, email: users.email, fullName: users.fullName })
+        .from(users).where(eq(users.id, opts.clipperId)).limit(1);
+      const [campaign] = await db
+        .select({ id: campaigns.id, name: campaigns.name, creatorId: campaigns.creatorId })
+        .from(campaigns).where(eq(campaigns.id, opts.campaignId)).limit(1);
+      if (!clipper || !campaign) return;
+      const [creator] = await db
+        .select({ id: users.id, email: users.email, fullName: users.fullName })
+        .from(users).where(eq(users.id, campaign.creatorId)).limit(1);
+
+      // Clipper-side: "you hit the goal"
+      await sendEmail({
+        kind: "campaign_goal_reached",
+        to: clipper.email,
+        subject: `Goal reached on "${campaign.name}" — bonus released`,
+        react: React.createElement(CampaignGoalReached, {
+          fullName: clipper.fullName,
+          campaignName: campaign.name,
+          goalType: opts.goalType,
+          target: opts.target,
+          achieved: opts.achieved,
+          completionReward: opts.completionReward.toFixed(2),
+          appUrl: APP_URL,
+        }),
+        dedupeKey: `campaign_goal_reached:${opts.clipperCampaignId}`,
+        userId: clipper.id,
+      });
+
+      // Creator-side: "your campaign was completed"
+      if (creator) {
+        await sendEmail({
+          kind: "campaign_completed_creator",
+          to: creator.email,
+          subject: `${clipper.fullName} completed "${campaign.name}"`,
+          react: React.createElement(CampaignCompletedCreator, {
+            creatorName: creator.fullName,
+            clipperName: clipper.fullName,
+            campaignName: campaign.name,
+            goalType: opts.goalType,
+            target: opts.target,
+            achieved: opts.achieved,
+            appUrl: APP_URL,
+          }),
+          dedupeKey: `campaign_completed_creator:${opts.clipperCampaignId}`,
+          userId: creator.id,
+        });
+      }
+    } catch (err) {
+      console.error("notifyCampaignCompletion failed:", err);
     }
   }
 

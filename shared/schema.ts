@@ -889,6 +889,9 @@ export const subscriptions = pgTable("subscriptions", {
   status: text("status").notNull().default("active"),
   currentPeriodEnd: timestamp("current_period_end").notNull(),
   lastPaymentIntentId: varchar("last_payment_intent_id").references(() => paymentIntents.id),
+  // Stamped after we send the T-3 expiry warning email; reset on every renewal
+  // (when currentPeriodEnd advances) so each cycle gets at most one notification.
+  notifiedExpiryAt: timestamp("notified_expiry_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

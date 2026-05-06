@@ -304,6 +304,7 @@ async function activateSubscription(userId: string, intentId: string, durationDa
     status: "active",
     currentPeriodEnd: extendedEnd,
     lastPaymentIntentId: intentId,
+    notifiedExpiryAt: null, // Reset so we re-notify near the *next* expiry
     updatedAt: now,
   }).where(eq(subscriptions.userId, userId));
   return extendedEnd;
