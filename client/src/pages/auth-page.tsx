@@ -28,13 +28,27 @@ export default function AuthPage() {
     phoneNumber: "",
   });
 
-  const handleAccountTypeChange = (accountType: string) => {
-    setRegisterData(prev => ({
-      ...prev,
-      accountType: accountType as any,
-      role: accountType === "influencer" || accountType === "business" ? "creator" : "clipper"
-    }));
+  // Single dropdown drives both `role` and `accountType` so users don't need
+  // to understand the schema. The three personas match the landing page.
+  const handlePersonaChange = (persona: string) => {
+    if (persona === "business") {
+      setRegisterData(prev => ({ ...prev, role: "creator", accountType: "business" }));
+    } else if (persona === "influencer") {
+      setRegisterData(prev => ({ ...prev, role: "creator", accountType: "influencer" }));
+    } else if (persona === "clipper") {
+      // Clippers default to `influencer` accountType so the column is non-null.
+      setRegisterData(prev => ({ ...prev, role: "clipper", accountType: "influencer" }));
+    }
   };
+
+  const personaValue =
+    registerData.role === "clipper"
+      ? "clipper"
+      : registerData.accountType === "business"
+      ? "business"
+      : registerData.accountType === "influencer"
+      ? "influencer"
+      : "";
 
   // Redirect if user is already logged in
   if (user) {
@@ -215,15 +229,15 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="accountType" className="text-slate-700 font-medium">Account Type</Label>
-                    <Select value={registerData.accountType || ""} onValueChange={handleAccountTypeChange}>
+                    <Label htmlFor="persona" className="text-slate-700 font-medium">I am a…</Label>
+                    <Select value={personaValue} onValueChange={handlePersonaChange}>
                       <SelectTrigger className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl">
-                        <SelectValue placeholder="Select your account type" />
+                        <SelectValue placeholder="Choose your role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="influencer">Social Influencer</SelectItem>
-                        <SelectItem value="business">Business / Entrepreneur</SelectItem>
-                        <SelectItem value="clipper">Content Clipper</SelectItem>
+                        <SelectItem value="business">Brand or business — running campaigns</SelectItem>
+                        <SelectItem value="influencer">Creator / influencer — running campaigns</SelectItem>
+                        <SelectItem value="clipper">Clipper — earning from campaigns</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -48,13 +48,8 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
         { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
-                    { name: "Communities", href: "/communities", icon: UsersIcon },
-            { name: "Premium", href: "/premium", icon: Crown },
-            { name: "Commissions", href: "/commissions", icon: DollarSign },
-        { name: "Enterprise", href: "/enterprise", icon: Building },
-        { name: "Enterprise Accounts", href: "/enterprise-accounts", icon: Building },
-        { name: "Payouts", href: "/payouts", icon: DollarSign },
-        { name: "Real Analytics", href: "/admin/real-analytics", icon: Activity },
+        { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
+        { name: "Revenue", href: "/admin/revenue", icon: Activity },
       ];
     }
 
@@ -62,31 +57,25 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       return [
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Marketplace", href: "/marketplace", icon: TrendingUp },
-                    { name: "Discover Communities", href: "/communities", icon: UsersIcon },
-            { name: "Premium Plans", href: "/premium", icon: Crown },
-            { name: "Commission Dashboard", href: "/commissions", icon: DollarSign },
         { name: "My Campaigns", href: "/campaigns", icon: Users },
         { name: "Top Clippers", href: "/clipper-directory", icon: Star },
+        { name: "Premium", href: "/premium", icon: Crown },
         { name: "Payouts", href: "/payouts", icon: Wallet },
       ];
     }
 
-    // Creator navigation (all creator types)
-    const baseNavigation = [
+    // Creator navigation. No "Payouts" entry — creators fund campaigns,
+    // they don't receive payouts. Refunds for unfilled campaigns surface
+    // inside My Campaigns.
+    return [
       { name: "Dashboard", href: "/", icon: BarChart3 },
       { name: "Metrics", href: "/metrics", icon: Activity },
       { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
       { name: "My Campaigns", href: "/my-campaigns", icon: Folder },
       { name: "Clippers", href: "/clippers", icon: Users },
       { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
-                { name: "My Communities", href: "/my-communities", icon: UsersIcon },
-          { name: "Premium Plans", href: "/premium", icon: Crown },
-          { name: "Commission Dashboard", href: "/commissions", icon: DollarSign },
+      { name: "Premium", href: "/premium", icon: Crown },
     ];
-
-    baseNavigation.push({ name: "Payouts", href: "/payouts", icon: DollarSign });
-
-    return baseNavigation;
   };
 
   const navigation = customNavigation || getDefaultNavigation();
@@ -112,9 +101,10 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex flex-1 flex-col px-4 py-4">
-            <ul className="flex flex-1 flex-col gap-y-1">
+          {/* Navigation — overflow-y-auto so the user menu below stays
+               visible regardless of nav length / viewport height */}
+          <nav className="flex flex-1 flex-col px-4 py-4 overflow-y-auto min-h-0">
+            <ul className="flex flex-col gap-y-1">
               {navigationWithCurrent.map((item) => {
                 const Icon = item.icon;
                 return (
