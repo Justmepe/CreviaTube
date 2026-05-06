@@ -94,6 +94,15 @@ export async function verifyUsdcTransfer(opts: {
   expectedFrom?: Address;
   minValue: bigint;
 }): Promise<VerifyResult> {
+  // Test hook: e2e suite sets WEB3_MOCK_VERIFY=true so we don't have to
+  // execute a real on-chain transfer to exercise the funding/payment flow.
+  // Returns a deterministic ok response with the expected receiver and the
+  // exact minValue. NEVER set this in production.
+  if (process.env.WEB3_MOCK_VERIFY === "true") {
+    const from = (opts.expectedFrom || "0x000000000000000000000000000000000000dEaD") as Address;
+    return { ok: true, from, to: opts.expectedTo, value: opts.minValue };
+  }
+
   let receipt;
   try {
     receipt = await publicClient.getTransactionReceipt({ hash: opts.txHash });

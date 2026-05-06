@@ -381,14 +381,17 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
     achievedValue: number
   ): Promise<void> {
     try {
-      // Create a virtual tracking event for the completion reward
+      // Create a virtual tracking event for the completion reward.
+      // eventType must come from the enum ["click","signup","view","conversion"]
+      // — we use 'conversion' since a goal hit IS a conversion. The
+      // completion-bonus marker lives in metadata, not the type column.
       const [completionEvent] = await db
         .insert(trackingEvents)
         .values({
           clipperId: clipperId,
           campaignId,
           clipperCampaignId,
-          eventType: 'completion_bonus',
+          eventType: 'conversion',
           eventValue: achievedValue.toString(),
           rewardAmount: completionReward.toString(),
           status: 'verified', // Auto-verify completion bonuses
