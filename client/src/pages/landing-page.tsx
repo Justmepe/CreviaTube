@@ -1,787 +1,578 @@
-import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { 
-  CheckCircle, 
-  TrendingUp, 
-  Globe,
-  DollarSign,
-  Shield,
-  Star,
+import {
   ArrowRight,
+  CheckCircle2,
+  Shield,
   Sparkles,
-  Quote,
-  Users,
-  Zap,
   BarChart3,
+  Star,
   Building2,
+  Zap,
   PlayCircle,
-  CreditCard,
-  Home,
-  LogIn,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Send,
-  Twitter,
-  Facebook,
-  Instagram,
-  Linkedin,
-  Youtube,
-  MessageCircle,
-  MessageSquare
+  Plus,
 } from "lucide-react";
+
+// Lucide ships the old Twitter bird; X rebranded to a different mark.
+const XLogo = ({ className = "" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+// Mock data for the live activity sections. These are placeholders for launch;
+// once real campaigns + payouts exist, swap to API queries.
+const recentPayouts = [
+  { amount: "450.00", clipper: "@maya.clips",   campaign: "Fitness app launch", txShort: "0x7c2…3e91", txUrl: "https://basescan.org" },
+  { amount: "120.00", clipper: "@vish_xo",      campaign: "Crypto wallet promo", txShort: "0x4a1…2b88", txUrl: "https://basescan.org" },
+  { amount: "310.50", clipper: "@dani.shorts",  campaign: "Beauty drop", txShort: "0x9d3…f102", txUrl: "https://basescan.org" },
+  { amount: "89.20",  clipper: "@indiegamer",   campaign: "Wishlist push", txShort: "0xc01…8e44", txUrl: "https://basescan.org" },
+  { amount: "240.00", clipper: "@boltcaster",   campaign: "$ZAP mint", txShort: "0x55e…1d27", txUrl: "https://basescan.org" },
+  { amount: "75.00",  clipper: "@reels.ria",    campaign: "Coach course", txShort: "0x3f7…9aa3", txUrl: "https://basescan.org" },
+];
+
+type LiveCampaign = {
+  name: string;
+  bounty: string;
+  bountyUnit: string;
+  percentFilled: number;
+  platforms: string[];
+  status: "open" | "filling";
+  daysLeft: number;
+};
+
+const liveCampaigns: LiveCampaign[] = [
+  { name: "Beauty brand launch · Drop the App", bounty: "0.04", bountyUnit: "1k views", percentFilled: 62, platforms: ["TikTok", "Reels"],   status: "filling", daysLeft: 4 },
+  { name: "$ZAP token mint",                    bounty: "0.10", bountyUnit: "click",    percentFilled: 28, platforms: ["X", "YouTube"],     status: "open",    daysLeft: 12 },
+  { name: "Fitness coach 8-week course",        bounty: "2.50", bountyUnit: "signup",   percentFilled: 45, platforms: ["IG", "TikTok"],     status: "open",    daysLeft: 9 },
+  { name: "Indie game wishlist push",           bounty: "0.06", bountyUnit: "1k views", percentFilled: 71, platforms: ["YouTube", "TikTok"], status: "filling", daysLeft: 3 },
+];
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
-  
-  // Safely access auth context with error handling
+
   let user = null;
   try {
-    const authContext = useAuth();
-    user = authContext.user;
-  } catch (error) {
-    // Handle case where AuthProvider is not available
-    console.warn('Auth context not available, rendering landing page without authentication');
+    user = useAuth().user;
+  } catch {
+    // AuthProvider may not wrap the public marketing route
   }
-  const [newReviewIds, setNewReviewIds] = useState<Set<string>>(new Set());
-  const [reviewsUpdateTime, setReviewsUpdateTime] = useState<Date>(new Date());
 
-  // Fetch platform features and stats from API
-  const { data: features = [] } = useQuery({
-    queryKey: ["/api/platform/features"],
-  });
-
-  const { data: stats = [] } = useQuery({
-    queryKey: ["/api/platform/stats"],
-  });
-
-  // Fetch featured platform reviews for landing page with auto-updates
-  const { data: featuredReviews = [], refetch: refetchReviews, isFetching, isRefetching } = useQuery({
-    queryKey: ["/api/platform-reviews", { status: "published", limit: 4 }],
-    refetchInterval: 30000, // Auto-refetch every 30 seconds
-    refetchIntervalInBackground: true, // Continue refetching when tab is not active
-    staleTime: 10000, // Consider data stale after 10 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-  });
-
-  // Track new reviews for highlighting
-  useEffect(() => {
-    if (Array.isArray(featuredReviews) && featuredReviews.length > 0) {
-      const currentReviewIds = new Set(featuredReviews.map((review: any) => review.id));
-      const previousReviewIds = new Set(JSON.parse(localStorage.getItem('lastReviewIds') || '[]'));
-      
-      // Find new reviews - convert Set to Array for filtering
-      const currentIds = Array.from(currentReviewIds);
-      const newIds = new Set(currentIds.filter(id => !previousReviewIds.has(id)));
-      
-      if (newIds.size > 0 && previousReviewIds.size > 0) {
-        setNewReviewIds(newIds);
-        setReviewsUpdateTime(new Date());
-        
-        // Clear highlighting after 5 seconds
-        setTimeout(() => {
-          setNewReviewIds(new Set());
-        }, 5000);
-      }
-      
-      // Save current review ids for next comparison
-      localStorage.setItem('lastReviewIds', JSON.stringify(currentIds));
-    }
-  }, [featuredReviews]);
-
-  // Manual refresh function for reviews
-  const handleRefreshReviews = useCallback(() => {
-    refetchReviews();
-    setReviewsUpdateTime(new Date());
-  }, [refetchReviews]);
-
-  // Redirect if user is already logged in
   if (user) {
     setLocation("/");
     return null;
   }
 
-  // Handle Get Started button click
-  const handleGetStarted = () => {
-    setLocation("/auth");
-  };
-
-  // Navigation handlers for hero section buttons
-  const scrollToSection = (elementId: string) => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleNavigation = (action: string) => {
-    switch (action) {
-      case 'home':
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        break;
-      case 'features':
-        scrollToSection('features');
-        break;
-      case 'how-it-works':
-        scrollToSection('how-it-works');
-        break;
-      case 'reviews':
-        scrollToSection('reviews');
-        break;
-      case 'signin':
-        setLocation('/auth');
-        break;
-      case 'creators':
-        setLocation('/auth');
-        break;
-      case 'clippers':
-        setLocation('/auth');
-        break;
-      case 'enterprise':
-        setLocation('/auth');
-        break;
-      case 'pricing':
-        scrollToSection('trust-indicators');
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Icon mapping for dynamic features
-  const iconMap = {
-    TrendingUp,
-    DollarSign,
-    Shield,
-    Globe,
+  const goToAuth = () => setLocation("/auth");
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Floating Top Navigation */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-sm">
-        <div className="max-w-6xl mx-auto px-12 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">CreviaTube</span>
+    <div className="bg-slate-50 text-slate-900 antialiased font-sans">
+      <style>{`
+        .brand-grad { background-image: linear-gradient(135deg, #1D4ED8 0%, #047857 100%); }
+        .brand-grad-text { background-image: linear-gradient(135deg, #1D4ED8 0%, #047857 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .grid-bg {
+          background-image:
+            linear-gradient(to right, rgba(29,78,216,0.06) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(29,78,216,0.06) 1px, transparent 1px);
+          background-size: 56px 56px;
+        }
+        .glow { position: absolute; inset: auto; pointer-events: none; filter: blur(80px); opacity: 0.45; }
+        .ticker-track { animation: ticker 50s linear infinite; }
+        @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+      `}</style>
+
+      {/* ============ NAV ============ */}
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2.5">
+            <div className="w-9 h-9 brand-grad rounded-xl flex items-center justify-center shadow-sm">
+              <PlayCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
-            
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <button
-                onClick={() => handleNavigation('home')}
-                className="flex items-center space-x-2 text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
-              >
-                <Home className="w-4 h-4" />
-                <span>Home</span>
-              </button>
-              
-              <button
-                onClick={() => handleNavigation('features')}
-                className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
-              >
-                Features
-              </button>
-              
-              <button
-                onClick={() => handleNavigation('how-it-works')}
-                className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
-              >
-                How It Works
-              </button>
-              
-              <button
-                onClick={() => handleNavigation('reviews')}
-                className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
-              >
-                Reviews
-              </button>
-              
-              <button
-                onClick={() => handleNavigation('signin')}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </button>
-            </nav>
-            
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => handleNavigation('signin')}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </button>
-            </div>
+            <span className="text-xl font-bold brand-grad-text">CreviaTube</span>
+          </button>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+            <button onClick={() => scrollTo("how")} className="hover:text-slate-900">How it works</button>
+            <button onClick={() => scrollTo("why")} className="hover:text-slate-900">Why USDC</button>
+            <button onClick={() => scrollTo("fees")} className="hover:text-slate-900">Fees</button>
+            <button onClick={() => scrollTo("faq")} className="hover:text-slate-900">FAQ</button>
+          </nav>
+          <div className="flex items-center gap-3">
+            <a href="https://x.com/creviatube" target="_blank" rel="noopener noreferrer" aria-label="CreviaTube on X" className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+              <XLogo className="w-4 h-4" />
+            </a>
+            <button onClick={goToAuth} className="text-sm font-medium text-slate-700 hover:text-slate-900">Log in</button>
+            <button onClick={goToAuth} className="brand-grad text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition">
+              Get started
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Background Elements */}
-      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]"></div>
-      
-      {/* Professional Background Images */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-teal-500/5"></div>
-        
-        {/* Creator Economy Visualization */}
-        <div className="absolute top-20 left-10 w-32 h-32 opacity-10">
-          <svg viewBox="0 0 100 100" className="w-full h-full">
-            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500"/>
-            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-500"/>
-            <circle cx="50" cy="50" r="15" fill="currentColor" className="text-teal-500"/>
-            <circle cx="50" cy="20" r="8" fill="currentColor" className="text-blue-400"/>
-            <circle cx="80" cy="50" r="8" fill="currentColor" className="text-purple-400"/>
-            <circle cx="50" cy="80" r="8" fill="currentColor" className="text-teal-400"/>
-            <circle cx="20" cy="50" r="8" fill="currentColor" className="text-indigo-400"/>
-          </svg>
+      {/* ============ HERO ============ */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 grid-bg" />
+        <div className="glow w-[500px] h-[500px] rounded-full brand-grad -top-40 -right-40" />
+        <div className="glow w-[400px] h-[400px] rounded-full bg-emerald-400 top-40 -left-32 opacity-30" />
+
+        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 mb-6 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Now live on Base. On-chain USDC payouts.
+          </div>
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] max-w-4xl mx-auto">
+            Pay for <span className="brand-grad-text">verified results</span>, not promises.
+          </h1>
+          <p className="text-lg md:text-xl text-slate-600 mt-6 max-w-2xl mx-auto">
+            <strong className="text-slate-900">Brands</strong> launching a product. <strong className="text-slate-900">Creators</strong> growing an audience. <strong className="text-slate-900">Founders</strong> chasing distribution. Fund a campaign in USDC, clippers post, and rewards release when goals are hit.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-9">
+            <button onClick={goToAuth} className="brand-grad text-white text-base font-semibold px-7 py-4 rounded-xl shadow-lg hover:shadow-xl transition inline-flex items-center gap-2">
+              Start a campaign
+              <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+            <button onClick={goToAuth} className="bg-white text-slate-900 text-base font-semibold px-7 py-4 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition inline-flex items-center gap-2">
+              Earn as a clipper
+            </button>
+          </div>
+
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-slate-500">
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Funds held in on-chain escrow</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> AI content review before payout</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Anti-bot view verification</div>
+          </div>
         </div>
-        
-        {/* Global Network Pattern */}
-        <div className="absolute top-40 right-20 w-40 h-40 opacity-8">
-          <svg viewBox="0 0 120 120" className="w-full h-full">
-            <defs>
-              <linearGradient id="networkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style={{stopColor:'#3B82F6', stopOpacity:0.3}} />
-                <stop offset="100%" style={{stopColor:'#8B5CF6', stopOpacity:0.1}} />
-              </linearGradient>
-            </defs>
-            {/* Network nodes */}
-            <circle cx="20" cy="20" r="3" fill="url(#networkGrad)"/>
-            <circle cx="60" cy="15" r="4" fill="url(#networkGrad)"/>
-            <circle cx="100" cy="30" r="3" fill="url(#networkGrad)"/>
-            <circle cx="15" cy="60" r="3" fill="url(#networkGrad)"/>
-            <circle cx="60" cy="60" r="5" fill="url(#networkGrad)"/>
-            <circle cx="105" cy="70" r="3" fill="url(#networkGrad)"/>
-            <circle cx="30" cy="100" r="4" fill="url(#networkGrad)"/>
-            <circle cx="80" cy="105" r="3" fill="url(#networkGrad)"/>
-            {/* Connecting lines */}
-            <line x1="20" y1="20" x2="60" y2="15" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="60" y1="15" x2="100" y2="30" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="20" y1="20" x2="15" y2="60" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="60" y1="60" x2="60" y2="15" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="60" y1="60" x2="105" y2="70" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="15" y1="60" x2="30" y2="100" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="60" y1="60" x2="80" y2="105" stroke="url(#networkGrad)" strokeWidth="1"/>
-            <line x1="100" y1="30" x2="105" y2="70" stroke="url(#networkGrad)" strokeWidth="1"/>
-          </svg>
+
+        {/* Stats strip */}
+        <div className="relative max-w-5xl mx-auto px-6 -mt-2 pb-16">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-200">
+            {[
+              { v: "100%", l: "On-chain payouts" },
+              { v: "~$0.01", l: "Avg gas on Base" },
+              { v: "< 5 min", l: "From verify to wallet" },
+              { v: "20%", l: "Flat platform fee" },
+            ].map((s) => (
+              <div key={s.l} className="p-6 text-center">
+                <div className="text-3xl font-bold text-slate-900">{s.v}</div>
+                <div className="text-xs text-slate-500 mt-1 font-medium">{s.l}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      
-      {/* Animated Gradient Orbs */}
-      <div className="absolute top-0 right-0 -mt-4 -mr-16 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-0 left-0 -mb-4 -ml-16 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-      <div className="absolute top-1/2 right-1/4 w-60 h-60 bg-gradient-to-br from-teal-400/15 to-green-400/15 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
+      </section>
 
-      {/* Main Content - Starts from top so navigation floats over it */}
-      <div className="relative z-10 min-h-screen flex pt-20">
-        {/* Full Width Hero Section */}
-        <div className="flex-1 flex flex-col justify-center max-w-6xl mx-auto px-12 py-16">
-          <div>
-            {/* Platform Description */}
-            <div className="mb-8">
-              <p className="text-lg text-slate-600 font-medium">Global Creator Economy Platform</p>
-            </div>
-
-            {/* Hero Content */}
-            <div className="space-y-6 mb-12">
-              <h2 className="text-5xl font-bold text-slate-800 leading-tight">
-                Monetize Your 
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Creative Content</span>
-              </h2>
-              <p className="text-xl text-slate-600 leading-relaxed">
-                Join the world's most advanced affiliate marketing platform designed for creators. 
-                Track performance, complete goals, and get paid automatically with our intelligent escrow system.
-              </p>
-              
-              {/* Call-to-Action Button */}
-              <div className="flex items-center space-x-4 pt-4">
-                <Button 
-                  onClick={handleGetStarted}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 text-lg"
-                >
-                  <span>Get Started Free</span>
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-                <div className="text-sm text-slate-500">
-                  <span className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                    No setup fees
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Features Section */}
-            <div id="features" className="mb-16">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                  Choose Your Path
-                </h2>
-                <p className="text-lg text-slate-600">
-                  Select what best describes you to explore relevant features
-                </p>
-              </div>
-              
-              {/* Navigation Buttons */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
-                <button
-                  onClick={() => handleNavigation('creators')}
-                  className="flex items-center justify-center space-x-3 p-6 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105 group"
-                >
-                  <TrendingUp className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-slate-800">For Creators</span>
-                </button>
-                
-                <button
-                  onClick={() => handleNavigation('clippers')}
-                  className="flex items-center justify-center space-x-3 p-6 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105 group"
-                >
-                  <Users className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-slate-800">For Clippers</span>
-                </button>
-                
-                <button
-                  onClick={() => handleNavigation('enterprise')}
-                  className="flex items-center justify-center space-x-3 p-6 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105 group"
-                >
-                  <Building2 className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-slate-800">Enterprise</span>
-                </button>
-              </div>
-              
-              {/* Feature Grid */}
-              <div className="grid grid-cols-2 gap-6">
-              {Array.isArray(features) && features?.map((feature: any, index: number) => {
-                const Icon = iconMap[feature.icon as keyof typeof iconMap];
-                return (
-                  <div key={index} className="group">
-                    <div className="flex items-start space-x-3 p-4 rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg hover:scale-105">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                        {Icon && <Icon className="w-5 h-5 text-white" />}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-800 mb-1">{feature.title}</h3>
-                        <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-8">
-              {Array.isArray(stats) && stats?.map((stat: any, index: number) => (
-                <div key={index} className="text-center">
-                  <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-slate-600 font-medium">{stat.label}</div>
+      {/* ============ LIVE PAYOUTS TICKER ============ */}
+      <section className="bg-white border-y border-slate-200 overflow-hidden">
+        <div className="py-3 flex items-center">
+          <div className="flex items-center gap-2 px-5 shrink-0 border-r border-slate-200 self-stretch">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Live payouts</span>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <div className="flex gap-10 ticker-track whitespace-nowrap pl-10">
+              {[...recentPayouts, ...recentPayouts].map((p, i) => (
+                <div key={i} className="flex items-center gap-3 text-sm shrink-0">
+                  <span className="font-bold text-emerald-700">+{p.amount} USDC</span>
+                  <span className="text-slate-400">→</span>
+                  <span className="font-medium">{p.clipper}</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-slate-500">{p.campaign}</span>
+                  <a href={p.txUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-blue-600 hover:underline">{p.txShort} ↗</a>
                 </div>
               ))}
             </div>
-
-            {/* How It Works Section */}
-            <div id="how-it-works" className="mt-16 mb-16">
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-                  How CreviaTube Works
-                </h2>
-                <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-                  Whether you're a creator or clipper, get started in minutes with our simple 3-step process
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Step 1 */}
-                <div className="text-center group">
-                  <div className="relative mb-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-2xl font-bold text-white">1</span>
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                      <TrendingUp className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3">Create or Join</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    <strong>Creators:</strong> Set up campaigns with goals and budgets. <strong>Clippers:</strong> Join campaigns that match your interests and skills.
-                  </p>
-                </div>
-
-                {/* Step 2 */}
-                <div className="text-center group">
-                  <div className="relative mb-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-2xl font-bold text-white">2</span>
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                      <BarChart3 className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3">Create & Track</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    <strong>Creators:</strong> Monitor campaign performance. <strong>Clippers:</strong> Share content using unique tracking links. Real-time analytics for everyone.
-                  </p>
-                </div>
-
-                {/* Step 3 */}
-                <div className="text-center group">
-                  <div className="relative mb-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-2xl font-bold text-white">3</span>
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                      <DollarSign className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3">Get Paid</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    <strong>Everyone wins:</strong> When goals are met, payouts are automatically processed through our secure escrow system. No delays, no hassles.
-                  </p>
-                </div>
-              </div>
-
-              {/* CTA for How It Works */}
-              <div className="text-center mt-12">
-                <Button 
-                  onClick={handleGetStarted}
-                  variant="outline"
-                  className="bg-white/60 backdrop-blur-sm border border-white/40 hover:bg-white/80 hover:shadow-lg transition-all duration-300 hover:scale-105 text-slate-700 hover:text-slate-900 px-8 py-3 rounded-xl font-semibold"
-                >
-                  <span>Start Your Journey</span>
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Enhanced Customer Reviews Section */}
-            <div id="reviews" className="mt-16">
-              <div className="text-center mb-10">
-                <div className="flex items-center justify-center space-x-2 mb-4">
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <span className="text-2xl font-bold text-slate-800">4.9/5</span>
-                </div>
-                
-                <div className="flex items-center justify-center space-x-4 mb-4">
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Trusted by Creators Worldwide
-                  </h2>
-                  
-                  {/* Live Update Indicator */}
-                  <div className="flex items-center space-x-2">
-                    <div className="flex items-center space-x-1 bg-green-100/80 backdrop-blur-sm rounded-full px-3 py-1 border border-green-200/50">
-                      <div className={`w-2 h-2 rounded-full ${isRefetching ? 'bg-blue-500 animate-pulse' : 'bg-green-500'} transition-colors duration-300`}></div>
-                      <span className="text-xs font-medium text-green-700">
-                        {isRefetching ? 'Updating...' : 'Live'}
-                      </span>
-                    </div>
-                    
-                    <button
-                      onClick={handleRefreshReviews}
-                      className="p-2 rounded-full bg-white/70 hover:bg-white/90 border border-white/40 transition-all duration-200 hover:scale-105"
-                      title="Refresh reviews"
-                    >
-                      <MessageSquare className={`w-4 h-4 text-slate-600 ${isRefetching ? 'animate-spin' : ''}`} />
-                    </button>
-                  </div>
-                </div>
-                
-                <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                  Join thousands of successful creators who are already earning with CreviaTube. 
-                  See what they have to say about their experience.
-                </p>
-                
-                {/* Last updated timestamp */}
-                <p className="text-sm text-slate-500 mt-2">
-                  Reviews updated: {reviewsUpdateTime.toLocaleTimeString()}
-                </p>
-              </div>
-
-              {/* Reviews Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {Array.isArray(featuredReviews) && featuredReviews.length > 0 ? (
-                  featuredReviews.slice(0, 4).map((review: any) => {
-                    const isNewReview = newReviewIds.has(review.id);
-                    return (
-                      <div key={review.id} className="group">
-                        <div className={`bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-105 h-full ${
-                          isNewReview ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50/50 animate-pulse' : ''
-                        }`}>
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`w-5 h-5 ${
-                                  i < Math.floor(parseFloat(review.overallRating)) 
-                                    ? "fill-yellow-400 text-yellow-400" 
-                                    : "fill-gray-200 text-gray-200"
-                                }`} 
-                              />
-                            ))}
-                          </div>
-                          <Quote className="w-6 h-6 text-blue-400 opacity-60" />
-                        </div>
-                        
-                        <h3 className="font-bold text-gray-900 text-lg mb-3">{review.reviewTitle}</h3>
-                        <p className="text-gray-700 text-sm leading-relaxed mb-4 line-clamp-3">
-                          {review.reviewText}
-                        </p>
-                        
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                              <span className="text-white font-semibold text-sm">
-                                {(review.user?.fullName || "A").charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm">
-                                {review.user?.fullName || "Anonymous"}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {review.user?.role === "creator" ? "Creator" : "Clipper"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-blue-600 font-bold text-sm">
-                              {review.user?.role === "creator" ? "✓ Verified Creator" : "✓ Verified Clipper"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })
-                ) : (
-                  // Fallback testimonials when no reviews are available
-                  [
-                    {
-                      id: 1,
-                      rating: 5,
-                      title: "Game-changing platform for creators",
-                      text: "CreviaTube has completely transformed how I monetize my trading content. The automated escrow system gives me peace of mind, and the analytics help me optimize my campaigns perfectly.",
-                      author: "Sarah Chen",
-                      role: "Trading Educator",
-                      verified: true
-                    },
-                    {
-                      id: 2,
-                      rating: 5,
-                      title: "Incredible earning potential",
-                      text: "As a clipper, I've earned more in 3 months with CreviaTube than I did in a year with other platforms. The goal-based system is transparent and the payouts are instant.",
-                      author: "Marcus Johnson",
-                      role: "Content Clipper",
-                      verified: true
-                    },
-                    {
-                      id: 3,
-                      rating: 5,
-                      title: "Professional and reliable",
-                      text: "The multi-platform integration is seamless. I can track my Instagram, TikTok, and YouTube performance all in one place. The AI content protection is a huge plus.",
-                      author: "Elena Rodriguez",
-                      role: "Social Influencer",
-                      verified: true
-                    },
-                    {
-                      id: 4,
-                      rating: 5,
-                      title: "Best affiliate platform I've used",
-                      text: "The enterprise features are outstanding. White-label capabilities and custom commission rates make this perfect for our business. Customer support is top-notch.",
-                      author: "David Kim",
-                      role: "Business Owner",
-                      verified: true
-                    }
-                  ].map((review) => (
-                    <div key={review.id} className="group">
-                      <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-105 h-full">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`w-5 h-5 ${
-                                  i < review.rating 
-                                    ? "fill-yellow-400 text-yellow-400" 
-                                    : "fill-gray-200 text-gray-200"
-                                }`} 
-                                />
-                            ))}
-                          </div>
-                          <Quote className="w-6 h-6 text-blue-400 opacity-60" />
-                        </div>
-                        
-                        <h3 className="font-bold text-gray-900 text-lg mb-3">{review.title}</h3>
-                        <p className="text-gray-700 text-sm leading-relaxed mb-4">
-                          {review.text}
-                        </p>
-                        
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                              <span className="text-white font-semibold text-sm">
-                                {review.author.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm">{review.author}</p>
-                              <p className="text-xs text-gray-500">{review.role}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-blue-600 font-bold text-sm">
-                              ✓ Verified User
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Trust Indicators */}
-              <div id="trust-indicators" className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600 mb-1">50K+</div>
-                    <div className="text-sm text-gray-600">Active Creators</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-purple-600 mb-1">$2M+</div>
-                    <div className="text-sm text-gray-600">Paid Out</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-teal-600 mb-1">25+</div>
-                    <div className="text-sm text-gray-600">Integrations</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600 mb-1">99.9%</div>
-                    <div className="text-sm text-gray-600">Uptime</div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20"></div>
-        <div className="absolute inset-0 bg-grid-slate-800 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))] opacity-20"></div>
-        
-        <div className="relative z-10 max-w-6xl mx-auto px-12 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Company Info */}
-            <div className="lg:col-span-1">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent">CreviaTube</span>
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                Advanced affiliate marketing platform for the global creator economy.
-              </p>
-              <div className="flex items-center space-x-3">
-                <button className="w-8 h-8 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Twitter className="w-4 h-4" />
-                </button>
-                <button className="w-8 h-8 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Facebook className="w-4 h-4" />
-                </button>
-                <button className="w-8 h-8 bg-slate-800 hover:bg-purple-600 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Instagram className="w-4 h-4" />
-                </button>
-                <button className="w-8 h-8 bg-slate-800 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-colors duration-200">
-                  <Linkedin className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Company */}
+      {/* ============ RUNNING NOW (live campaigns) ============ */}
+      <section className="py-20 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
             <div>
-              <h3 className="text-base font-semibold text-white mb-3">Company</h3>
-              <ul className="space-y-2">
-                <li><button onClick={() => setLocation('/about-us')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">About Us</button></li>
-                <li><button onClick={() => handleNavigation('reviews')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Reviews</button></li>
-                <li><button onClick={() => setLocation('/contact')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Contact</button></li>
-                <li><button onClick={() => setLocation('/careers')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Careers</button></li>
-              </ul>
+              <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Running now</p>
+              <h2 className="text-4xl md:text-5xl font-bold mt-2">Open bounties.<br className="md:hidden" /> Real campaigns.</h2>
             </div>
+            <button onClick={goToAuth} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800">
+              See all open campaigns <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {liveCampaigns.map((c) => (
+              <CampaignCard key={c.name} {...c} onApply={goToAuth} />
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Support & Legal */}
-            <div>
-              <h3 className="text-base font-semibold text-white mb-3">Support</h3>
-              <ul className="space-y-2">
-                <li><button onClick={() => setLocation('/help-center')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Help Center</button></li>
-                <li><button onClick={() => setLocation('/privacy-policy')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Privacy Policy</button></li>
-                <li><button onClick={() => setLocation('/terms-of-service')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Terms of Service</button></li>
-                <li><button onClick={() => setLocation('/status')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Status</button></li>
-              </ul>
-            </div>
+      {/* ============ WHO IT'S FOR ============ */}
+      <section className="py-20 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Who it's for</p>
+            <h2 className="text-4xl md:text-5xl font-bold mt-3">Built for whoever needs reach.</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <PersonaCard tint="blue" Icon={Building2} title="Brands & businesses" desc="Launching a product or scaling a brand. Skip agency markups. Pay for verified reach, not impressions on a slide deck." />
+            <PersonaCard tint="emerald" Icon={Sparkles} title="Creators" desc="Got a course, merch line, or paid community? Spin up a clipping campaign and let other creators distribute it." />
+            <PersonaCard tint="indigo" Icon={Zap} title="Founders & entrepreneurs" desc="Pre-seed to growth stage. Treat clippers as a performance-marketing channel. Pay only when you hit the goal." />
+            <PersonaCard tint="amber" Icon={PlayCircle} title="Clippers" desc="You make the content. Browse open campaigns, post your clip, get paid in USDC the moment metrics verify." />
+          </div>
+        </div>
+      </section>
 
-            {/* Community */}
-            <div>
-              <h3 className="text-base font-semibold text-white mb-3">Community</h3>
-              <ul className="space-y-2">
-                <li>
-                  <button onClick={() => window.open('/api/pages/discord', '_blank')} className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
-                    <MessageCircle className="w-4 h-4 group-hover:text-purple-400" />
-                    <span>Discord Community</span>
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => window.open('/api/pages/whatsapp', '_blank')} className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors duration-200 text-sm group">
-                    <MessageSquare className="w-4 h-4 group-hover:text-green-400" />
-                    <span>WhatsApp Community</span>
-                  </button>
-                </li>
-                <li><button onClick={() => setLocation('/community-guidelines')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Community Guidelines</button></li>
-                <li><button onClick={() => setLocation('/events')} className="text-slate-300 hover:text-white transition-colors duration-200 text-sm">Events</button></li>
-              </ul>
-            </div>
+      {/* ============ HOW IT WORKS ============ */}
+      <section id="how" className="py-24 bg-white border-y border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">How it works</p>
+            <h2 className="text-4xl md:text-5xl font-bold mt-3 max-w-3xl mx-auto">Two sides of the same campaign</h2>
+            <p className="text-slate-600 mt-4 max-w-2xl mx-auto">Creators bring the budget. Clippers bring the audience. The smart contract handles the rest.</p>
           </div>
 
-
-          {/* Bottom Bar */}
-          <div className="border-t border-slate-700 pt-6">
-            <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="flex items-center space-x-6 mb-3 md:mb-0">
-                <p className="text-slate-400 text-sm">© 2025 CreviaTube. All rights reserved.</p>
-                <div className="flex items-center space-x-2 text-slate-400 text-xs">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>All systems operational</span>
+          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            {/* Run a campaign (blue) */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-8">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5" />
                 </div>
+                <h3 className="text-xl font-bold">Run a campaign</h3>
               </div>
-              <button onClick={() => handleNavigation('home')} className="text-slate-300 hover:text-white transition-colors duration-200 text-xs font-medium">
-                Back to Top ↑
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                {["Brands", "Creators", "Founders & entrepreneurs"].map((t) => (
+                  <span key={t} className="text-xs font-medium px-2.5 py-1 bg-white border border-blue-200 text-blue-700 rounded-full">{t}</span>
+                ))}
+              </div>
+              <ol className="space-y-5">
+                <Step n={1} tint="blue" title="Set a goal & budget" body="100k verified views, 5k clicks, signups. Pick what you want, set the bounty." />
+                <Step n={2} tint="blue" title="Fund in USDC on Base" body="One on-chain transaction. Funds sit in escrow until clippers earn them." />
+                <Step n={3} tint="blue" title="Review, then ship" body="AI flags low-quality work; you approve the rest. Reach the goal, payouts auto-fire." />
+              </ol>
+              <button onClick={goToAuth} className="mt-7 inline-flex items-center gap-2 text-blue-700 font-semibold text-sm hover:gap-3 transition-all">
+                Start a campaign <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Earn as a clipper (emerald) */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-8">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                  <PlayCircle className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold">Earn as a clipper</h3>
+              </div>
+              <ol className="space-y-5">
+                <Step n={1} tint="emerald" title="Browse open campaigns" body="Filtered to your platforms (TikTok, YouTube Shorts, IG Reels) and audience fit." />
+                <Step n={2} tint="emerald" title="Post your clip" body="Drop the link. Our tracker measures verified views, clicks, and conversions automatically." />
+                <Step n={3} tint="emerald" title="Get paid in USDC" body="Hit the goal, get paid to your wallet. No invoices, no Net-30, no DM follow-ups." />
+              </ol>
+              <button onClick={goToAuth} className="mt-7 inline-flex items-center gap-2 text-emerald-700 font-semibold text-sm hover:gap-3 transition-all">
+                Earn as a clipper <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* ============ WHY USDC ============ */}
+      <section id="why" className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Why USDC on Base</p>
+              <h2 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">Goal hits.<br />Wallet pings.</h2>
+              <p className="text-slate-600 mt-5 text-lg">
+                The second your metrics cross the line, USDC moves. No 30-day wires. No "the finance team is on holiday." No swap fees eating into the bounty. Just dollar-pegged stablecoins on a chain where transactions cost pennies.
+              </p>
+              <ul className="mt-8 space-y-4">
+                <Bullet title="Pegged to USD" body="Clippers don't take volatility risk. 1 USDC = $1 today, next week, always." />
+                <Bullet title="Pennies in gas" body="Base L2 keeps fees low enough that micro-payouts actually work." />
+                <Bullet title="Public ledger" body="Every campaign-fund and every payout has a Basescan link. Disputes are short." />
+              </ul>
+            </div>
+
+            {/* Mock receipt card */}
+            <div className="relative">
+              <div className="absolute inset-0 brand-grad rounded-3xl blur-2xl opacity-20" />
+              <div className="relative bg-white border border-slate-200 rounded-2xl shadow-xl p-7 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4" strokeWidth={3} />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">Payout settled</div>
+                      <div className="text-xs text-slate-500">2 minutes ago</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">On-chain</span>
+                </div>
+                <div className="border-t border-slate-100 pt-5 space-y-3 text-sm">
+                  <ReceiptRow label="Campaign" value="Fitness app launch · TikTok" />
+                  <ReceiptRow label="Clipper" value="@maya.clips" />
+                  <ReceiptRow label="Verified views" value="142,330 / 100,000" />
+                  <ReceiptRow label="Tx hash" value={<span className="font-mono text-xs text-blue-600">0x7c2…3e91 ↗</span>} />
+                </div>
+                <div className="border-t border-slate-100 pt-5 flex items-end justify-between">
+                  <div>
+                    <div className="text-xs text-slate-500">Released to wallet</div>
+                    <div className="text-3xl font-bold">450.00 <span className="text-base text-slate-500">USDC</span></div>
+                  </div>
+                  <div className="brand-grad text-white text-xs font-semibold px-3 py-1.5 rounded-full">Auto-paid</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ TRUST GRID ============ */}
+      <section className="py-24 bg-white border-y border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Built for trust</p>
+            <h2 className="text-4xl md:text-5xl font-bold mt-3 max-w-3xl mx-auto">Both sides win or no one pays.</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <TrustCard tint="blue" Icon={Shield} title="Escrow on day one" body="Campaign budget is locked the moment you fund. Clippers see the money before they post." />
+            <TrustCard tint="emerald" Icon={Sparkles} title="AI content review" body="Every submission gets a quality score before it counts toward the goal. Low effort doesn't pay." />
+            <TrustCard tint="indigo" Icon={BarChart3} title="Real-view tracking" body="Bot detection on every event. Inflated numbers get filtered out before payouts." />
+            <TrustCard tint="amber" Icon={Star} title="Reputation, on-chain" body="Clipper ratings stick to the wallet, not the username. No more disposable accounts." />
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FEES ============ */}
+      <section id="fees" className="py-24 bg-slate-50">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Fees</p>
+          <h2 className="text-4xl md:text-5xl font-bold mt-3">One number. No surprises.</h2>
+          <p className="text-slate-600 mt-4 max-w-xl mx-auto">CreviaTube takes a flat 20% of the campaign budget. That's it. No subscription, no hidden cuts on payouts, no swap spreads.</p>
+
+          <div className="mt-12 bg-white border border-slate-200 rounded-2xl shadow-lg p-8 text-left">
+            <div className="text-sm font-semibold text-slate-500 mb-4">Example: $10,000 campaign</div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-600">Creator funds</span>
+                <span className="font-bold text-lg">10,000.00 USDC</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-600">Platform fee (20%)</span>
+                <span className="font-medium text-slate-500">- 2,000.00 USDC</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="font-semibold">Available to clippers</span>
+                <span className="font-bold text-2xl brand-grad-text">8,000.00 USDC</span>
+              </div>
+            </div>
+            <div className="mt-5 text-xs text-slate-500 bg-slate-50 rounded-lg px-4 py-3">No fee on top of clipper payouts. The clipper receives exactly what the campaign rules say they earn.</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FAQ ============ */}
+      <section id="faq" className="py-24 bg-white border-y border-slate-200">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">FAQ</p>
+            <h2 className="text-4xl md:text-5xl font-bold mt-3">Common questions</h2>
+          </div>
+          <div className="space-y-3">
+            <FaqItem q="Do I need to know crypto to use this?" a="If you can use Stripe or PayPal, you'll be fine. We use Reown AppKit for wallet connection, which works with MetaMask, Coinbase Wallet, or you can sign in with email and we'll create a wallet for you." />
+            <FaqItem q="What happens to unused budget?" a="If a campaign ends without hitting its goal, the unspent escrow returns to your wallet automatically. The smart contract enforces it." />
+            <FaqItem q="Which platforms do you track?" a="TikTok, YouTube Shorts, Instagram Reels, X, and Twitch. All verified through their official APIs plus our anti-bot layer." />
+            <FaqItem q="When do clippers get paid?" a="Once verified metrics cross the campaign goal, the contract releases the bounty. Most clippers see USDC in their wallet within minutes of approval." />
+            <FaqItem q="Is this legal where I am?" a="USDC payouts to a self-custodied wallet are available in 100+ countries. We don't currently serve OFAC-sanctioned regions. Check our Terms for the full list." />
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FINAL CTA ============ */}
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 brand-grad" />
+        <div className="absolute inset-0 grid-bg opacity-30" />
+        <div className="relative max-w-4xl mx-auto px-6 text-center text-white">
+          <h2 className="text-4xl md:text-5xl font-bold leading-tight">Pay for results.<br />Earn from results.</h2>
+          <p className="text-white/80 mt-5 text-lg max-w-xl mx-auto">No invoices. No promises. Just on-chain receipts and content that performs.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+            <button onClick={goToAuth} className="bg-white text-slate-900 font-semibold px-7 py-4 rounded-xl shadow-lg hover:bg-slate-100 transition">Start a campaign</button>
+            <button onClick={goToAuth} className="bg-white/10 backdrop-blur text-white font-semibold px-7 py-4 rounded-xl border border-white/30 hover:bg-white/20 transition">Earn as a clipper</button>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FOOTER ============ */}
+      <footer className="bg-slate-950 text-slate-400 py-14">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-10">
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 brand-grad rounded-xl flex items-center justify-center">
+                <PlayCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
+              </div>
+              <span className="text-xl font-bold text-white">CreviaTube</span>
+            </div>
+            <p className="text-sm max-w-sm">The clipper-rewards marketplace where creators pay for verified results in USDC, on-chain.</p>
+            <div className="flex items-center gap-3 mt-5">
+              <a href="https://x.com/creviatube" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 transition text-white">
+                <XLogo className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+          <FooterCol title="Product" items={[
+            { label: "For creators", onClick: goToAuth },
+            { label: "For clippers", onClick: goToAuth },
+            { label: "How it works", onClick: () => scrollTo("how") },
+            { label: "Fees", onClick: () => scrollTo("fees") },
+          ]} />
+          <FooterCol title="Legal" items={[
+            { label: "Terms of service", onClick: () => setLocation("/terms") },
+            { label: "Privacy policy", onClick: () => setLocation("/privacy") },
+            { label: "Cookie policy", onClick: () => setLocation("/cookies") },
+            { label: "Contact", onClick: () => setLocation("/contact") },
+          ]} />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
+          <div>© {new Date().getFullYear()} CreviaTube. All rights reserved.</div>
+          <div>Built on Base · Powered by USDC</div>
+        </div>
       </footer>
+    </div>
+  );
+}
+
+// ============ Subcomponents ============
+
+type Tint = "blue" | "emerald" | "indigo" | "amber";
+
+const tintMap: Record<Tint, { bg: string; text: string; pillBg: string; border: string; cardBg: string }> = {
+  blue:    { bg: "bg-blue-600",    text: "text-blue-700",    pillBg: "bg-blue-100",    border: "border-blue-100",    cardBg: "from-blue-50 to-blue-100/40" },
+  emerald: { bg: "bg-emerald-600", text: "text-emerald-700", pillBg: "bg-emerald-100", border: "border-emerald-100", cardBg: "from-emerald-50 to-emerald-100/40" },
+  indigo:  { bg: "bg-indigo-600",  text: "text-indigo-700",  pillBg: "bg-indigo-100",  border: "border-indigo-100",  cardBg: "from-indigo-50 to-indigo-100/40" },
+  amber:   { bg: "bg-amber-600",   text: "text-amber-700",   pillBg: "bg-amber-100",   border: "border-amber-100",   cardBg: "from-amber-50 to-amber-100/40" },
+};
+
+function PersonaCard({ tint, Icon, title, desc }: { tint: Tint; Icon: React.ComponentType<{ className?: string }>; title: string; desc: string }) {
+  const t = tintMap[tint];
+  return (
+    <div className={`bg-gradient-to-br ${t.cardBg} border ${t.border} rounded-2xl p-7`}>
+      <div className={`w-11 h-11 rounded-xl ${t.bg} text-white flex items-center justify-center mb-4`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="font-bold text-lg mb-1">{title}</div>
+      <div className="text-sm text-slate-600">{desc}</div>
+    </div>
+  );
+}
+
+function TrustCard({ tint, Icon, title, body }: { tint: Tint; Icon: React.ComponentType<{ className?: string }>; title: string; body: string }) {
+  const t = tintMap[tint];
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 hover:shadow-md transition">
+      <div className={`w-10 h-10 rounded-lg ${t.pillBg} ${t.text} flex items-center justify-center mb-4`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="font-semibold mb-1">{title}</div>
+      <div className="text-sm text-slate-600">{body}</div>
+    </div>
+  );
+}
+
+function Step({ n, tint, title, body }: { n: number; tint: "blue" | "emerald"; title: string; body: string }) {
+  const ringText = tint === "blue" ? "border-blue-600 text-blue-600" : "border-emerald-600 text-emerald-700";
+  return (
+    <li className="flex gap-4">
+      <span className={`w-7 h-7 shrink-0 rounded-full bg-white border-2 ${ringText} font-bold text-sm flex items-center justify-center`}>{n}</span>
+      <div>
+        <div className="font-semibold">{title}</div>
+        <div className="text-sm text-slate-600">{body}</div>
+      </div>
+    </li>
+  );
+}
+
+function Bullet({ title, body }: { title: string; body: string }) {
+  return (
+    <li className="flex gap-3">
+      <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+        <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={3} />
+      </div>
+      <div>
+        <div className="font-semibold">{title}</div>
+        <div className="text-sm text-slate-600">{body}</div>
+      </div>
+    </li>
+  );
+}
+
+function ReceiptRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="group bg-slate-50 border border-slate-200 rounded-xl p-5 open:bg-white open:border-blue-200">
+      <summary className="flex justify-between items-center cursor-pointer font-semibold list-none">
+        {q}
+        <Plus className="w-5 h-5 text-slate-400 group-open:rotate-45 transition-transform" />
+      </summary>
+      <p className="mt-3 text-slate-600 text-sm">{a}</p>
+    </details>
+  );
+}
+
+function CampaignCard({ name, bounty, bountyUnit, percentFilled, platforms, status, daysLeft, onApply }: LiveCampaign & { onApply: () => void }) {
+  const open = status === "open";
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col hover:shadow-md hover:-translate-y-0.5 transition">
+      <div className="flex items-center justify-between mb-4">
+        <span className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${open ? "text-emerald-700" : "text-amber-700"}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${open ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+          {open ? "Open" : "Filling"}
+        </span>
+        <span className="text-xs text-slate-500">{daysLeft}d left</span>
+      </div>
+      <div className="font-semibold text-base mb-3 line-clamp-2 min-h-[2.75rem]">{name}</div>
+      <div className="flex flex-wrap gap-1 mb-4">
+        {platforms.map((p) => (
+          <span key={p} className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">{p}</span>
+        ))}
+      </div>
+      <div className="text-3xl font-bold leading-none">${bounty}<span className="text-sm font-normal text-slate-500"> / {bountyUnit}</span></div>
+      <div className="mt-auto pt-5">
+        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
+          <div className="h-full brand-grad" style={{ width: `${percentFilled}%` }} />
+        </div>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-500">{percentFilled}% filled</span>
+          <button onClick={onApply} className="font-semibold text-blue-700 hover:text-blue-800 inline-flex items-center gap-1">
+            Apply <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FooterCol({ title, items }: { title: string; items: { label: string; onClick: () => void }[] }) {
+  return (
+    <div>
+      <div className="text-sm font-semibold text-white mb-3">{title}</div>
+      <ul className="space-y-2 text-sm">
+        {items.map((i) => (
+          <li key={i.label}>
+            <button onClick={i.onClick} className="hover:text-white text-left">{i.label}</button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

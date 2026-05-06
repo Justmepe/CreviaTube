@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CreviaTube · Clipper-rewards on Base</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* Palette: deep blue → emerald. Reads fintech-credible (Coinbase / Linear / Plaid territory) without the AI-rainbow gradient. */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .brand-grad { background-image: linear-gradient(135deg, #1D4ED8 0%, #047857 100%); }
+    .brand-grad-text { background-image: linear-gradient(135deg, #1D4ED8 0%, #047857 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .grid-bg {
+      background-image:
+        linear-gradient(to right, rgba(29,78,216,0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(29,78,216,0.06) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+    .glow {
+      position: absolute; inset: auto; pointer-events: none; filter: blur(80px); opacity: 0.45;
+    }
+    .ticker-track { animation: ticker 50s linear infinite; }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased">
+
+  <!-- ============ NAV ============ -->
+  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-slate-200/60">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5">
+        <div class="w-9 h-9 brand-grad rounded-xl flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <span class="text-xl font-bold brand-grad-text">CreviaTube</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+        <a href="#how" class="hover:text-slate-900">How it works</a>
+        <a href="#why" class="hover:text-slate-900">Why USDC</a>
+        <a href="#fees" class="hover:text-slate-900">Fees</a>
+        <a href="#faq" class="hover:text-slate-900">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="https://x.com/creviatube" target="_blank" rel="noopener noreferrer" aria-label="CreviaTube on X" class="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="#" class="text-sm font-medium text-slate-700 hover:text-slate-900">Log in</a>
+        <a href="#" class="brand-grad text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition">Get started</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg"></div>
+    <div class="glow w-[500px] h-[500px] rounded-full brand-grad -top-40 -right-40"></div>
+    <div class="glow w-[400px] h-[400px] rounded-full bg-emerald-400 top-40 -left-32 opacity-30"></div>
+
+    <div class="relative max-w-7xl mx-auto px-6 pt-20 pb-24 text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 mb-6 shadow-sm">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Now live on Base. On-chain USDC payouts.
+      </div>
+      <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] max-w-4xl mx-auto">
+        Pay for <span class="brand-grad-text">verified results</span>, not promises.
+      </h1>
+      <p class="text-lg md:text-xl text-slate-600 mt-6 max-w-2xl mx-auto">
+        <strong class="text-slate-900">Brands</strong> launching a product. <strong class="text-slate-900">Creators</strong> growing an audience. <strong class="text-slate-900">Founders</strong> chasing distribution. Fund a campaign in USDC, clippers post, and rewards release when goals are hit.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-9">
+        <a href="#" class="brand-grad text-white text-base font-semibold px-7 py-4 rounded-xl shadow-lg hover:shadow-xl transition inline-flex items-center gap-2">
+          Start a campaign
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#" class="bg-white text-slate-900 text-base font-semibold px-7 py-4 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition inline-flex items-center gap-2">
+          Earn as a clipper
+        </a>
+      </div>
+
+      <div class="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-slate-500">
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-11"/></svg>Funds held in on-chain escrow</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-11"/></svg>AI content review before payout</div>
+        <div class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-11"/></svg>Anti-bot view verification</div>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="relative max-w-5xl mx-auto px-6 -mt-2 pb-16">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-xl grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-200">
+        <div class="p-6 text-center">
+          <div class="text-3xl font-bold text-slate-900">100%</div>
+          <div class="text-xs text-slate-500 mt-1 font-medium">On-chain payouts</div>
+        </div>
+        <div class="p-6 text-center">
+          <div class="text-3xl font-bold text-slate-900">~$0.01</div>
+          <div class="text-xs text-slate-500 mt-1 font-medium">Avg gas on Base</div>
+        </div>
+        <div class="p-6 text-center">
+          <div class="text-3xl font-bold text-slate-900">&lt; 5 min</div>
+          <div class="text-xs text-slate-500 mt-1 font-medium">From verify to wallet</div>
+        </div>
+        <div class="p-6 text-center">
+          <div class="text-3xl font-bold text-slate-900">20%</div>
+          <div class="text-xs text-slate-500 mt-1 font-medium">Flat platform fee</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LIVE PAYOUTS TICKER ============ -->
+  <section class="bg-white border-y border-slate-200 overflow-hidden">
+    <div class="py-3 flex items-center">
+      <div class="flex items-center gap-2 px-5 shrink-0 border-r border-slate-200 self-stretch">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Live payouts</span>
+      </div>
+      <div class="flex-1 overflow-hidden">
+        <div class="flex gap-10 ticker-track whitespace-nowrap pl-10">
+          <!-- duplicated track for seamless scroll -->
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+450.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@maya.clips</span><span class="text-slate-300">·</span><span class="text-slate-500">Fitness app launch</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x7c2…3e91 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+120.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@vish_xo</span><span class="text-slate-300">·</span><span class="text-slate-500">Crypto wallet promo</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x4a1…2b88 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+310.50 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@dani.shorts</span><span class="text-slate-300">·</span><span class="text-slate-500">Beauty drop</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x9d3…f102 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+89.20 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@indiegamer</span><span class="text-slate-300">·</span><span class="text-slate-500">Wishlist push</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0xc01…8e44 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+240.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@boltcaster</span><span class="text-slate-300">·</span><span class="text-slate-500">$ZAP mint</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x55e…1d27 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+75.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@reels.ria</span><span class="text-slate-300">·</span><span class="text-slate-500">Coach course</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x3f7…9aa3 ↗</a></div>
+          <!-- duplicated -->
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+450.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@maya.clips</span><span class="text-slate-300">·</span><span class="text-slate-500">Fitness app launch</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x7c2…3e91 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+120.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@vish_xo</span><span class="text-slate-300">·</span><span class="text-slate-500">Crypto wallet promo</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x4a1…2b88 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+310.50 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@dani.shorts</span><span class="text-slate-300">·</span><span class="text-slate-500">Beauty drop</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x9d3…f102 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+89.20 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@indiegamer</span><span class="text-slate-300">·</span><span class="text-slate-500">Wishlist push</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0xc01…8e44 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+240.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@boltcaster</span><span class="text-slate-300">·</span><span class="text-slate-500">$ZAP mint</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x55e…1d27 ↗</a></div>
+          <div class="flex items-center gap-3 text-sm shrink-0"><span class="font-bold text-emerald-700">+75.00 USDC</span><span class="text-slate-400">→</span><span class="font-medium">@reels.ria</span><span class="text-slate-300">·</span><span class="text-slate-500">Coach course</span><a href="https://basescan.org" class="font-mono text-xs text-blue-600 hover:underline">0x3f7…9aa3 ↗</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RUNNING NOW (live campaigns) ============ -->
+  <section class="py-20 bg-slate-50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-end justify-between mb-10 flex-wrap gap-4">
+        <div>
+          <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">Running now</p>
+          <h2 class="text-4xl md:text-5xl font-bold mt-2">Open bounties.<br class="md:hidden"/> Real campaigns.</h2>
+        </div>
+        <a href="#" class="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800">See all open campaigns →</a>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- card 1 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col hover:shadow-md transition">
+          <div class="flex items-center justify-between mb-4"><span class="text-xs font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Filling</span><span class="text-xs text-slate-500">4d left</span></div>
+          <div class="font-semibold text-base mb-3">Beauty brand launch · Drop the App</div>
+          <div class="flex flex-wrap gap-1 mb-4"><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">TikTok</span><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">Reels</span></div>
+          <div class="text-3xl font-bold leading-none">$0.04<span class="text-sm font-normal text-slate-500"> / 1k views</span></div>
+          <div class="mt-auto pt-5">
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2"><div class="h-full brand-grad" style="width:62%"></div></div>
+            <div class="flex justify-between items-center text-xs"><span class="text-slate-500">62% filled</span><a href="#" class="font-semibold text-blue-700 hover:text-blue-800">Apply →</a></div>
+          </div>
+        </div>
+        <!-- card 2 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col hover:shadow-md transition">
+          <div class="flex items-center justify-between mb-4"><span class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Open</span><span class="text-xs text-slate-500">12d left</span></div>
+          <div class="font-semibold text-base mb-3">$ZAP token mint</div>
+          <div class="flex flex-wrap gap-1 mb-4"><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">X</span><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">YouTube</span></div>
+          <div class="text-3xl font-bold leading-none">$0.10<span class="text-sm font-normal text-slate-500"> / click</span></div>
+          <div class="mt-auto pt-5">
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2"><div class="h-full brand-grad" style="width:28%"></div></div>
+            <div class="flex justify-between items-center text-xs"><span class="text-slate-500">28% filled</span><a href="#" class="font-semibold text-blue-700 hover:text-blue-800">Apply →</a></div>
+          </div>
+        </div>
+        <!-- card 3 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col hover:shadow-md transition">
+          <div class="flex items-center justify-between mb-4"><span class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Open</span><span class="text-xs text-slate-500">9d left</span></div>
+          <div class="font-semibold text-base mb-3">Fitness coach 8-week course</div>
+          <div class="flex flex-wrap gap-1 mb-4"><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">IG</span><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">TikTok</span></div>
+          <div class="text-3xl font-bold leading-none">$2.50<span class="text-sm font-normal text-slate-500"> / signup</span></div>
+          <div class="mt-auto pt-5">
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2"><div class="h-full brand-grad" style="width:45%"></div></div>
+            <div class="flex justify-between items-center text-xs"><span class="text-slate-500">45% filled</span><a href="#" class="font-semibold text-blue-700 hover:text-blue-800">Apply →</a></div>
+          </div>
+        </div>
+        <!-- card 4 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col hover:shadow-md transition">
+          <div class="flex items-center justify-between mb-4"><span class="text-xs font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Filling</span><span class="text-xs text-slate-500">3d left</span></div>
+          <div class="font-semibold text-base mb-3">Indie game wishlist push</div>
+          <div class="flex flex-wrap gap-1 mb-4"><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">YouTube</span><span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">TikTok</span></div>
+          <div class="text-3xl font-bold leading-none">$0.06<span class="text-sm font-normal text-slate-500"> / 1k views</span></div>
+          <div class="mt-auto pt-5">
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2"><div class="h-full brand-grad" style="width:71%"></div></div>
+            <div class="flex justify-between items-center text-xs"><span class="text-slate-500">71% filled</span><a href="#" class="font-semibold text-blue-700 hover:text-blue-800">Apply →</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHO IT'S FOR ============ -->
+  <section class="py-20 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">Who it's for</p>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3">Built for whoever needs reach.</h2>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100/40 border border-blue-100 rounded-2xl p-7">
+          <div class="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4 8 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg></div>
+          <div class="font-bold text-lg mb-1">Brands &amp; businesses</div>
+          <div class="text-sm text-slate-600">Launching a product or scaling a brand. Skip agency markups. Pay for verified reach, not impressions on a slide deck.</div>
+        </div>
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/40 border border-emerald-100 rounded-2xl p-7">
+          <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M5 9c0-4 3-7 7-7s7 3 7 7c0 6-7 13-7 13s-7-7-7-13z"/></svg></div>
+          <div class="font-bold text-lg mb-1">Creators</div>
+          <div class="text-sm text-slate-600">Got a course, merch line, or paid community? Spin up a clipping campaign and let other creators distribute it.</div>
+        </div>
+        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/40 border border-indigo-100 rounded-2xl p-7">
+          <div class="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+          <div class="font-bold text-lg mb-1">Founders &amp; entrepreneurs</div>
+          <div class="text-sm text-slate-600">Pre-seed to growth stage. Treat clippers as a performance-marketing channel. Pay only when you hit the goal.</div>
+        </div>
+        <div class="bg-gradient-to-br from-amber-50 to-amber-100/40 border border-amber-100 rounded-2xl p-7">
+          <div class="w-11 h-11 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5v14l11-7z"/></svg></div>
+          <div class="font-bold text-lg mb-1">Clippers</div>
+          <div class="text-sm text-slate-600">You make the content. Browse open campaigns, post your clip, get paid in USDC the moment metrics verify.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS (TWO AUDIENCES) ============ -->
+  <section id="how" class="py-24 bg-white border-y border-slate-200">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">How it works</p>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3 max-w-3xl mx-auto">Two sides of the same campaign</h2>
+        <p class="text-slate-600 mt-4 max-w-2xl mx-auto">Creators bring the budget. Clippers bring the audience. The smart contract handles the rest.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+        <!-- For campaigners (brands / creators / founders) -->
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-8">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v4H3zM3 11h18v10H3zM7 15h4M7 18h7"/></svg>
+            </div>
+            <h3 class="text-xl font-bold">Run a campaign</h3>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mb-6">
+            <span class="text-xs font-medium px-2.5 py-1 bg-white border border-blue-200 text-blue-700 rounded-full">Brands</span>
+            <span class="text-xs font-medium px-2.5 py-1 bg-white border border-blue-200 text-blue-700 rounded-full">Creators</span>
+            <span class="text-xs font-medium px-2.5 py-1 bg-white border border-blue-200 text-blue-700 rounded-full">Founders &amp; entrepreneurs</span>
+          </div>
+          <ol class="space-y-5">
+            <li class="flex gap-4"><span class="w-7 h-7 shrink-0 rounded-full bg-white border-2 border-blue-600 text-blue-600 font-bold text-sm flex items-center justify-center">1</span><div><div class="font-semibold">Set a goal &amp; budget</div><div class="text-sm text-slate-600">100k verified views, 5k clicks, signups. Pick what you want, set the bounty.</div></div></li>
+            <li class="flex gap-4"><span class="w-7 h-7 shrink-0 rounded-full bg-white border-2 border-blue-600 text-blue-600 font-bold text-sm flex items-center justify-center">2</span><div><div class="font-semibold">Fund in USDC on Base</div><div class="text-sm text-slate-600">One on-chain transaction. Funds sit in escrow until clippers earn them.</div></div></li>
+            <li class="flex gap-4"><span class="w-7 h-7 shrink-0 rounded-full bg-white border-2 border-blue-600 text-blue-600 font-bold text-sm flex items-center justify-center">3</span><div><div class="font-semibold">Review, then ship</div><div class="text-sm text-slate-600">AI flags low-quality work; you approve the rest. Reach the goal, payouts auto-fire.</div></div></li>
+          </ol>
+          <a href="#" class="mt-7 inline-flex items-center gap-2 text-blue-700 font-semibold text-sm hover:gap-3 transition-all">Start a campaign <span>→</span></a>
+        </div>
+
+        <!-- For clippers -->
+        <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-8">
+          <div class="flex items-center gap-2 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <h3 class="text-xl font-bold">Earn as a clipper</h3>
+          </div>
+          <ol class="space-y-5">
+            <li class="flex gap-4"><span class="w-7 h-7 shrink-0 rounded-full bg-white border-2 border-emerald-600 text-emerald-700 font-bold text-sm flex items-center justify-center">1</span><div><div class="font-semibold">Browse open campaigns</div><div class="text-sm text-slate-600">Filtered to your platforms (TikTok, YouTube Shorts, IG Reels) and audience fit.</div></div></li>
+            <li class="flex gap-4"><span class="w-7 h-7 shrink-0 rounded-full bg-white border-2 border-emerald-600 text-emerald-700 font-bold text-sm flex items-center justify-center">2</span><div><div class="font-semibold">Post your clip</div><div class="text-sm text-slate-600">Drop the link. Our tracker measures verified views, clicks, and conversions automatically.</div></div></li>
+            <li class="flex gap-4"><span class="w-7 h-7 shrink-0 rounded-full bg-white border-2 border-emerald-600 text-emerald-700 font-bold text-sm flex items-center justify-center">3</span><div><div class="font-semibold">Get paid in USDC</div><div class="text-sm text-slate-600">Hit the goal, get paid to your wallet. No invoices, no Net-30, no DM follow-ups.</div></div></li>
+          </ol>
+          <a href="#" class="mt-7 inline-flex items-center gap-2 text-emerald-700 font-semibold text-sm hover:gap-3 transition-all">Earn as a clipper <span>→</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY USDC ============ -->
+  <section id="why" class="py-24 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid md:grid-cols-2 gap-16 items-center">
+        <div>
+          <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">Why USDC on Base</p>
+          <h2 class="text-4xl md:text-5xl font-bold mt-3 leading-tight">Goal hits.<br/>Wallet pings.</h2>
+          <p class="text-slate-600 mt-5 text-lg">The second your metrics cross the line, USDC moves. No 30-day wires, no "the finance team is on holiday," no swap fees eating into the bounty. Just dollar-pegged stablecoins on a chain where transactions cost pennies.</p>
+          <ul class="mt-8 space-y-4">
+            <li class="flex gap-3"><div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></div><div><div class="font-semibold">Pegged to USD</div><div class="text-sm text-slate-600">Clippers don't take volatility risk. 1 USDC = $1 today, next week, always.</div></div></li>
+            <li class="flex gap-3"><div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></div><div><div class="font-semibold">Pennies in gas</div><div class="text-sm text-slate-600">Base L2 keeps fees low enough that micro-payouts actually work.</div></div></li>
+            <li class="flex gap-3"><div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></div><div><div class="font-semibold">Public ledger</div><div class="text-sm text-slate-600">Every campaign-fund and every payout has a Basescan link. Disputes are short.</div></div></li>
+          </ul>
+        </div>
+        <!-- Mock payment receipt card -->
+        <div class="relative">
+          <div class="absolute inset-0 brand-grad rounded-3xl blur-2xl opacity-20"></div>
+          <div class="relative bg-white border border-slate-200 rounded-2xl shadow-xl p-7 space-y-5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></div>
+                <div>
+                  <div class="font-semibold text-sm">Payout settled</div>
+                  <div class="text-xs text-slate-500">2 minutes ago</div>
+                </div>
+              </div>
+              <span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">On-chain</span>
+            </div>
+            <div class="border-t border-slate-100 pt-5 space-y-3">
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Campaign</span><span class="font-medium">Fitness app launch · TikTok</span></div>
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Clipper</span><span class="font-medium">@maya.clips</span></div>
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Verified views</span><span class="font-medium">142,330 / 100,000</span></div>
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Tx hash</span><span class="font-mono text-xs text-blue-600">0x7c2…3e91 ↗</span></div>
+            </div>
+            <div class="border-t border-slate-100 pt-5 flex items-end justify-between">
+              <div>
+                <div class="text-xs text-slate-500">Released to wallet</div>
+                <div class="text-3xl font-bold">450.00 <span class="text-base text-slate-500">USDC</span></div>
+              </div>
+              <div class="brand-grad text-white text-xs font-semibold px-3 py-1.5 rounded-full">Auto-paid</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRUST GRID ============ -->
+  <section class="py-24 bg-white border-y border-slate-200">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-14">
+        <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">Built for trust</p>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3 max-w-3xl mx-auto">Both sides win or no one pays.</h2>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/></svg></div>
+          <div class="font-semibold mb-1">Escrow on day one</div>
+          <div class="text-sm text-slate-600">Campaign budget is locked the moment you fund. Clippers see the money before they post.</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+          <div class="font-semibold mb-1">AI content review</div>
+          <div class="text-sm text-slate-600">Every submission gets a quality score before it counts toward the goal. Low effort doesn't pay.</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 4 4 6-6"/></svg></div>
+          <div class="font-semibold mb-1">Real-view tracking</div>
+          <div class="text-sm text-slate-600">Bot detection on every event. Inflated numbers get filtered out before payouts.</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center mb-4"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg></div>
+          <div class="font-semibold mb-1">Reputation, on-chain</div>
+          <div class="text-sm text-slate-600">Clipper ratings stick to the wallet, not the username. No more disposable accounts.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEES ============ -->
+  <section id="fees" class="py-24 bg-slate-50">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">Fees</p>
+      <h2 class="text-4xl md:text-5xl font-bold mt-3">One number. No surprises.</h2>
+      <p class="text-slate-600 mt-4 max-w-xl mx-auto">CreviaTube takes a flat 20% of the campaign budget. That's it. No subscription, no hidden cuts on payouts, no swap spreads.</p>
+
+      <div class="mt-12 bg-white border border-slate-200 rounded-2xl shadow-lg p-8 text-left">
+        <div class="text-sm font-semibold text-slate-500 mb-4">Example: $10,000 campaign</div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between py-2 border-b border-slate-100">
+            <span class="text-slate-600">Creator funds</span>
+            <span class="font-bold text-lg">10,000.00 USDC</span>
+          </div>
+          <div class="flex items-center justify-between py-2 border-b border-slate-100">
+            <span class="text-slate-600">Platform fee (20%)</span>
+            <span class="font-medium text-slate-500">- 2,000.00 USDC</span>
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <span class="font-semibold">Available to clippers</span>
+            <span class="font-bold text-2xl brand-grad-text">8,000.00 USDC</span>
+          </div>
+        </div>
+        <div class="mt-5 text-xs text-slate-500 bg-slate-50 rounded-lg px-4 py-3">No fee on top of clipper payouts. The clipper receives exactly what the campaign rules say they earn.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section id="faq" class="py-24 bg-white border-y border-slate-200">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <p class="text-sm font-semibold brand-grad-text uppercase tracking-wider">FAQ</p>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3">Common questions</h2>
+      </div>
+      <div class="space-y-3">
+        <details class="group bg-slate-50 border border-slate-200 rounded-xl p-5 open:bg-white open:border-blue-200">
+          <summary class="flex justify-between items-center cursor-pointer font-semibold">Do I need to know crypto to use this?<span class="text-2xl text-slate-400 group-open:rotate-45 transition-transform">+</span></summary>
+          <p class="mt-3 text-slate-600 text-sm">If you can use Stripe or PayPal, you'll be fine. We use Reown AppKit for wallet connection, which works with MetaMask, Coinbase Wallet, or you can sign in with email and we'll create a wallet for you.</p>
+        </details>
+        <details class="group bg-slate-50 border border-slate-200 rounded-xl p-5 open:bg-white open:border-blue-200">
+          <summary class="flex justify-between items-center cursor-pointer font-semibold">What happens to unused budget?<span class="text-2xl text-slate-400 group-open:rotate-45 transition-transform">+</span></summary>
+          <p class="mt-3 text-slate-600 text-sm">If a campaign ends without hitting its goal, the unspent escrow returns to your wallet automatically. The smart contract enforces it.</p>
+        </details>
+        <details class="group bg-slate-50 border border-slate-200 rounded-xl p-5 open:bg-white open:border-blue-200">
+          <summary class="flex justify-between items-center cursor-pointer font-semibold">Which platforms do you track?<span class="text-2xl text-slate-400 group-open:rotate-45 transition-transform">+</span></summary>
+          <p class="mt-3 text-slate-600 text-sm">TikTok, YouTube Shorts, Instagram Reels, X, and Twitch. All verified through their official APIs plus our anti-bot layer.</p>
+        </details>
+        <details class="group bg-slate-50 border border-slate-200 rounded-xl p-5 open:bg-white open:border-blue-200">
+          <summary class="flex justify-between items-center cursor-pointer font-semibold">When do clippers get paid?<span class="text-2xl text-slate-400 group-open:rotate-45 transition-transform">+</span></summary>
+          <p class="mt-3 text-slate-600 text-sm">Once verified metrics cross the campaign goal, the contract releases the bounty. Most clippers see USDC in their wallet within minutes of approval.</p>
+        </details>
+        <details class="group bg-slate-50 border border-slate-200 rounded-xl p-5 open:bg-white open:border-blue-200">
+          <summary class="flex justify-between items-center cursor-pointer font-semibold">Is this legal where I am?<span class="text-2xl text-slate-400 group-open:rotate-45 transition-transform">+</span></summary>
+          <p class="mt-3 text-slate-600 text-sm">USDC payouts to a self-custodied wallet are available in 100+ countries. We don't currently serve OFAC-sanctioned regions. Check our Terms for the full list.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section class="relative py-24 overflow-hidden">
+    <div class="absolute inset-0 brand-grad"></div>
+    <div class="absolute inset-0 grid-bg opacity-30"></div>
+    <div class="relative max-w-4xl mx-auto px-6 text-center text-white">
+      <h2 class="text-4xl md:text-5xl font-bold leading-tight">Pay for results.<br/>Earn from results.</h2>
+      <p class="text-white/80 mt-5 text-lg max-w-xl mx-auto">No invoices. No promises. Just on-chain receipts and content that performs.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+        <a href="#" class="bg-white text-slate-900 font-semibold px-7 py-4 rounded-xl shadow-lg hover:bg-slate-100 transition">Start a campaign</a>
+        <a href="#" class="bg-white/10 backdrop-blur text-white font-semibold px-7 py-4 rounded-xl border border-white/30 hover:bg-white/20 transition">Earn as a clipper</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="bg-slate-950 text-slate-400 py-14">
+    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-10">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="w-9 h-9 brand-grad rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <span class="text-xl font-bold text-white">CreviaTube</span>
+        </div>
+        <p class="text-sm max-w-sm">The clipper-rewards marketplace where creators pay for verified results in USDC, on-chain.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <a href="https://x.com/creviatube" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 transition">
+            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-white mb-3">Product</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="hover:text-white">For creators</a></li>
+          <li><a href="#" class="hover:text-white">For clippers</a></li>
+          <li><a href="#" class="hover:text-white">How it works</a></li>
+          <li><a href="#" class="hover:text-white">Fees</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-white mb-3">Legal</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="hover:text-white">Terms of service</a></li>
+          <li><a href="#" class="hover:text-white">Privacy policy</a></li>
+          <li><a href="#" class="hover:text-white">Cookie policy</a></li>
+          <li><a href="#" class="hover:text-white">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
+      <div>© 2026 CreviaTube. All rights reserved.</div>
+      <div>Built on Base · Powered by USDC</div>
+    </div>
+  </footer>
+
+</body>
+</html>
