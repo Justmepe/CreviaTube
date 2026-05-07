@@ -7,6 +7,7 @@ import { RECEIVE_ADDRESS, toUsdcUnits, verifyUsdcTransfer, isSameAddress } from 
 import { sendEmail, APP_URL } from "../lib/email";
 import { SubscriptionPaid } from "../emails/subscription-paid";
 import { CampaignFunded } from "../emails/campaign-funded";
+import { maybePromoteStage } from "../core/services/stage-promotion";
 
 function basescanTxUrl(txHash: string): string {
   const chainId = Number(process.env.WEB3_CHAIN_ID || 84532);
@@ -182,6 +183,14 @@ export function setupPaymentsAPI(app: Express): void {
         intentId: intent.id,
         txHash,
       });
+      // Auto-promote campaigner stage if they crossed a milestone with this
+      // funded campaign (founder_prelaunch → early_brand → established_brand).
+      // Fire-and-forget; logged on promotion, no user-facing UX yet.
+      void maybePromoteStage(intent.userId).then((r) => {
+        if (r.changed) {
+          console.log(`📈 stage promotion user=${intent.userId} ${r.from} → ${r.to} (${r.reason})`);
+        }
+      }).catch((e) => console.error("Stage promotion failed:", e));
     }
 
     res.json({ status: "paid", intentId: intent.id, txHash });
