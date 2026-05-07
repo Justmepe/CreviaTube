@@ -91,6 +91,59 @@ describe("Registration persona + region capture (Phase 2)", () => {
     expect(u.campaignerStage).toBe("solo_creator");
   });
 
+  it("stamps country_verified_at when phone country code matches IP country", async () => {
+    const email = `test-phone-verify-${stamp}@example.test`;
+    const res = await request(app)
+      .post("/api/register")
+      .set("CF-IPCountry", "KE")
+      .send({
+        username: `phone_verify_${stamp}`,
+        email,
+        password: "supersecret123",
+        fullName: "Phone Verified User",
+        role: "creator",
+        accountType: "business",
+        campaignerStage: "early_brand",
+        phoneNumber: "+254712345678",
+      });
+    expect(res.status, res.text).toBe(201);
+
+    const [u] = await db.select().from(users).where(eq(users.email, email));
+    expect(u.countryIso).toBe("KE");
+    expect(u.countryVerifiedAt).not.toBeNull();
+
+    // Cleanup
+    await db.delete(emailLog).where(eq(emailLog.userId, u.id));
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
+  it("leaves country_verified_at null when phone country code mismatches IP country", async () => {
+    const email = `test-phone-mismatch-${stamp}@example.test`;
+    const res = await request(app)
+      .post("/api/register")
+      .set("CF-IPCountry", "US")
+      .send({
+        username: `phone_mismatch_${stamp}`,
+        email,
+        password: "supersecret123",
+        fullName: "Phone Mismatched User",
+        role: "creator",
+        accountType: "business",
+        campaignerStage: "early_brand",
+        phoneNumber: "+254712345678", // Kenyan phone, US IP — mismatch
+      });
+    expect(res.status).toBe(201);
+
+    const [u] = await db.select().from(users).where(eq(users.email, email));
+    expect(u.countryIso).toBe("US");
+    expect(u.countryVerifiedAt).toBeNull();
+
+    await db.delete(emailLog).where(eq(emailLog.userId, u.id));
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
   it("rejects bogus stage values silently (writes null, doesn't fail registration)", async () => {
     const res = await request(app)
       .post("/api/register")

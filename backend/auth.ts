@@ -9,6 +9,7 @@ import { User as SelectUser } from "../shared/schema.js";
 import { issueVerificationEmail } from "./api/email-verification";
 import { detectCountryIso } from "./lib/geolocation";
 import { emit } from "./lib/metrics";
+import { phoneMatchesCountry } from "./lib/phone-verification";
 
 // Whitelist of values accepted for users.campaigner_stage. Mirrors the CHECK
 // constraint in migrations/0012_personas_and_region.sql so we reject bad
@@ -117,13 +118,22 @@ export function setupAuth(app: Express) {
       // override via payload but we prefer CF header when present.
       const detectedCountry = detectCountryIso(req, claimedCountry);
 
+      // Tier-2 region verification: if the user supplied a phone number AND
+      // its country dialing code matches our IP-detected country, stamp
+      // country_verified_at on signup. Soft signal — proves consistency,
+      // not ownership. Real ownership = SMS OTP, deferred to v1.5.
+      const phone = (userData as any).phoneNumber;
+      const countryVerifiedNow =
+        detectedCountry && phone && phoneMatchesCountry(phone, detectedCountry)
+          ? new Date()
+          : null;
+
       const user = await storage.createUser({
         ...userData,
         password: await hashPassword(userData.password),
         campaignerStage: stage,
         countryIso: detectedCountry,
-        // country_verified_at left null; verification happens later (login-IP
-        // re-check, phone country code, KYC).
+        countryVerifiedAt: countryVerifiedNow,
       });
 
       // Structured metrics emit. Persists a row to metric_events and a
@@ -134,6 +144,7 @@ export function setupAuth(app: Express) {
         accountType: user.accountType ?? null,
         stage: stage ?? null,
         country: detectedCountry ?? null,
+        countryVerified: !!countryVerifiedNow,
       }, user.id);
 
       // Fire-and-forget: send verification email. Failures here shouldn't block signup.
