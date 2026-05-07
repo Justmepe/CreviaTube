@@ -125,6 +125,11 @@ export function setupAuth(app: Express) {
         // re-check, phone country code, KYC).
       });
 
+      // Lightweight observability: log persona distribution at signup so we
+      // can eyeball trends without a full metrics pipe yet. Replace with a
+      // real counter (StatsD / OpenTelemetry / etc.) when we wire one up.
+      console.log(`📊 signup persona=${user.role}/${user.accountType ?? "-"} stage=${stage ?? "-"} country=${detectedCountry ?? "-"}`);
+
       // Fire-and-forget: send verification email. Failures here shouldn't block signup.
       issueVerificationEmail({
         userId: user.id,

@@ -207,7 +207,7 @@ export default function AdminDashboard() {
                     <DollarSign className="w-4 h-4 text-purple-600" />
                     <p className="text-sm font-medium text-slate-600">Platform Revenue</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">KES {stats?.totalRevenue?.toLocaleString() || '0'}</p>
+                  <p className="text-3xl font-bold text-slate-800">{(stats?.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-base font-normal text-slate-500">USDC</span></p>
                   <div className="flex items-center space-x-1">
                     <ArrowUpRight className="w-3 h-3 text-green-600" />
                     <p className="text-sm text-green-600 font-medium">+{stats?.revenueGrowth || 0}% growth</p>

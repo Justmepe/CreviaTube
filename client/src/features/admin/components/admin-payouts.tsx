@@ -180,12 +180,12 @@ export default function AdminPayouts() {
                   </TableHeader>
                   <TableBody>
                     {[
-                      { clipper: "clipper_mike", campaign: "Forex Trading Course", amount: 150, method: "Bank Transfer", date: "2024-07-30", verification: "50 signups verified" },
-                      { clipper: "social_sam", campaign: "Crypto Investment Guide", amount: 230, method: "PayPal", date: "2024-07-29", verification: "100 clicks + 15 conversions verified" },
-                      { clipper: "content_creator", campaign: "Trading Signals App", amount: 180, method: "M-Pesa", date: "2024-07-28", verification: "75 app downloads verified" },
-                      { clipper: "video_pro", campaign: "Social Media Marketing", amount: 120, method: "Bank Transfer", date: "2024-07-27", verification: "200 social engagements verified" },
-                      { clipper: "influencer_jane", campaign: "Business Mentorship", amount: 280, method: "PayPal", date: "2024-07-26", verification: "30 webinar signups verified" },
-                      { clipper: "trader_clips", campaign: "MetaTrader Course", amount: 200, method: "Crypto", date: "2024-07-25", verification: "25 course purchases verified" },
+                      { clipper: "@maya.clips",   campaign: "Fitness app launch",    amount: 450, method: "USDC on Base", date: "2026-05-06", verification: "142,330 verified views" },
+                      { clipper: "@vish_xo",      campaign: "Crypto wallet promo",   amount: 120, method: "USDC on Base", date: "2026-05-05", verification: "2,400 clicks verified" },
+                      { clipper: "@dani.shorts",  campaign: "Beauty drop",           amount: 310, method: "USDC on Base", date: "2026-05-04", verification: "8,000,000 views verified" },
+                      { clipper: "@indiegamer",   campaign: "Wishlist push",         amount:  89, method: "USDC on Base", date: "2026-05-03", verification: "1,250 wishlist signups" },
+                      { clipper: "@boltcaster",   campaign: "$ZAP mint",             amount: 240, method: "USDC on Base", date: "2026-05-02", verification: "2,400 clicks verified" },
+                      { clipper: "@reels.ria",    campaign: "Coach course",          amount:  75, method: "USDC on Base", date: "2026-05-01", verification: "30 paid signups verified" },
                     ].map((payout, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{payout.clipper}</TableCell>
