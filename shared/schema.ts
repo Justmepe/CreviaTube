@@ -90,6 +90,15 @@ export const users = pgTable("users", {
   countryIso: varchar("country_iso", { length: 2 }),
   countryVerifiedAt: timestamp("country_verified_at"),
 
+  // KYC scaffold (migration 0015). Today an admin flips kycStatus manually;
+  // when we integrate a provider (Persona / Onfido / Sumsub) the same column
+  // is driven by their webhooks. Constrained at the DB level to
+  // null | pending | approved | rejected.
+  kycStatus: text("kyc_status"),
+  kycProvider: text("kyc_provider"),
+  kycReference: text("kyc_reference"),
+  kycUpdatedAt: timestamp("kyc_updated_at"),
+
   // Social Media Integration
   socialAccounts: json("social_accounts").$type<{
     instagram?: { username: string; accessToken?: string; businessAccount?: boolean };
@@ -132,6 +141,11 @@ export const campaigns = pgTable("campaigns", {
   targetPlatforms: text("target_platforms").notNull(), // JSON array
   requirements: text("requirements"),
   duration: integer("duration").notNull().default(30), // campaign duration in days
+
+  // KYC scaffold (migration 0015). When true, only clippers with
+  // users.kycStatus='approved' can apply to this campaign. Use for
+  // high-budget / regulated-vertical campaigns.
+  requiresKyc: boolean("requires_kyc").notNull().default(false),
 
   campaignGoals: json("campaign_goals").$type<{
     viewsGoal?: number;

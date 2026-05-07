@@ -638,15 +638,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Already applied to this campaign" });
       }
 
-      // Region targeting (Phase 3.5). Pull the campaign's targetRegions out
-      // of requirements.geography and verify the clipper's verified country
-      // matches. Empty targetRegions = global campaign, anyone can apply.
+      // Region + KYC checks (Phase 3.5 + KYC scaffold).
       const [campaignRow] = await db.select({
         requirements: campaigns.requirements,
+        requiresKyc: campaigns.requiresKyc,
       }).from(campaigns).where(eq(campaigns.id, req.params.id)).limit(1);
       if (!campaignRow) {
         return res.status(404).json({ message: "Campaign not found" });
       }
+
+      // Region match
       let targetRegions: string[] = [];
       try {
         const reqs = JSON.parse(campaignRow.requirements || "{}");
@@ -659,6 +660,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "This campaign targets a different region. Your verified location doesn't match.",
           clipperCountry: (req.user as any).countryIso || null,
           targetRegions,
+        });
+      }
+
+      // KYC gate (tier 3). Only enforced when the campaign opted in via
+      // requiresKyc=true. Real provider integration (Persona / Onfido /
+      // Sumsub) plugs in via the kyc_status column — same enforcement
+      // works regardless of how that status was set.
+      if (campaignRow.requiresKyc && (req.user as any).kycStatus !== "approved") {
+        return res.status(403).json({
+          message: "This campaign requires KYC verification. Complete KYC to apply.",
+          requiresKyc: true,
+          kycStatus: (req.user as any).kycStatus || null,
         });
       }
 
@@ -1558,6 +1571,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Admin users error:", error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // KYC admin override (tier 3 scaffold). Until a third-party provider
+  // is integrated, admins flip kyc_status manually. Same column will be
+  // driven by provider webhooks once we wire one — endpoint unchanged.
+  app.patch("/api/admin/users/:userId/kyc", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    const { userId } = req.params;
+    const { status, provider, reference } = req.body as {
+      status?: "pending" | "approved" | "rejected" | null;
+      provider?: string;
+      reference?: string;
+    };
+    if (status !== null && status !== "pending" && status !== "approved" && status !== "rejected") {
+      return res.status(400).json({ message: "status must be one of: pending, approved, rejected, null" });
+    }
+    try {
+      await db.update(users).set({
+        kycStatus: status ?? null,
+        kycProvider: provider ?? "manual",
+        kycReference: reference ?? null,
+        kycUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+      res.json({ success: true, userId, status: status ?? null });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to update KYC status", error: error.message });
     }
   });
 
