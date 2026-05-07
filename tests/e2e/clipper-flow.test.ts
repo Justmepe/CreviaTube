@@ -76,12 +76,10 @@ describe("Clipper end-to-end happy path: apply → approve → goal hit → auto
     const createRes = await creator.post("/api/campaigns").send({
       name: "Clipper-flow smoke campaign",
       description: "End-to-end smoke for the clipper-side flow including auto-completion.",
-      // Budget needs to cover the completion-bonus payout. The current code
-      // calculates bonus as base*10 with a $10 fallback when rewardRates lookup
-      // misses (goalType "views" vs rewardRates key "view" — plural/singular
-      // mismatch is a known follow-up). 200 USDC budget => 160 USDC escrow,
-      // comfortably above the 100 USDC bonus.
-      budget: "200.00",
+      // 10 USDC budget => 8 USDC escrow. With the singular/plural rate-key
+      // fix in place (goalType "views" → rate key "view"), the completion
+      // bonus is base*10 = 0.04 * 10 = $0.40, well within escrow.
+      budget: "10.00",
       duration: 7,
       targetPlatforms: JSON.stringify(["tiktok"]),
       rewardRates: JSON.stringify({ view: 0.04, click: 0.05, signup: 2.0 }),

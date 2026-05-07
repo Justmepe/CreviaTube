@@ -9,7 +9,16 @@ export const userRoleEnum = pgEnum("user_role", ["creator", "clipper", "admin"])
 export const accountTypeEnum = pgEnum("account_type", ["influencer", "business"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "inactive", "suspended"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["active", "paused", "completed", "draft"]);
-export const eventTypeEnum = pgEnum("event_type", ["click", "signup", "view", "conversion"]);
+export const eventTypeEnum = pgEnum("event_type", [
+  "click",
+  "signup",
+  "view",
+  "conversion",
+  // Phase 3 additions for influencer + founder personas (migration 0013):
+  "follow",
+  "subscribe",
+  "install",
+]);
 export const eventStatusEnum = pgEnum("event_status", ["pending", "verified", "paid", "rejected"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
 
@@ -129,7 +138,18 @@ export const campaigns = pgTable("campaigns", {
     clicksGoal?: number;
     signupsGoal?: number;
     conversionsGoal?: number;
-    primaryGoal?: 'views' | 'clicks' | 'signups' | 'conversions';
+    // Phase 3 — persona-specific goals
+    followsGoal?: number;
+    subscribesGoal?: number;
+    installsGoal?: number;
+    primaryGoal?:
+      | 'views'
+      | 'clicks'
+      | 'signups'
+      | 'conversions'
+      | 'follows'
+      | 'subscribes'
+      | 'installs';
   }>(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),

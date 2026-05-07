@@ -269,9 +269,24 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
         })
         .where(eq(clipperCampaigns.id, clipperCampaignId));
 
-      // Calculate completion reward - fixed bonus for completing goal
+      // Calculate completion reward — fixed bonus for completing goal.
+      // goalType comes in as a plural ("views", "clicks") from
+      // campaignGoals.primaryGoal but rewardRates is keyed by the singular
+      // event type ("view", "click"). Map plural→singular here so the
+      // lookup actually hits the configured rate instead of falling
+      // through to the $10 default.
+      const GOAL_TO_RATE_KEY: Record<string, string> = {
+        views: "view",
+        clicks: "click",
+        signups: "signup",
+        conversions: "conversion",
+        follows: "follow",
+        subscribes: "subscribe",
+        installs: "install",
+      };
       const rewardRates = JSON.parse(clipperCampaign.rewardRates || "{}");
-      const baseReward = parseFloat(rewardRates[goalType] || "10"); // Base reward per goal type
+      const rateKey = GOAL_TO_RATE_KEY[goalType] || goalType;
+      const baseReward = parseFloat(rewardRates[rateKey] || "10");
       const completionReward = baseReward * 10; // 10x bonus for completing the full goal
 
       // Create an automatic completion bonus payment

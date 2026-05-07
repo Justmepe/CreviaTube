@@ -29,7 +29,19 @@ import {
   MousePointerClick,
   UserPlus,
   TrendingUp,
+  Heart,
+  Crown,
+  Smartphone,
+  Sparkles,
 } from "lucide-react";
+import { resolvePersona } from "@/features/personas/resolver";
+import { getPersonaConfig } from "@/features/personas/registry";
+import type { CampaignTemplate } from "@/features/personas/registry";
+import type { Persona } from "@/features/personas/types";
+
+// All seven goal types (aligned with eventTypeEnum + new persona goals).
+const GOAL_TYPES = ["views", "clicks", "signups", "conversions", "follows", "subscribes", "installs"] as const;
+type GoalType = typeof GOAL_TYPES[number];
 
 // Frontend zod for the form. Backend re-validates via insertCampaignSchema.
 const campaignSchema = z.object({
@@ -39,17 +51,23 @@ const campaignSchema = z.object({
   duration: z.number().int().min(1, "Minimum 1 day"),
   targetPlatforms: z.array(z.string()).min(1, "Select at least one platform"),
   rewardRates: z.object({
-    view: z.number().min(0, "Per-1k-views must be ≥ 0"),
-    click: z.number().min(0, "Per-click must be ≥ 0"),
-    signup: z.number().min(0, "Per-signup must be ≥ 0"),
-    conversion: z.number().optional(),
+    view: z.number().min(0).optional(),
+    click: z.number().min(0).optional(),
+    signup: z.number().min(0).optional(),
+    conversion: z.number().min(0).optional(),
+    follow: z.number().min(0).optional(),
+    subscribe: z.number().min(0).optional(),
+    install: z.number().min(0).optional(),
   }),
   campaignGoals: z.object({
-    primaryGoal: z.enum(["views", "clicks", "signups", "conversions"]),
+    primaryGoal: z.enum(GOAL_TYPES),
     viewsGoal: z.number().int().min(0).optional(),
     clicksGoal: z.number().int().min(0).optional(),
     signupsGoal: z.number().int().min(0).optional(),
     conversionsGoal: z.number().int().min(0).optional(),
+    followsGoal: z.number().int().min(0).optional(),
+    subscribesGoal: z.number().int().min(0).optional(),
+    installsGoal: z.number().int().min(0).optional(),
   }),
   minFollowers: z.number().int().min(0),
 });
@@ -89,12 +107,50 @@ const LANGUAGES = [
   { value: "pt", label: "Portuguese" },
 ];
 
-const GOAL_OPTIONS = [
-  { value: "views", label: "Verified views", icon: Eye, helper: "Best for awareness / reach campaigns" },
-  { value: "clicks", label: "Link clicks", icon: MousePointerClick, helper: "Best for traffic / app installs" },
-  { value: "signups", label: "Signups", icon: UserPlus, helper: "Best for lead gen / waitlists" },
-  { value: "conversions", label: "Conversions", icon: TrendingUp, helper: "Best for revenue / paid actions" },
-] as const;
+type GoalOption = { value: GoalType; label: string; icon: any; helper: string };
+
+const ALL_GOAL_OPTIONS: Record<GoalType, GoalOption> = {
+  views:       { value: "views",       label: "Verified views",   icon: Eye,                helper: "Best for awareness / reach campaigns" },
+  clicks:      { value: "clicks",      label: "Link clicks",      icon: MousePointerClick,  helper: "Best for traffic / app installs" },
+  signups:     { value: "signups",     label: "Signups",          icon: UserPlus,           helper: "Best for lead gen / waitlists" },
+  conversions: { value: "conversions", label: "Conversions",      icon: TrendingUp,         helper: "Best for revenue / paid actions" },
+  follows:     { value: "follows",     label: "Follower growth",  icon: Heart,              helper: "Convert viewers into followers on your channel" },
+  subscribes:  { value: "subscribes",  label: "Paid subscribers", icon: Crown,              helper: "Drive paid-tier signups (Patreon, Substack, course)" },
+  installs:    { value: "installs",    label: "App installs",     icon: Smartphone,         helper: "iOS / Android installs from the clip" },
+};
+
+// Which goal types each persona can pick. Mirrors the registry templates.
+const GOALS_FOR_PERSONA: Record<Persona, GoalType[]> = {
+  brand:      ["views", "clicks", "signups", "conversions"],
+  influencer: ["views", "follows", "clicks", "subscribes"],
+  founder:    ["views", "signups", "installs", "conversions"],
+  clipper:    [],
+  admin:      [],
+};
+
+// Maps a persona's primaryGoal to the corresponding rewardRates key.
+// Single-source-of-truth fix for the singular/plural mismatch the
+// completion-bonus calc was hitting (goal "views" vs rate key "view").
+const GOAL_TO_RATE_KEY: Record<GoalType, keyof CampaignFormData["rewardRates"]> = {
+  views:       "view",
+  clicks:      "click",
+  signups:     "signup",
+  conversions: "conversion",
+  follows:     "follow",
+  subscribes:  "subscribe",
+  installs:    "install",
+};
+
+// Goal type → goal-amount field name (camelCase for form path).
+const GOAL_TO_AMOUNT_FIELD: Record<GoalType, keyof CampaignFormData["campaignGoals"]> = {
+  views:       "viewsGoal",
+  clicks:      "clicksGoal",
+  signups:     "signupsGoal",
+  conversions: "conversionsGoal",
+  follows:     "followsGoal",
+  subscribes:  "subscribesGoal",
+  installs:    "installsGoal",
+};
 
 export default function CampaignCreation() {
   const { user } = useAuth();
@@ -102,6 +158,14 @@ export default function CampaignCreation() {
   const [, setLocation] = useLocation();
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+
+  // Resolve the user's persona and look up their template playbook + the
+  // subset of goal types they're allowed to pick. Defaults gracefully to
+  // brand for legacy users / null state.
+  const persona = resolvePersona(user as any);
+  const personaConfig = getPersonaConfig(persona);
+  const goalsForThisPersona = (GOALS_FOR_PERSONA[persona] || []).map((g) => ALL_GOAL_OPTIONS[g]);
+  const defaultGoal = goalsForThisPersona[0]?.value || "views";
 
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),
@@ -112,21 +176,31 @@ export default function CampaignCreation() {
       duration: 7,
       targetPlatforms: [],
       rewardRates: {
-        view: 0.04,    // per 1,000 verified views
+        view: 0.04,
         click: 0.05,
         signup: 2.0,
-        conversion: user?.accountType === "business" ? 5.0 : undefined,
+        conversion: persona === "brand" ? 5.0 : undefined,
+        follow: persona === "influencer" ? 0.5 : undefined,
+        subscribe: persona === "influencer" ? 3.0 : undefined,
+        install: persona === "founder" ? 1.5 : undefined,
       },
-      campaignGoals: {
-        primaryGoal: "views",
-        viewsGoal: 100000,
-        clicksGoal: undefined,
-        signupsGoal: undefined,
-        conversionsGoal: undefined,
-      },
+      campaignGoals: { primaryGoal: defaultGoal },
       minFollowers: 1000,
     },
   });
+
+  // Apply a registry template to the form. Pre-fills name, description,
+  // primaryGoal + that goal's amount, and the matching reward rate. The
+  // creator can customize anything from there.
+  const applyTemplate = (tpl: CampaignTemplate) => {
+    const rateKey = GOAL_TO_RATE_KEY[tpl.primaryGoal];
+    const amountField = GOAL_TO_AMOUNT_FIELD[tpl.primaryGoal];
+    form.setValue("name", tpl.name, { shouldDirty: true });
+    form.setValue("description", `${tpl.description} (Guidance to clippers: ${tpl.guidance})`, { shouldDirty: true });
+    form.setValue("campaignGoals.primaryGoal", tpl.primaryGoal, { shouldDirty: true });
+    form.setValue(`campaignGoals.${amountField}` as any, tpl.defaultGoalAmount, { shouldDirty: true });
+    form.setValue(`rewardRates.${rateKey}` as any, tpl.defaultRewardRate, { shouldDirty: true });
+  };
 
   const primaryGoal = form.watch("campaignGoals.primaryGoal");
   const selectedPlatforms = form.watch("targetPlatforms");
@@ -185,11 +259,46 @@ export default function CampaignCreation() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Page header */}
         <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
+              {personaConfig.shortLabel}
+            </span>
+            <span className="text-xs text-slate-500">{personaConfig.oneLiner}</span>
+          </div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">New campaign</h1>
           <p className="text-slate-600 mt-1">
             Set the goal, fund USDC into escrow, clippers post, payouts fire when you hit it.
           </p>
         </div>
+
+        {/* Template picker — persona-specific starter playbooks. Clicking
+            applies sensible defaults; the creator can customize anything
+            below. Hidden when persona has no templates (admin / clipper). */}
+        {personaConfig.templates.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-blue-700" />
+              <h2 className="text-base font-semibold text-slate-900">Pick a starting point</h2>
+              <span className="text-xs text-slate-500">— optional, you can build from scratch too</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {personaConfig.templates.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => applyTemplate(tpl)}
+                  className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm transition"
+                >
+                  <div className="font-semibold text-sm mb-1">{tpl.name}</div>
+                  <div className="text-xs text-slate-600 leading-snug">{tpl.description}</div>
+                  <div className="mt-2.5 text-xs text-blue-700 font-medium">
+                    ${tpl.defaultRewardRate} {tpl.rewardRateUnit}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Escrow notice */}
         <Alert className="border-blue-200 bg-blue-50 text-blue-900">
@@ -328,7 +437,7 @@ export default function CampaignCreation() {
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-                    {GOAL_OPTIONS.map((opt) => {
+                    {goalsForThisPersona.map((opt) => {
                       const Icon = opt.icon;
                       const active = primaryGoal === opt.value;
                       return (
@@ -383,92 +492,45 @@ export default function CampaignCreation() {
 
                 <Separator />
 
-                {/* === REWARD RATES === */}
+                {/* === REWARD RATES (persona-aware) === */}
                 <section>
                   <h3 className="text-base font-semibold text-slate-900">Reward rates</h3>
-                  <p className="text-sm text-slate-600 mt-1 mb-4">What clippers earn per verified action.</p>
+                  <p className="text-sm text-slate-600 mt-1 mb-4">What clippers earn per verified action. Only the rates relevant to your persona's goals are shown.</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="rewardRates.view"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Per 1,000 views (USDC)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="rewardRates.click"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Per click (USDC)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="rewardRates.signup"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Per signup (USDC)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {user?.accountType === "business" && (
-                      <FormField
-                        control={form.control}
-                        name="rewardRates.conversion"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Per conversion (USDC)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={field.value ?? ""}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                    {goalsForThisPersona.map((opt) => {
+                      const rateKey = GOAL_TO_RATE_KEY[opt.value];
+                      const labelMap: Record<GoalType, string> = {
+                        views: "Per 1,000 views (USDC)",
+                        clicks: "Per click (USDC)",
+                        signups: "Per signup (USDC)",
+                        conversions: "Per conversion (USDC)",
+                        follows: "Per new follow (USDC)",
+                        subscribes: "Per paid subscriber (USDC)",
+                        installs: "Per install (USDC)",
+                      };
+                      return (
+                        <FormField
+                          key={rateKey}
+                          control={form.control}
+                          name={`rewardRates.${rateKey}` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{labelMap[opt.value]}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      );
+                    })}
                   </div>
                 </section>
 
