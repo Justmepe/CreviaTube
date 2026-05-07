@@ -18,6 +18,7 @@ import { setupPaymentsAPI } from "./api/payments";
 import { setupCampaignMatchingAPI } from "./api/campaign-matching";
 import { setupEmailVerificationAPI } from "./api/email-verification";
 import { setupPasswordResetAPI } from "./api/password-reset";
+import { clipperMatchesRegions, groupByContinent } from "./lib/region";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
 import analyticsRoutes from "./analytics/analytics-routes";
 import visualizationRoutes from "./analytics/visualization-routes"; // NEW IMPORT
@@ -482,6 +483,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Phase 3.5 — region-coverage breakdown for the campaigner. Returns the
+  // per-continent distribution of clippers currently working on the campaign,
+  // plus the per-country breakdown. The trust artifact campaigners can show
+  // stakeholders ("12 clippers in AF, 8 in EU — your message is being
+  // distributed in your target regions, provably").
+  app.get("/api/campaigns/:id/region-coverage", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const campaign = await storage.getCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      // Only the creator (or admin) can see the breakdown — it's a private
+      // analytics view, not public.
+      if (req.user.role !== "admin" && campaign.creatorId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const rows = await db
+        .select({ countryIso: users.countryIso })
+        .from(clipperCampaigns)
+        .innerJoin(users, eq(clipperCampaigns.clipperId, users.id))
+        .where(eq(clipperCampaigns.campaignId, req.params.id));
+
+      const countries = rows.map((r) => r.countryIso);
+      const byContinent = groupByContinent(countries);
+
+      // Per-country breakdown too — useful for the heatmap drill-down.
+      const byCountry: Record<string, number> = {};
+      for (const c of countries) {
+        const key = (c || "unknown").toUpperCase();
+        byCountry[key] = (byCountry[key] || 0) + 1;
+      }
+
+      res.json({
+        totalClippers: rows.length,
+        byContinent,
+        byCountry,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch region coverage", error: error.message });
+    }
+  });
+
   // Available campaigns for clippers
   app.get("/api/campaigns/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -584,6 +630,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await storage.getClipperCampaign(req.user.id, req.params.id);
       if (existing) {
         return res.status(400).json({ message: "Already applied to this campaign" });
+      }
+
+      // Region targeting (Phase 3.5). Pull the campaign's targetRegions out
+      // of requirements.geography and verify the clipper's verified country
+      // matches. Empty targetRegions = global campaign, anyone can apply.
+      const [campaignRow] = await db.select({
+        requirements: campaigns.requirements,
+      }).from(campaigns).where(eq(campaigns.id, req.params.id)).limit(1);
+      if (!campaignRow) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      let targetRegions: string[] = [];
+      try {
+        const reqs = JSON.parse(campaignRow.requirements || "{}");
+        targetRegions = Array.isArray(reqs.geography) ? reqs.geography : [];
+      } catch {
+        targetRegions = [];
+      }
+      if (!clipperMatchesRegions((req.user as any).countryIso, targetRegions)) {
+        return res.status(403).json({
+          message: "This campaign targets a different region. Your verified location doesn't match.",
+          clipperCountry: (req.user as any).countryIso || null,
+          targetRegions,
+        });
       }
 
       const trackingCode = `${req.params.id}_${req.user.id}_${randomBytes(8).toString('hex')}`;
