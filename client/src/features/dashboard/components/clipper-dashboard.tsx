@@ -87,9 +87,9 @@ export default function ClipperDashboard() {
                     <p className="text-sm font-medium text-slate-600">Total Earnings</p>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">
-                    KES {(earnings as any)?.total?.toLocaleString() || "0"}
+                    {((earnings as any)?.total ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-base font-normal text-slate-500">USDC</span>
                   </p>
-                  <p className="text-sm text-green-600 font-medium">+18.5% this month</p>
+                  <p className="text-sm text-emerald-600 font-medium">Lifetime, on-chain</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Wallet className="w-6 h-6 text-white" />
@@ -123,7 +123,7 @@ export default function ClipperDashboard() {
                     <p className="text-sm font-medium text-slate-600">Pending</p>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">
-                    KES {(earnings as any)?.pending?.toLocaleString() || "0"}
+                    {((earnings as any)?.pending ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-base font-normal text-slate-500">USDC</span>
                   </p>
                   <p className="text-sm text-orange-600 font-medium">Processing payouts</p>
                 </div>

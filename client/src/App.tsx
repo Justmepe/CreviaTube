@@ -10,6 +10,8 @@ import AuthPage from "@/pages/auth-page";
 import LandingPage from "@/pages/landing-page";
 
 import ClipperDashboard from "@/features/dashboard/components/clipper-dashboard";
+import CampaignerDashboard from "@/features/dashboard/components/campaigner-dashboard";
+import { resolvePersona } from "@/features/personas/resolver";
 import MetricsDashboard from "@/pages/metrics-dashboard";
 import CampaignCreation from "@/pages/campaign-creation";
 import ClipperMarketplace from "@/pages/clipper-marketplace";
@@ -29,8 +31,6 @@ import CreatorApplicationReview from "@/pages/creator-application-review";
 import RealRevenueAnalytics from "@/pages/real-revenue-analytics";
 import EnhancedCampaignCreation from "@/pages/enhanced-campaign-creation";
 import CampaignsEnhanced from "@/pages/campaigns-enhanced";
-import InfluencerDashboard from "@/features/dashboard/components/influencer-dashboard";
-import BusinessDashboard from "@/features/dashboard/components/business-dashboard";
 import ClipperDirectoryPage from "@/pages/clipper-directory";
 import ClipperProfilePage from "@/pages/clipper-profile";
 import VerifyEmailPage from "@/pages/verify-email";
@@ -115,22 +115,18 @@ function Router() {
 
 function DashboardRouter(): JSX.Element {
   const { user } = useAuth();
-
   if (!user) return <LandingPage />;
 
-  if (user.role === "admin") {
-    return <ComprehensiveAdminDashboard />;
-  }
+  // Single source of truth: resolvePersona reads (role, accountType,
+  // campaignerStage) and tells us which dashboard to show. The three
+  // campaigner personas share one component (CampaignerDashboard) which
+  // tailors stat labels, copy, and pill colour internally based on
+  // resolvePersona — same skeleton, persona-specific framing.
+  const persona = resolvePersona(user as any);
 
-  if (user.accountType === "influencer") {
-    return <InfluencerDashboard />;
-  }
-
-  if (user.accountType === "business") {
-    return <BusinessDashboard />;
-  }
-
-  return <ClipperDashboard />;
+  if (persona === "admin") return <ComprehensiveAdminDashboard />;
+  if (persona === "clipper") return <ClipperDashboard />;
+  return <CampaignerDashboard />; // brand / influencer / founder
 }
 
 function App() {
