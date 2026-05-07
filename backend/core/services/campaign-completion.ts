@@ -6,6 +6,7 @@ import { EscrowService } from "./escrow-service";
 import { sendEmail, APP_URL } from "../../lib/email";
 import { CampaignGoalReached } from "../../emails/campaign-goal-reached";
 import { CampaignCompletedCreator } from "../../emails/campaign-completed-creator";
+import { emit } from "../../lib/metrics";
 
 export interface CampaignCompletionService {
   checkAndUpdateClipperCompletion(clipperCampaignId: string): Promise<boolean>;
@@ -300,6 +301,15 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
       );
 
       console.log(`✅ Clipper campaign ${clipperCampaignId} marked as complete. Goal: ${goalType} (${achievedValue}/${targetValue}). Completion payout: $${completionReward}`);
+
+      emit("campaign_goal_reached", {
+        clipperCampaignId,
+        campaignId: clipperCampaign.campaignId,
+        goalType,
+        target: targetValue,
+        achieved: achievedValue,
+        completionReward,
+      }, clipperCampaign.clipperId);
 
       // Notify both sides (fire-and-forget — failures don't unwind completion)
       void this.notifyCampaignCompletion({

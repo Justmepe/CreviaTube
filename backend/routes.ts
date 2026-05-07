@@ -19,6 +19,7 @@ import { setupCampaignMatchingAPI } from "./api/campaign-matching";
 import { setupEmailVerificationAPI } from "./api/email-verification";
 import { setupPasswordResetAPI } from "./api/password-reset";
 import { clipperMatchesRegions, groupByContinent } from "./lib/region";
+import { emit } from "./lib/metrics";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
 import analyticsRoutes from "./analytics/analytics-routes";
 import visualizationRoutes from "./analytics/visualization-routes"; // NEW IMPORT
@@ -325,6 +326,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const campaign = await storage.createCampaign(validatedData);
+      emit("campaign_created", {
+        campaignId: campaign.id,
+        budget: campaign.budget,
+        primaryGoal: (campaign.campaignGoals as any)?.primaryGoal ?? null,
+      }, req.user.id);
       res.status(201).json({
         ...campaign,
         message: "Campaign created successfully. Please fund it to activate."
@@ -683,6 +689,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const clipperCampaign = await storage.createClipperApplication(applicationData);
+      emit("application_submitted", {
+        campaignId: req.params.id,
+        applicationStatus,
+      }, req.user.id);
       res.status(201).json(clipperCampaign);
     } catch (error: any) {
       console.error('Application error:', error);
@@ -720,6 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.reviewClipperApplication(applicationId, action, notes, req.user.id);
+      emit("application_decision", { applicationId, action }, req.user.id);
 
       // Notify the clipper of the decision (fire-and-forget).
       void (async () => {

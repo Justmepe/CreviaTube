@@ -6,6 +6,7 @@ import { db } from "../db";
 import { users, emailVerificationTokens } from "../../shared/schema.js";
 import { sendEmail, APP_URL } from "../lib/email";
 import { WelcomeVerification } from "../emails/welcome-verification";
+import { emit } from "../lib/metrics";
 
 const TOKEN_TTL_HOURS = 24;
 
@@ -86,6 +87,8 @@ export function setupEmailVerificationAPI(app: Express): void {
         .set({ usedAt: new Date() })
         .where(eq(emailVerificationTokens.id, row.id));
     });
+
+    emit("email_verified", {}, row.userId);
 
     res.json({ success: true });
   });

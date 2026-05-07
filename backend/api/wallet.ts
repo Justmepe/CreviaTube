@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { verifyMessage, isAddress, getAddress } from "viem";
 import { db } from "../db";
 import { users } from "../../shared/schema.js";
+import { emit } from "../lib/metrics";
 
 declare module "express-session" {
   interface SessionData {
@@ -74,6 +75,8 @@ export function setupWalletAPI(app: Express): void {
 
     await db.update(users).set({ walletAddress: lowered, updatedAt: new Date() }).where(eq(users.id, req.user.id));
     delete req.session.walletNonce;
+
+    emit("wallet_bound", { address: lowered }, req.user.id);
 
     // Security notification (fire-and-forget). Lazy-imported to avoid hard dep on email at boot.
     void (async () => {

@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { User as SelectUser } from "../shared/schema.js";
 import { issueVerificationEmail } from "./api/email-verification";
 import { detectCountryIso } from "./lib/geolocation";
+import { emit } from "./lib/metrics";
 
 // Whitelist of values accepted for users.campaigner_stage. Mirrors the CHECK
 // constraint in migrations/0012_personas_and_region.sql so we reject bad
@@ -125,10 +126,15 @@ export function setupAuth(app: Express) {
         // re-check, phone country code, KYC).
       });
 
-      // Lightweight observability: log persona distribution at signup so we
-      // can eyeball trends without a full metrics pipe yet. Replace with a
-      // real counter (StatsD / OpenTelemetry / etc.) when we wire one up.
-      console.log(`📊 signup persona=${user.role}/${user.accountType ?? "-"} stage=${stage ?? "-"} country=${detectedCountry ?? "-"}`);
+      // Structured metrics emit. Persists a row to metric_events and a
+      // JSON line to stdout. Single source for all platform analytics
+      // until we stand up a real metrics pipe.
+      emit("signup", {
+        role: user.role,
+        accountType: user.accountType ?? null,
+        stage: stage ?? null,
+        country: detectedCountry ?? null,
+      }, user.id);
 
       // Fire-and-forget: send verification email. Failures here shouldn't block signup.
       issueVerificationEmail({

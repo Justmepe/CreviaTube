@@ -851,6 +851,18 @@ export const platformEvents = pgTable("platform_events", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Metric events — one row per significant platform action (signup,
+// campaign_funded, stage_promoted, payout_settled, etc.). Powers in-app
+// counters + ad-hoc analytics queries until we stand up a real metrics
+// pipe. See backend/lib/metrics.ts for the writer.
+export const metricEvents = pgTable("metric_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventName: text("event_name").notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  props: json("props"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Contact information table
 export const contactInfo = pgTable("contact_info", {
   id: text("id").primaryKey(),
