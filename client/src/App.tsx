@@ -12,6 +12,7 @@ import LandingPage from "@/pages/landing-page";
 import ClipperDashboard from "@/features/dashboard/components/clipper-dashboard";
 import CampaignerDashboard from "@/features/dashboard/components/campaigner-dashboard";
 import { resolvePersona } from "@/features/personas/resolver";
+import AdminMetricsPage from "@/pages/admin-metrics";
 import MetricsDashboard from "@/pages/metrics-dashboard";
 import CampaignCreation from "@/pages/campaign-creation";
 import ClipperMarketplace from "@/pages/clipper-marketplace";
@@ -91,6 +92,7 @@ function Router() {
       <ProtectedRoute path="/admin/bot-monitoring" component={BotMonitoring} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/real-analytics" component={RealRevenueAnalytics} />
+      <ProtectedRoute path="/admin/metrics" component={AdminMetricsPage} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/clipper-directory" component={ClipperDirectoryPage} />
       <ProtectedRoute path="/clippers/:id" component={ClipperProfilePage} />

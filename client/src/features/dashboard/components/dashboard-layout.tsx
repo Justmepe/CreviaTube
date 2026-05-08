@@ -50,6 +50,7 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
         { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
         { name: "Revenue", href: "/admin/revenue", icon: Activity },
+        { name: "Metrics", href: "/admin/metrics", icon: BarChart3 },
       ];
     }
 
