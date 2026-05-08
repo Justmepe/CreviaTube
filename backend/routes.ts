@@ -18,6 +18,7 @@ import { setupPaymentsAPI } from "./api/payments";
 import { setupCampaignMatchingAPI } from "./api/campaign-matching";
 import { setupEmailVerificationAPI } from "./api/email-verification";
 import { setupPasswordResetAPI } from "./api/password-reset";
+import { setupTwoFactorAPI } from "./api/two-factor";
 import { clipperMatchesRegions, groupByContinent } from "./lib/region";
 import { emit } from "./lib/metrics";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
@@ -66,6 +67,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Password reset (POST /api/password/request-reset, POST /api/password/reset)
   setupPasswordResetAPI(app);
+
+  // 2FA: TOTP (Authenticator) + email OTP. Setup/verify endpoints only —
+  // login-flow integration is a separate piece (sensitive-action gating
+  // can use these primitives standalone).
+  setupTwoFactorAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {

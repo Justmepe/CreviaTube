@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { User, Mail, Phone, Globe, Briefcase, Shield, Key, Bell } from "lucide-react";
 import { ConnectWalletButton } from "@/features/wallet/connect-wallet-button";
+import { TwoFactorSection } from "./two-factor-section";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -396,6 +397,9 @@ export default function ProfileSettings() {
             <ConnectWalletButton />
           </CardContent>
         </Card>
+
+        {/* Two-factor authentication */}
+        <TwoFactorSection />
       </div>
     </DashboardLayout>
   );

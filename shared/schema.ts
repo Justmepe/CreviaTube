@@ -103,6 +103,14 @@ export const users = pgTable("users", {
   kycReference: text("kyc_reference"),
   kycUpdatedAt: timestamp("kyc_updated_at"),
 
+  // 2FA (migration 0017). TOTP secret for Authenticator-app users; email
+  // OTP hash + expiry for email-based codes (used for password reset,
+  // sensitive actions, optional second factor on login).
+  totpSecret: text("totp_secret"),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
+  emailOtpHash: text("email_otp_hash"),
+  emailOtpExpiresAt: timestamp("email_otp_expires_at"),
+
   // Social Media Integration
   socialAccounts: json("social_accounts").$type<{
     instagram?: { username: string; accessToken?: string; businessAccount?: boolean };

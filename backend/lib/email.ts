@@ -29,7 +29,8 @@ export type EmailKind =
   | "payout_failed"
   | "review_received"
   | "wallet_bound"
-  | "stage_promoted";
+  | "stage_promoted"
+  | "email_otp";
 
 export interface SendEmailArgs {
   kind: EmailKind;
