@@ -20,6 +20,7 @@ import { setupEmailVerificationAPI } from "./api/email-verification";
 import { setupPasswordResetAPI } from "./api/password-reset";
 import { setupTwoFactorAPI } from "./api/two-factor";
 import { setupMetricsAdminAPI } from "./api/metrics-admin";
+import { setupKycAPI } from "./api/kyc";
 import { clipperMatchesRegions, groupByContinent } from "./lib/region";
 import { emit } from "./lib/metrics";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
@@ -76,6 +77,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin metrics rollups for the /admin/metrics dashboard.
   setupMetricsAdminAPI(app);
+
+  // KYC: user-facing inquiry start + status, Persona webhook receiver.
+  // Falls through to a deterministic dev stub when PERSONA_API_KEY isn't
+  // set so the flow is testable without a Persona account.
+  setupKycAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {

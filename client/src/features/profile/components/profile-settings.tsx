@@ -18,6 +18,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { User, Mail, Phone, Globe, Briefcase, Shield, Key, Bell } from "lucide-react";
 import { ConnectWalletButton } from "@/features/wallet/connect-wallet-button";
 import { TwoFactorSection } from "./two-factor-section";
+import { KycSection } from "./kyc-section";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -400,6 +401,9 @@ export default function ProfileSettings() {
 
         {/* Two-factor authentication */}
         <TwoFactorSection />
+
+        {/* KYC verification */}
+        <KycSection />
       </div>
     </DashboardLayout>
   );
