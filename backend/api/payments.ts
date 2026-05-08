@@ -190,9 +190,38 @@ export function setupPaymentsAPI(app: Express): void {
         txHash,
       });
       // Auto-promote campaigner stage if they crossed a milestone.
-      void maybePromoteStage(intent.userId).then((r) => {
-        if (r.changed) {
-          emit("stage_promoted", { from: r.from, to: r.to, reason: r.reason }, intent.userId);
+      void maybePromoteStage(intent.userId).then(async (r) => {
+        if (!r.changed) return;
+        emit("stage_promoted", { from: r.from, to: r.to, reason: r.reason }, intent.userId);
+
+        // Celebration email — fire-and-forget, swallow errors. Lazy import
+        // to avoid a hard email dep in the payments path on startup.
+        try {
+          const [u] = await db.select().from(users).where(eq(users.id, intent.userId)).limit(1);
+          if (!u) return;
+          const [{ StagePromoted }, _React] = await Promise.all([
+            import("../emails/stage-promoted"),
+            import("react"),
+          ]);
+          const ReactLib = await import("react");
+          await sendEmail({
+            kind: "stage_promoted",
+            to: u.email,
+            subject: `You graduated to ${r.to.replace(/_/g, " ")}`,
+            react: ReactLib.createElement(StagePromoted, {
+              fullName: u.fullName,
+              fromStage: r.from,
+              toStage: r.to,
+              reason: r.reason,
+              appUrl: APP_URL,
+            }),
+            // Allow re-send if a user hits the same threshold again after
+            // a manual demotion, but not on the same exact transition.
+            dedupeKey: `stage_promoted:${intent.userId}:${r.from}:${r.to}`,
+            userId: intent.userId,
+          });
+        } catch (err) {
+          console.error("stage-promoted email failed:", err);
         }
       }).catch((e) => console.error("Stage promotion failed:", e));
     }

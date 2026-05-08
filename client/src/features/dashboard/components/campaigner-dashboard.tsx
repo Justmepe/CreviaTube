@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,11 +59,38 @@ const PERSONA_PILL_TONE: Record<Persona, string> = {
   admin:      "bg-slate-100 text-slate-700 border-slate-200",
 };
 
+const STAGE_LABEL: Record<string, string> = {
+  founder_prelaunch: "Founder · pre-launch",
+  early_brand: "Early-stage brand",
+  established_brand: "Established brand",
+  solo_creator: "Solo creator",
+};
+
 export default function CampaignerDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const persona = resolvePersona(user as any);
   const config = getPersonaConfig(persona);
+
+  // Stage promotion celebration. When the backend has promoted the user but
+  // the UI hasn't shown them yet (campaignerStage !== lastSeenStage), pop
+  // a toast then ack so we don't show it again.
+  useEffect(() => {
+    const u = user as any;
+    if (!u?.campaignerStage) return;
+    if (u.lastSeenStage === u.campaignerStage) return;
+    if (!u.lastSeenStage) {
+      // First time landing on the dashboard — sync silently, no toast.
+      apiRequest("POST", "/api/me/acknowledge-stage", {}).catch(() => {});
+      return;
+    }
+    toast({
+      title: "🎉 You graduated",
+      description: `${STAGE_LABEL[u.lastSeenStage] || u.lastSeenStage} → ${STAGE_LABEL[u.campaignerStage] || u.campaignerStage}`,
+    });
+    apiRequest("POST", "/api/me/acknowledge-stage", {}).catch(() => {});
+  }, [user, toast]);
 
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<any[]>({
     queryKey: ["/api/campaigns"],

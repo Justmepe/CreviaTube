@@ -83,6 +83,10 @@ export const users = pgTable("users", {
   //   founder_prelaunch | early_brand | established_brand | solo_creator
   // Resolved into a Persona (see client/src/features/personas/resolver.ts).
   campaignerStage: text("campaigner_stage"),
+  // UI bookkeeping: last stage shown to the user. When this drifts from
+  // campaignerStage we surface a celebration toast on dashboard load,
+  // then sync via POST /api/me/acknowledge-stage.
+  lastSeenStage: text("last_seen_stage"),
 
   // Region targeting (Phase 3.5). country_iso is ISO 3166-1 alpha-2; auto-detected
   // at signup via IP geolocation, may be self-attested. country_verified_at is

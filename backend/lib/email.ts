@@ -28,7 +28,8 @@ export type EmailKind =
   | "payout_sent"
   | "payout_failed"
   | "review_received"
-  | "wallet_bound";
+  | "wallet_bound"
+  | "stage_promoted";
 
 export interface SendEmailArgs {
   kind: EmailKind;

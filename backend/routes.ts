@@ -87,6 +87,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark the user's current campaigner stage as seen. Frontend calls this
+  // after rendering the celebration toast so we don't show it again.
+  app.post("/api/me/acknowledge-stage", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const u = req.user as any;
+    if (!u.campaignerStage) return res.json({ acknowledged: null });
+    await db.update(users)
+      .set({ lastSeenStage: u.campaignerStage, updatedAt: new Date() })
+      .where(eq(users.id, u.id));
+    res.json({ acknowledged: u.campaignerStage });
+  });
+
   app.get("/api/user/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
