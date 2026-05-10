@@ -2831,20 +2831,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
-  // Root endpoint - serve API info only if explicitly requested (via Accept header or query param)
-  // Otherwise, let Vite serve the frontend in development
+  // Root endpoint - serve API info only if explicitly requested (via Accept header or query param).
+  // Otherwise fall through so the SPA's index.html is served by serveStatic in prod (or Vite in dev).
   app.get("/", (req, res, next) => {
-    // Only return JSON if:
-    // 1. Request explicitly asks for JSON (Accept header)
-    // 2. Query parameter ?format=json or ?api is present
-    // 3. In production (where static files are served separately)
     const wantsJson = req.headers.accept?.includes('application/json') ||
                      req.query.format === 'json' ||
                      req.query.api !== undefined;
-    
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    if (wantsJson || isProduction) {
+
+    if (wantsJson) {
       return res.json({
         message: "CreviaTube API Server",
         version: process.env.npm_package_version || "1.0.0",
