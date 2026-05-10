@@ -1,6 +1,23 @@
 import { db } from "../../db";
 import { campaigns, clipperCampaigns, trackingEvents, users } from "../../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
+
+// Progress queries only count events that passed bot detection.
+// flaggedAsBot defaults to false on all writes (see migration 0000); we
+// match the existing convention from getBotDetectionStats — eq(...,false)
+// — which is also conservatively correct for any NULL rows (excluded
+// from progress, since we can't confirm they're human).
+const BOT_FILTER = eq(trackingEvents.flaggedAsBot, false);
+
+// Synthetic events fired by the integration-test tool carry
+// metadata.test=true. We surface them in the recent-events diagnostic
+// panel but they must NOT move real progress. Plain text LIKE rather
+// than JSONB casting so a row with malformed metadata doesn't crash the
+// query — JSON.stringify always produces `"test":true` with no space.
+const TEST_EVENT_FILTER = sql`(
+  ${trackingEvents.metadata} IS NULL
+  OR ${trackingEvents.metadata} NOT LIKE '%"test":true%'
+)`;
 import * as React from "react";
 import { EscrowService } from "./escrow-service";
 import { sendEmail, APP_URL } from "../../lib/email";
@@ -18,9 +35,17 @@ export interface ClipperProgress {
   totalViews: number;
   totalClicks: number;
   totalSignups: number;
-  totalDeposits: number;
-  totalTrades: number;
   totalConversions: number;
+  // Phase 3 — persona-specific event types
+  totalFollows: number;
+  totalSubscribes: number;
+  totalInstalls: number;
+  // Phase 4 — goal-verification v1
+  totalLeads: number;
+  totalCodeRedemptions: number;
+  totalPurchases: number;          // count of purchase events (rows)
+  totalRevenue: number;            // SUM(event_value) for purchase events ($)
+  totalApprovedPosts: number;      // ugc_volume: approved + post-URL-verified submissions for this clipper-campaign
   isCompleted: boolean;
   goalProgress: {
     type: string;
@@ -67,35 +92,35 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
 
       // Get current progress
       const progress = await this.getClipperProgress(clipperCampaignId);
-      
-      // Check if primary goal is reached
+
+      // Check if primary goal is reached. Most goal targets are stored as
+      // `${goalType}Goal`; code_redemptions and ugc_volume have explicit
+      // camelCase keys to avoid concatenating snake_case into JSON paths.
       const primaryGoal = goals.primaryGoal;
-      const targetValue = goals[`${primaryGoal}Goal`];
-      
+      const targetKeyByGoal: Record<string, string> = {
+        code_redemptions: 'codeRedemptionsGoal',
+        ugc_volume: 'ugcVolumeGoal',
+      };
+      const targetKey = targetKeyByGoal[primaryGoal] || `${primaryGoal}Goal`;
+      const targetValue = goals[targetKey];
+
       if (!targetValue) {
         return false; // No target set for primary goal
       }
 
       let currentValue = 0;
       switch (primaryGoal) {
-        case 'views':
-          currentValue = progress.totalViews;
-          break;
-        case 'clicks':
-          currentValue = progress.totalClicks;
-          break;
-        case 'signups':
-          currentValue = progress.totalSignups;
-          break;
-        case 'deposits':
-          currentValue = progress.totalDeposits;
-          break;
-        case 'trades':
-          currentValue = progress.totalTrades;
-          break;
-        case 'conversions':
-          currentValue = progress.totalConversions;
-          break;
+        case 'views':            currentValue = progress.totalViews; break;
+        case 'clicks':           currentValue = progress.totalClicks; break;
+        case 'signups':          currentValue = progress.totalSignups; break;
+        case 'conversions':      currentValue = progress.totalConversions; break;
+        case 'follows':          currentValue = progress.totalFollows; break;
+        case 'subscribes':       currentValue = progress.totalSubscribes; break;
+        case 'installs':         currentValue = progress.totalInstalls; break;
+        case 'leads':            currentValue = progress.totalLeads; break;
+        case 'code_redemptions': currentValue = progress.totalCodeRedemptions; break;
+        case 'revenue':          currentValue = progress.totalRevenue; break;
+        case 'ugc_volume':       currentValue = progress.totalApprovedPosts; break;
       }
 
       // If goal is reached, mark as complete
@@ -121,60 +146,84 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
    */
   async getClipperProgress(clipperCampaignId: string): Promise<ClipperProgress> {
     try {
-      // Aggregated metrics. Sum the per-event value with a fallback of 1 so an
-      // event without an explicit eventValue still counts as one occurrence —
-      // this matches how trackingService records views/clicks (value optional).
+      // Aggregated metrics. Three columns per event type:
+      //
+      //   rowCount  — count(*). Used as a literal "how many rows" when
+      //               the row count itself is the answer (e.g., the
+      //               totalPurchases display counter — number of orders).
+      //   countSum  — sum(coalesce(event_value, 1)). Used for count-based
+      //               goals. eventValue defaults to "1" on every insert,
+      //               so a single click event contributes 1; a view-poll
+      //               sweep that observed a +N delta inserts one row with
+      //               eventValue=N and contributes N. Both add up cleanly.
+      //   valueSum  — sum(event_value). Used for revenue (purchase events
+      //               where event_value is the order amount in $).
       const metrics = await db
         .select({
           eventType: trackingEvents.eventType,
-          totalValue: sql<number>`sum(coalesce(${trackingEvents.eventValue}::numeric, 1))::int`,
+          rowCount: sql<number>`count(*)::int`,
+          countSum: sql<number>`coalesce(sum(coalesce(${trackingEvents.eventValue}::numeric, 1))::int, 0)`,
+          valueSum: sql<number>`coalesce(sum(${trackingEvents.eventValue}::numeric), 0)::numeric`,
         })
         .from(trackingEvents)
-        .where(eq(trackingEvents.clipperCampaignId, clipperCampaignId))
+        .where(
+          and(
+            eq(trackingEvents.clipperCampaignId, clipperCampaignId),
+            BOT_FILTER,
+            TEST_EVENT_FILTER,
+          ),
+        )
         .groupBy(trackingEvents.eventType);
 
-      // Initialize progress
       const progress: ClipperProgress = {
         totalViews: 0,
         totalClicks: 0,
         totalSignups: 0,
-        totalDeposits: 0,
-        totalTrades: 0,
         totalConversions: 0,
+        totalFollows: 0,
+        totalSubscribes: 0,
+        totalInstalls: 0,
+        totalLeads: 0,
+        totalCodeRedemptions: 0,
+        totalPurchases: 0,
+        totalRevenue: 0,
+        totalApprovedPosts: 0,
         isCompleted: false,
         goalProgress: null,
       };
 
-      // Aggregate metrics by type
       metrics.forEach(metric => {
-        const value = Number(metric.totalValue) || 0;
+        const rows = Number(metric.rowCount) || 0;
+        const count = Number(metric.countSum) || 0;
+        const value = Number(metric.valueSum) || 0;
         switch (metric.eventType) {
-          case 'view':
-            progress.totalViews = value;
-            break;
-          case 'click':
-            progress.totalClicks = value;
-            break;
-          case 'signup':
-            progress.totalSignups = value;
-            break;
-          case 'deposit':
-            progress.totalDeposits = value;
-            break;
-          case 'trade':
-            progress.totalTrades = value;
-            break;
-          case 'conversion':
-            progress.totalConversions = value;
+          case 'view':            progress.totalViews = count; break;
+          case 'click':           progress.totalClicks = count; break;
+          case 'signup':          progress.totalSignups = count; break;
+          case 'conversion':      progress.totalConversions = count; break;
+          case 'follow':          progress.totalFollows = count; break;
+          case 'subscribe':       progress.totalSubscribes = count; break;
+          case 'install':         progress.totalInstalls = count; break;
+          case 'lead':            progress.totalLeads = count; break;
+          case 'code_redemption': progress.totalCodeRedemptions = count; break;
+          case 'purchase':
+            // Purchases counter = number of orders (literal rowCount).
+            // Revenue = SUM of order amounts ($, valueSum).
+            progress.totalPurchases = rows;
+            progress.totalRevenue = value;
             break;
         }
       });
 
-      // Get campaign goals and completion status
+      // Get campaign goals + completion status + ugc_volume signal (the
+      // submission's approval state and post URL — ugc_volume goals don't
+      // emit tracking events, they verify via the submission record itself).
       const [clipperCampaign] = await db
         .select({
           isCompleted: clipperCampaigns.isCompleted,
           campaignGoals: campaigns.campaignGoals,
+          applicationStatus: clipperCampaigns.applicationStatus,
+          postUrl: clipperCampaigns.postUrl,
         })
         .from(clipperCampaigns)
         .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
@@ -182,33 +231,40 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
 
       if (clipperCampaign) {
         progress.isCompleted = clipperCampaign.isCompleted;
-        
+        // ugc_volume per-clipper progress is binary: their submission is
+        // approved AND has a verifiable post_url. Per-campaign budget caps
+        // total payouts; we don't gate completion on the campaign-wide N.
+        progress.totalApprovedPosts =
+          clipperCampaign.applicationStatus === 'approved' && clipperCampaign.postUrl ? 1 : 0;
+
         const goals = clipperCampaign.campaignGoals as any;
         if (goals && goals.primaryGoal) {
           const goalType = goals.primaryGoal;
-          const target = goals[`${goalType}Goal`];
-          
+          // Most goals store target as `${goalType}Goal`. Two exceptions:
+          //   code_redemptions → codeRedemptionsGoal (already snake-cased
+          //                       primary goal value to camelCase JSON key)
+          //   ugc_volume       → ugcVolumeGoal
+          const targetKeyByGoal: Record<string, string> = {
+            code_redemptions: 'codeRedemptionsGoal',
+            ugc_volume: 'ugcVolumeGoal',
+          };
+          const targetKey = targetKeyByGoal[goalType] || `${goalType}Goal`;
+          const target = goals[targetKey];
+
           if (target) {
             let current = 0;
             switch (goalType) {
-              case 'views':
-                current = progress.totalViews;
-                break;
-              case 'clicks':
-                current = progress.totalClicks;
-                break;
-              case 'signups':
-                current = progress.totalSignups;
-                break;
-              case 'deposits':
-                current = progress.totalDeposits;
-                break;
-              case 'trades':
-                current = progress.totalTrades;
-                break;
-              case 'conversions':
-                current = progress.totalConversions;
-                break;
+              case 'views':            current = progress.totalViews; break;
+              case 'clicks':           current = progress.totalClicks; break;
+              case 'signups':          current = progress.totalSignups; break;
+              case 'conversions':      current = progress.totalConversions; break;
+              case 'follows':          current = progress.totalFollows; break;
+              case 'subscribes':       current = progress.totalSubscribes; break;
+              case 'installs':         current = progress.totalInstalls; break;
+              case 'leads':            current = progress.totalLeads; break;
+              case 'code_redemptions': current = progress.totalCodeRedemptions; break;
+              case 'revenue':          current = progress.totalRevenue; break;
+              case 'ugc_volume':       current = progress.totalApprovedPosts; break;
             }
 
             progress.goalProgress = {
@@ -284,6 +340,12 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
         follows: "follow",
         subscribes: "subscribe",
         installs: "install",
+        // Phase 4 — reward keys for the new event types. Mirrors
+        // GOAL_TO_RATE_KEY in client/src/pages/campaign-creation.tsx.
+        revenue: "purchase",
+        leads: "lead",
+        code_redemptions: "codeRedemption",
+        ugc_volume: "post",
       };
       const rewardRates = JSON.parse(clipperCampaign.rewardRates || "{}");
       const rateKey = GOAL_TO_RATE_KEY[goalType] || goalType;
@@ -352,6 +414,13 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
         .select({ id: users.id, email: users.email, fullName: users.fullName })
         .from(users).where(eq(users.id, campaign.creatorId)).limit(1);
 
+      // Resolve verification source for the email body. We read the most
+      // recent verified non-bot non-test event for this clipper-campaign
+      // and translate metadata.source into a human label. Best-effort —
+      // failure leaves verificationSource undefined and the templates
+      // skip the line entirely.
+      const verificationSource = await this.resolveVerificationSource(opts.clipperCampaignId);
+
       // Clipper-side: "you hit the goal"
       await sendEmail({
         kind: "campaign_goal_reached",
@@ -365,6 +434,7 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
           achieved: opts.achieved,
           completionReward: opts.completionReward.toFixed(2),
           appUrl: APP_URL,
+          verificationSource,
         }),
         dedupeKey: `campaign_goal_reached:${opts.clipperCampaignId}`,
         userId: clipper.id,
@@ -384,6 +454,7 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
             target: opts.target,
             achieved: opts.achieved,
             appUrl: APP_URL,
+            verificationSource,
           }),
           dedupeKey: `campaign_completed_creator:${opts.clipperCampaignId}`,
           userId: creator.id,
@@ -391,6 +462,50 @@ class CampaignCompletionServiceImpl implements CampaignCompletionService {
       }
     } catch (err) {
       console.error("notifyCampaignCompletion failed:", err);
+    }
+  }
+
+  // Translate the most recent verified event's metadata.source into a
+  // human-friendly label for the goal-reached email. Returns undefined
+  // when no verifying event was found (e.g., ugc_volume goals where the
+  // submission record itself is the proof — see notes).
+  private async resolveVerificationSource(
+    clipperCampaignId: string,
+  ): Promise<string | undefined> {
+    try {
+      // Sort by created_at DESC; the most recent verified event is the
+      // one that crossed the threshold (or close to it). Apply the same
+      // bot+test filters as goal-progress aggregation so a synthetic
+      // test event can never claim credit for the verification line.
+      const [row] = await db
+        .select({ metadata: trackingEvents.metadata })
+        .from(trackingEvents)
+        .where(
+          and(
+            eq(trackingEvents.clipperCampaignId, clipperCampaignId),
+            eq(trackingEvents.flaggedAsBot, false),
+            sql`(${trackingEvents.metadata} IS NULL OR ${trackingEvents.metadata} NOT LIKE '%"test":true%')`,
+          ),
+        )
+        .orderBy(sql`${trackingEvents.createdAt} desc`)
+        .limit(1);
+      if (!row?.metadata) return undefined;
+      let parsed: Record<string, any> = {};
+      try { parsed = JSON.parse(row.metadata); } catch { return undefined; }
+      const SOURCE_LABEL: Record<string, string> = {
+        pixel:            "Conversion pixel",
+        shopify_webhook:  "Shopify webhook",
+        stripe_webhook:   "Stripe webhook",
+        mmp_postback:     "Mobile Measurement Partner",
+        server_postback:  "Server postback",
+        view_polling:     "Public-platform API polling",
+        admin_credit:     "Manual admin credit",
+        manual_test:      "Manual test event",
+      };
+      return SOURCE_LABEL[parsed.source as string] ?? undefined;
+    } catch (err) {
+      console.warn("resolveVerificationSource failed:", err);
+      return undefined;
     }
   }
 

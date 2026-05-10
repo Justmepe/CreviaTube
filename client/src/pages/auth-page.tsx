@@ -24,7 +24,7 @@ export default function AuthPage() {
     password: "",
     fullName: "",
     role: "clipper" as "creator" | "clipper",
-    accountType: undefined as "influencer" | "business" | undefined,
+    accountType: undefined as "influencer" | "founder" | "business" | undefined,
     campaignerStage: undefined as
       | "founder_prelaunch"
       | "early_brand"
@@ -35,8 +35,9 @@ export default function AuthPage() {
   });
 
   // Single dropdown drives both `role` and `accountType` so users don't need
-  // to understand the schema. The three personas match the landing page.
-  // For brands we ask a follow-up stage question; for influencers we set
+  // to understand the schema. The four personas match the landing page.
+  // For brands we ask a follow-up stage question; for founders we default
+  // to founder_prelaunch (changeable in Settings); for influencers we set
   // solo_creator implicitly; for clippers stage is null.
   const handlePersonaChange = (persona: string) => {
     if (persona === "business") {
@@ -45,6 +46,13 @@ export default function AuthPage() {
         role: "creator",
         accountType: "business",
         campaignerStage: undefined, // they'll pick one in the follow-up
+      }));
+    } else if (persona === "founder") {
+      setRegisterData(prev => ({
+        ...prev,
+        role: "creator",
+        accountType: "founder",
+        campaignerStage: "founder_prelaunch",
       }));
     } else if (persona === "influencer") {
       setRegisterData(prev => ({
@@ -68,6 +76,8 @@ export default function AuthPage() {
       ? "clipper"
       : registerData.accountType === "business"
       ? "business"
+      : registerData.accountType === "founder"
+      ? "founder"
       : registerData.accountType === "influencer"
       ? "influencer"
       : "";
@@ -258,6 +268,7 @@ export default function AuthPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="business">Brand or business, running campaigns</SelectItem>
+                        <SelectItem value="founder">Founder / entrepreneur, building something</SelectItem>
                         <SelectItem value="influencer">Creator / influencer, running campaigns</SelectItem>
                         <SelectItem value="clipper">Clipper, earning from campaigns</SelectItem>
                       </SelectContent>

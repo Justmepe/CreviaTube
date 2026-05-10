@@ -8,7 +8,8 @@ import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ArrowDown, BarChart3 } from "lucide-react";
+import { Activity, ArrowDown, BarChart3, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
   LineChart,
@@ -84,18 +85,28 @@ export default function AdminMetricsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Platform metrics</h1>
             <p className="text-slate-600 mt-1">Signup funnel, time-series, persona mix.</p>
           </div>
-          <div className="flex gap-1 bg-white border border-slate-200 rounded-lg p-1">
-            {[7, 30, 90].map((d) => (
-              <button
-                key={d}
-                onClick={() => setDays(d)}
-                className={`px-3 py-1.5 text-xs font-medium rounded ${
-                  days === d ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {d}d
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/admin/credit-event")}
+            >
+              <FileText className="w-4 h-4 mr-1.5" />
+              Manual credit
+            </Button>
+            <div className="flex gap-1 bg-white border border-slate-200 rounded-lg p-1">
+              {[7, 30, 90].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDays(d)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded ${
+                    days === d ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

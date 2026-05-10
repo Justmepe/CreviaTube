@@ -11,7 +11,7 @@ import { eq, and, desc, sql, sum, count, gte } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -614,9 +614,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async reviewClipperApplication(
-    applicationId: string, 
-    action: 'approve' | 'reject', 
-    notes: string, 
+    applicationId: string,
+    action: 'approve' | 'reject',
+    notes: string,
     creatorId: string
   ): Promise<ClipperCampaign> {
     // Verify the application belongs to this creator's campaign
@@ -644,11 +644,40 @@ export class DatabaseStorage implements IStorage {
       updateData.rejectionReason = notes || 'Content does not meet campaign requirements';
     }
 
+    // On approval, mint a unique clipperPromoCode the clipper can share for
+    // offline / e-commerce attribution (Shopify/Stripe webhooks look it up
+    // here). Auto-generated only the first time — re-approving an already-
+    // approved application preserves the existing code so the clipper's
+    // outbound posts don't suddenly stop attributing.
+    if (action === 'approve') {
+      const [existing] = await db
+        .select({ clipperPromoCode: clipperCampaigns.clipperPromoCode })
+        .from(clipperCampaigns)
+        .where(eq(clipperCampaigns.id, applicationId));
+      if (!existing?.clipperPromoCode) {
+        updateData.clipperPromoCode = await this.generateUniquePromoCode();
+      }
+    }
+
     const [updated] = await db
       .update(clipperCampaigns)
       .set(updateData)
       .where(eq(clipperCampaigns.id, applicationId))
       .returning();
+
+    // ugc_volume goals don't emit tracking events — verification *is* the
+    // approval + post URL. Fire the completion check on approve so the
+    // clipper's bonus + payout flow runs without waiting for an unrelated
+    // tracked event. Other goal types still rely on the event-driven path
+    // in trackingService.recordTrackingEvent.
+    if (action === 'approve') {
+      try {
+        const { campaignCompletionService } = await import("./core/services/campaign-completion");
+        await campaignCompletionService.checkAndUpdateClipperCompletion(applicationId);
+      } catch (err) {
+        console.error("UGC approval completion check failed:", err);
+      }
+    }
 
     return updated;
   }
@@ -1035,6 +1064,32 @@ export class DatabaseStorage implements IStorage {
       console.error('Error fetching top clippers:', error);
       throw new Error('Failed to fetch top clippers');
     }
+  }
+
+  // Mint a unique clipperPromoCode. 8-char uppercase alphanumeric drawn
+  // from a 32-char alphabet that excludes ambiguous glyphs (no I, O, 0, 1)
+  // so codes are easy to read off a screen and hard to mistype on a
+  // checkout page. The partial unique index on clipper_campaigns
+  // (clipper_promo_code) guarantees uniqueness; we pre-check to avoid
+  // an INSERT failure path, but still retry on the rare collision.
+  private async generateUniquePromoCode(): Promise<string> {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 32 chars
+    const codeLen = 8; // 32^8 ≈ 1.1e12 — collision risk is negligible
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const bytes = randomBytes(codeLen);
+      let code = "";
+      for (let i = 0; i < codeLen; i++) {
+        code += alphabet[bytes[i] % alphabet.length];
+      }
+      const [collision] = await db
+        .select({ id: clipperCampaigns.id })
+        .from(clipperCampaigns)
+        .where(eq(clipperCampaigns.clipperPromoCode, code))
+        .limit(1);
+      if (!collision) return code;
+    }
+    // Fallback that's unlikely to collide even if 5 prior tries did.
+    return `C${randomBytes(6).toString("hex").toUpperCase()}`;
   }
 
 }

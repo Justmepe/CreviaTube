@@ -23,7 +23,12 @@ export type MetricEventName =
   | "application_decision"
   | "campaign_goal_reached"
   | "payout_settled"
-  | "subscription_paid";
+  | "subscription_paid"
+  // Phase 4 — operations audit trail. Fired every time an admin
+  // manually credits a tracking event on behalf of a clipper (e.g.,
+  // for X posts where we have no API path, or platforms whose OAuth
+  // the clipper declined).
+  | "admin_event_credited";
 
 export type MetricProps = Record<string, string | number | boolean | null>;
 

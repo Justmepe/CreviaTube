@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Search, Filter, Star, Users, Clock, DollarSign, Target, ExternalLink } from "lucide-react";
+import { CampaignGoalSummary, isCampaignVerified } from "@/features/campaigns/components/campaign-goal-summary";
+import { Switch } from "@/components/ui/switch";
+import { Search, Filter, Star, Users, Clock, DollarSign, Target, ExternalLink, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
@@ -23,6 +25,10 @@ export default function CampaignsMarketplace() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  // Phase 4 — Goal and Verification filters. Default to "all" / off so
+  // existing behavior is preserved; clipper opts into narrowing.
+  const [goalFilter, setGoalFilter] = useState<string>("all");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   const { data: availableCampaigns = [], isLoading } = useQuery({
     queryKey: ["/api/campaigns/available"],
@@ -78,7 +84,12 @@ export default function CampaignsMarketplace() {
     const matchesSearch = campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          campaign.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesGoal =
+      goalFilter === "all" ||
+      (campaign.campaignGoals as any)?.primaryGoal === goalFilter;
+    const matchesVerified =
+      !verifiedOnly || isCampaignVerified(campaign.campaignGoals, campaign.integration);
+    return matchesSearch && matchesStatus && matchesGoal && matchesVerified;
   });
 
   if (!user || user.role !== "clipper") {
@@ -97,28 +108,58 @@ export default function CampaignsMarketplace() {
       <div className="space-y-6">
 
         {/* Filters and Search */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search campaigns..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search campaigns..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-44">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={goalFilter} onValueChange={setGoalFilter}>
+              <SelectTrigger className="w-full sm:w-52">
+                <Target className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Goal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any goal</SelectItem>
+                <SelectItem value="views">Views</SelectItem>
+                <SelectItem value="clicks">Link clicks</SelectItem>
+                <SelectItem value="signups">Signups</SelectItem>
+                <SelectItem value="leads">Qualified leads</SelectItem>
+                <SelectItem value="conversions">Conversions</SelectItem>
+                <SelectItem value="installs">App installs</SelectItem>
+                <SelectItem value="revenue">Sales / revenue</SelectItem>
+                <SelectItem value="code_redemptions">Promo redemptions</SelectItem>
+                <SelectItem value="follows">Follower growth</SelectItem>
+                <SelectItem value="subscribes">Paid subscribers</SelectItem>
+                <SelectItem value="ugc_volume">UGC volume</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Campaigns</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="paused">Paused</SelectItem>
-            </SelectContent>
-          </Select>
+          <label className="flex items-center gap-2 text-sm text-slate-700 select-none">
+            <Switch checked={verifiedOnly} onCheckedChange={setVerifiedOnly} />
+            <ShieldCheck className="w-4 h-4 text-green-700" />
+            Only verified campaigns
+            <span className="text-xs text-slate-500">
+              (campaigner has configured the integration their goal needs)
+            </span>
+          </label>
         </div>
 
         {/* Campaign Cards */}
@@ -189,6 +230,16 @@ export default function CampaignsMarketplace() {
                     <p className="text-gray-600 text-sm line-clamp-3">
                       {campaign.description || "No description available"}
                     </p>
+
+                    {/* Phase 4 — what is this campaign actually verifying?
+                        Shows goal label + target + green/amber configured
+                        badge so clippers don't apply to a campaign that
+                        won't credit their work. */}
+                    <CampaignGoalSummary
+                      campaignGoals={campaign.campaignGoals}
+                      integration={campaign.integration}
+                      variant="full"
+                    />
 
                     {/* Reward Rates */}
                     <div className="bg-gray-50 p-3 rounded-lg">

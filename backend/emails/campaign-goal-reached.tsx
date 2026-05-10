@@ -5,11 +5,16 @@ import { Layout } from "./layout";
 export interface CampaignGoalReachedProps {
   fullName: string;
   campaignName: string;
-  goalType: string;       // 'views' | 'clicks' | 'signups' | 'conversions'
+  goalType: string;       // 'views' | 'clicks' | 'signups' | 'conversions' | …
   target: number;
   achieved: number;
   completionReward: string; // USDC display (e.g. "50.00")
   appUrl: string;
+  // Phase 4 — human-friendly description of which verification source
+  // landed the events that crossed the goal (e.g., "Stripe webhook",
+  // "TikTok API", "manual admin credit"). Optional so legacy callers
+  // and goals without a known source still render cleanly.
+  verificationSource?: string;
 }
 
 export function CampaignGoalReached(p: CampaignGoalReachedProps) {
@@ -29,6 +34,12 @@ export function CampaignGoalReached(p: CampaignGoalReachedProps) {
         <Text className="text-sm text-emerald-900 m-0">
           {p.achieved.toLocaleString()} / {p.target.toLocaleString()} {p.goalType}
         </Text>
+        {p.verificationSource && (
+          <>
+            <Text className="text-xs text-emerald-800 m-0 mt-3">Verified via</Text>
+            <Text className="text-sm text-emerald-900 m-0">{p.verificationSource}</Text>
+          </>
+        )}
         <Text className="text-xs text-emerald-800 m-0 mt-3">Completion bonus</Text>
         <Text className="text-base font-semibold text-emerald-900 m-0">
           {p.completionReward} USDC

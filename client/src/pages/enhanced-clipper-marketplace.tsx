@@ -39,6 +39,9 @@ import {
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { CampaignGoalSummary, isCampaignVerified } from "@/features/campaigns/components/campaign-goal-summary";
+import { Switch } from "@/components/ui/switch";
+import { ShieldCheck } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -78,6 +81,20 @@ interface Campaign {
     minFollowers: number;
     engagementRate: number;
     platforms: string[];
+  };
+  // Phase 4 — surfaced on the marketplace card via CampaignGoalSummary.
+  // campaignGoals carries primaryGoal + the {goalType}Goal target;
+  // integration is redacted (hasX booleans) when set, null otherwise.
+  campaignGoals?: Record<string, any> | null;
+  integration?: null | {
+    pixelId: string | null;
+    hasPostbackSecret: boolean;
+    shopifyDomain: string | null;
+    hasShopifyWebhookSecret: boolean;
+    hasStripeWebhookSecret: boolean;
+    mmpProvider: string | null;
+    mmpAppId: string | null;
+    hasMmpApiKey: boolean;
   };
 }
 
@@ -120,6 +137,11 @@ export default function EnhancedClipperMarketplace() {
   const [platformFilter, setPlatformFilter] = useState("all");
   const [sortBy, setSortBy] = useState<string>(user?.role === "clipper" ? "best_fit" : "latest");
   const [creatorTypeFilter, setCreatorTypeFilter] = useState("all");
+  // Phase 4 — Goal type + verified-only narrow the marketplace to
+  // campaigns the clipper can actually convert on. Default to "all"/off
+  // so no behavior changes until the clipper opts in.
+  const [goalFilter, setGoalFilter] = useState<string>("all");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   const { data: availableCampaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns/available"],
@@ -207,6 +229,12 @@ export default function EnhancedClipperMarketplace() {
         return false;
       }
       if (creatorTypeFilter !== "all" && campaign.creator.accountType !== creatorTypeFilter) {
+        return false;
+      }
+      if (goalFilter !== "all" && (campaign.campaignGoals as any)?.primaryGoal !== goalFilter) {
+        return false;
+      }
+      if (verifiedOnly && !isCampaignVerified(campaign.campaignGoals, campaign.integration)) {
         return false;
       }
       return campaign.fundingStatus === "funded" && campaign.status === "active";
@@ -324,6 +352,40 @@ export default function EnhancedClipperMarketplace() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Phase 4 — Goal type + verified-only filters. Lets clippers
+                narrow to campaigns where the verification path is
+                already wired up. */}
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Select value={goalFilter} onValueChange={setGoalFilter}>
+                <SelectTrigger className="w-full sm:w-56">
+                  <Target className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Goal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Any goal</SelectItem>
+                  <SelectItem value="views">Views</SelectItem>
+                  <SelectItem value="clicks">Link clicks</SelectItem>
+                  <SelectItem value="signups">Signups</SelectItem>
+                  <SelectItem value="leads">Qualified leads</SelectItem>
+                  <SelectItem value="conversions">Conversions</SelectItem>
+                  <SelectItem value="installs">App installs</SelectItem>
+                  <SelectItem value="revenue">Sales / revenue</SelectItem>
+                  <SelectItem value="code_redemptions">Promo redemptions</SelectItem>
+                  <SelectItem value="follows">Follower growth</SelectItem>
+                  <SelectItem value="subscribes">Paid subscribers</SelectItem>
+                  <SelectItem value="ugc_volume">UGC volume</SelectItem>
+                </SelectContent>
+              </Select>
+              <label className="flex items-center gap-2 text-sm text-slate-700 select-none">
+                <Switch checked={verifiedOnly} onCheckedChange={setVerifiedOnly} />
+                <ShieldCheck className="w-4 h-4 text-green-700" />
+                Only verified campaigns
+                <span className="text-xs text-slate-500 hidden sm:inline">
+                  (campaigner has configured verification)
+                </span>
+              </label>
+            </div>
           </CardContent>
         </Card>
 
@@ -415,6 +477,15 @@ export default function EnhancedClipperMarketplace() {
                           </div>
                         ))}
                       </div>
+
+                      {/* Phase 4 — goal + verification visibility for clippers
+                          before they apply. Hidden on legacy campaigns
+                          without a primaryGoal set. */}
+                      <CampaignGoalSummary
+                        campaignGoals={campaign.campaignGoals ?? null}
+                        integration={campaign.integration ?? null}
+                        variant="compact"
+                      />
 
                       {/* Reward Structure */}
                       <div className="space-y-2">

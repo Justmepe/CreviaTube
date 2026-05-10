@@ -80,19 +80,30 @@ export function PaymentModal({ open, onOpenChange, kind, referenceId, descriptio
     })();
   }, [stage, receipt, intent, toast, onSuccess]);
 
+  const fail = (msg: string) => {
+    console.error("[payment-modal]", msg);
+    setError(msg);
+    setStage("error");
+    toast({ title: "Payment failed", description: msg, variant: "destructive" });
+  };
+
   const start = async () => {
+    console.log("[payment-modal] start clicked", { isConnected, address, chainId, target: TARGET_CHAIN_ID });
     setError(null);
     if (!isConnected || !address) {
-      setError("Connect a wallet first.");
-      setStage("error");
+      fail("Connect a wallet first.");
       return;
     }
     if (chainId !== TARGET_CHAIN_ID) {
+      console.log("[payment-modal] switching chain", { from: chainId, to: TARGET_CHAIN_ID });
       try {
         await switchChainAsync({ chainId: TARGET_CHAIN_ID });
       } catch (e: any) {
-        setError(`Please switch to Base Sepolia (chain ${TARGET_CHAIN_ID}).`);
-        setStage("error");
+        console.error("[payment-modal] chain switch failed", e);
+        fail(
+          `Couldn't switch to Base Sepolia. Add the network in your wallet first ` +
+            `(chain id ${TARGET_CHAIN_ID}) or approve the prompt. ${e?.shortMessage ?? e?.message ?? ""}`,
+        );
         return;
       }
     }
@@ -100,6 +111,7 @@ export function PaymentModal({ open, onOpenChange, kind, referenceId, descriptio
     setStage("creating_intent");
     let intentRes: IntentResponse;
     try {
+      console.log("[payment-modal] POST /api/payments/intent", { kind, referenceId, senderAddress: address });
       const res = await apiRequest("POST", "/api/payments/intent", {
         kind,
         referenceId,
@@ -108,15 +120,20 @@ export function PaymentModal({ open, onOpenChange, kind, referenceId, descriptio
       const body = await res.json();
       if (!res.ok) throw new Error(body.message || "Failed to create intent");
       intentRes = body;
+      console.log("[payment-modal] intent created", intentRes);
       setIntent(intentRes);
     } catch (e: any) {
-      setError(e.message);
-      setStage("error");
+      console.error("[payment-modal] intent creation failed", e);
+      fail(e.message ?? "Failed to create payment intent");
       return;
     }
 
     setStage("awaiting_signature");
     try {
+      console.log("[payment-modal] writeContractAsync (USDC.transfer)", {
+        to: intentRes.receiveAddress,
+        amountUnits: intentRes.expectedUsdcUnits,
+      });
       const txHash = await writeContractAsync({
         address: USDC_ADDRESS,
         abi: erc20Abi,
@@ -124,11 +141,12 @@ export function PaymentModal({ open, onOpenChange, kind, referenceId, descriptio
         args: [intentRes.receiveAddress, BigInt(intentRes.expectedUsdcUnits)],
         chainId: TARGET_CHAIN_ID,
       });
+      console.log("[payment-modal] tx submitted", txHash);
       setPendingTxHash(txHash);
       setStage("awaiting_confirmation");
     } catch (e: any) {
-      setError(e?.shortMessage || e?.message || "User rejected the transaction");
-      setStage("error");
+      console.error("[payment-modal] writeContract failed", e);
+      fail(e?.shortMessage ?? e?.message ?? "User rejected the transaction");
     }
   };
 
@@ -183,8 +201,92 @@ export function PaymentModal({ open, onOpenChange, kind, referenceId, descriptio
               View on BaseScan →
             </a>
           )}
+          {/* Dev-only shortcut. Vite's import.meta.env.DEV is true in
+              the dev server and false in any production build, so this
+              never reaches end users. Skips the wallet entirely — POST
+              /api/payments/intent, then POST /verify with a stub tx
+              hash. Backend accepts when WEB3_MOCK_VERIFY=true. */}
+          {import.meta.env.DEV && stage !== "done" && (
+            <DevSkipPayment
+              kind={kind}
+              referenceId={referenceId}
+              senderAddress={address ?? undefined}
+              onDone={() => {
+                setStage("done");
+                toast({
+                  title: "Marked as funded (dev mode)",
+                  description: "Backend mock-verified the payment. Real chain bypassed.",
+                });
+                onSuccess?.();
+              }}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Dev-only "skip on-chain" component. Posts an intent + verifies it
+// against the backend mock (WEB3_MOCK_VERIFY=true), so the campaign
+// transitions to funded without touching the user's wallet. Useful when
+// the operator's wallet is on a different chain than the backend
+// expects, or when there's no testnet USDC available.
+function DevSkipPayment(props: {
+  kind: "subscription" | "campaign_funding";
+  referenceId?: string;
+  senderAddress?: string;
+  onDone: () => void;
+}) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const stubTxHash =
+    "0x" + "ab".repeat(32); // 64 hex chars; mock-verify accepts any value
+
+  const skip = async () => {
+    if (!props.senderAddress) {
+      toast({ title: "Connect a wallet first", variant: "destructive" });
+      return;
+    }
+    setBusy(true);
+    try {
+      const intentRes = await apiRequest("POST", "/api/payments/intent", {
+        kind: props.kind,
+        referenceId: props.referenceId,
+        senderAddress: props.senderAddress,
+      });
+      const intentBody = await intentRes.json();
+      if (!intentRes.ok) throw new Error(intentBody.message ?? "Intent creation failed");
+      const verifyRes = await apiRequest("POST", "/api/payments/verify", {
+        intentId: intentBody.intentId,
+        txHash: stubTxHash,
+      });
+      const verifyBody = await verifyRes.json();
+      if (!verifyRes.ok) {
+        throw new Error(
+          verifyBody.message ?? "Verify failed (is WEB3_MOCK_VERIFY=true in .env?)",
+        );
+      }
+      props.onDone();
+    } catch (e: any) {
+      toast({
+        title: "Dev skip failed",
+        description: e?.message ?? "See console for details",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={skip}
+      disabled={busy}
+      className="w-full text-center text-xs text-amber-700 hover:text-amber-800 underline underline-offset-2"
+    >
+      {busy ? "Marking funded…" : "DEV: skip on-chain payment (mock-verify)"}
+    </button>
   );
 }

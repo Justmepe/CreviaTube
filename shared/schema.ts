@@ -6,7 +6,7 @@ import { z } from "zod";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["creator", "clipper", "admin"]);
-export const accountTypeEnum = pgEnum("account_type", ["influencer", "business"]);
+export const accountTypeEnum = pgEnum("account_type", ["influencer", "founder", "business"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "inactive", "suspended"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["active", "paused", "completed", "draft"]);
 export const eventTypeEnum = pgEnum("event_type", [
@@ -18,6 +18,13 @@ export const eventTypeEnum = pgEnum("event_type", [
   "follow",
   "subscribe",
   "install",
+  // Phase 4 — goal-verification v1 (migration 0018):
+  //   purchase        — sales/revenue, $ amount in event_value
+  //   lead            — qualified-lead form fill (distinct from signup)
+  //   code_redemption — promo-code redeemed at checkout
+  "purchase",
+  "lead",
+  "code_redemption",
 ]);
 export const eventStatusEnum = pgEnum("event_status", ["pending", "verified", "paid", "rejected"]);
 export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
@@ -111,10 +118,30 @@ export const users = pgTable("users", {
   emailOtpHash: text("email_otp_hash"),
   emailOtpExpiresAt: timestamp("email_otp_expires_at"),
 
-  // Social Media Integration
+  // Social Media Integration. tiktok block extended in Phase 4 to hold
+  // OAuth artifacts so view-polling can call the Display API on behalf
+  // of the clipper. accessToken expires (24h), refreshToken lasts ~365d
+  // — view-polling refreshes lazily before each call.
   socialAccounts: json("social_accounts").$type<{
-    instagram?: { username: string; accessToken?: string; businessAccount?: boolean };
-    tiktok?: { username: string; accessToken?: string };
+    instagram?: {
+      username: string;
+      accessToken?: string;
+      refreshToken?: string;
+      expiresAt?: string;             // ISO 8601
+      businessAccountId?: string;     // IG Business account id (for Graph API)
+      businessAccount?: boolean;
+      connectedAt?: string;           // ISO 8601
+    };
+    tiktok?: {
+      username?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      expiresAt?: string;             // ISO 8601 — when accessToken stops working
+      refreshExpiresAt?: string;      // ISO 8601 — when re-OAuth is required
+      openId?: string;                // TikTok-stable user identifier
+      scope?: string;                 // space-separated granted scopes
+      connectedAt?: string;           // ISO 8601
+    };
     youtube?: { channelId: string; accessToken?: string };
     twitter?: { username: string; accessToken?: string };
     facebook?: { pageId: string; accessToken?: string };
@@ -168,6 +195,15 @@ export const campaigns = pgTable("campaigns", {
     followsGoal?: number;
     subscribesGoal?: number;
     installsGoal?: number;
+    // Phase 4 — goal-verification v1.
+    //   revenueGoal           — total $ revenue (purchase events, $-valued)
+    //   leadsGoal             — qualified-lead form fills
+    //   codeRedemptionsGoal   — promo-code redemptions at checkout
+    //   ugcVolumeGoal         — count of approved clipper submissions with verified post URLs
+    revenueGoal?: number;
+    leadsGoal?: number;
+    codeRedemptionsGoal?: number;
+    ugcVolumeGoal?: number;
     primaryGoal?:
       | 'views'
       | 'clicks'
@@ -175,8 +211,46 @@ export const campaigns = pgTable("campaigns", {
       | 'conversions'
       | 'follows'
       | 'subscribes'
-      | 'installs';
+      | 'installs'
+      | 'revenue'
+      | 'leads'
+      | 'code_redemptions'
+      | 'ugc_volume';
   }>(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Per-campaign integration creds (migration 0018). Holds the configuration
+// the campaigner provides so we can ingest conversion signals — server
+// postback secret, conversion pixel id, Shopify/Stripe webhook secrets,
+// MMP token for app installs. Each goal type uses a different subset, so
+// every field is nullable. One row per campaign (unique index on campaign_id).
+export const campaignIntegrations = pgTable("campaign_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }).unique(),
+
+  // Generic server postback. We generate postback_secret and reveal it once;
+  // the campaigner's backend HMAC-signs incoming conversions with it.
+  postbackSecret: text("postback_secret"),
+
+  // Conversion pixel — campaigner embeds <img src="{base}/pixel/{pixelId}?clipper={code}&event=signup"/>
+  // on their thank-you page. No secret because pixels are client-side.
+  pixelId: text("pixel_id").unique(),
+
+  // Shopify
+  shopifyDomain: text("shopify_domain"),
+  shopifyWebhookSecret: text("shopify_webhook_secret"),
+
+  // Stripe
+  stripeWebhookSecret: text("stripe_webhook_secret"),
+
+  // Mobile Measurement Partner (for app-install goals).
+  // Constrained at the DB level to: appsflyer | adjust | firebase.
+  mmpProvider: text("mmp_provider"),
+  mmpAppId: text("mmp_app_id"),
+  mmpApiKey: text("mmp_api_key"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -207,6 +281,23 @@ export const clipperCampaigns = pgTable("clipper_campaigns", {
     };
   }>(),
   
+  // Phase 4 — goal-verification proof fields (migration 0018).
+  // postUrl is the live URL of the clipper's post (YouTube/TikTok/IG/X);
+  // required for any goal that verifies against the public post (views,
+  // engagement, UGC volume). clipperPromoCode is the per-clipper unique
+  // short code used for offline / e-commerce attribution — globally
+  // unique (partial unique index), looked up by webhook receivers.
+  postUrl: text("post_url"),
+  clipperPromoCode: text("clipper_promo_code").unique(),
+
+  // Phase 4 — view-polling snapshot (migration 0019). For "views" goals
+  // we periodically hit the post_url's platform API; lastViewCount is
+  // the cumulative count we last observed, lastViewPolledAt the time we
+  // observed it. We credit (current - lastViewCount) as new view events
+  // and roll the snapshot forward.
+  lastViewCount: integer("last_view_count").notNull().default(0),
+  lastViewPolledAt: timestamp("last_view_polled_at"),
+
   // UGC Content Submission for AI Detection
   submittedContent: text("submitted_content"), // The actual content submitted by clipper
   contentType: text("content_type"), // text, video, image, audio
@@ -508,6 +599,17 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   clipperCampaigns: many(clipperCampaigns),
   trackingEvents: many(trackingEvents),
   clipperReviews: many(clipperReviews),
+  integration: one(campaignIntegrations, {
+    fields: [campaigns.id],
+    references: [campaignIntegrations.campaignId],
+  }),
+}));
+
+export const campaignIntegrationsRelations = relations(campaignIntegrations, ({ one }) => ({
+  campaign: one(campaigns, {
+    fields: [campaignIntegrations.campaignId],
+    references: [campaigns.id],
+  }),
 }));
 
 export const clipperCampaignsRelations = relations(clipperCampaigns, ({ one, many }) => ({
@@ -599,6 +701,12 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
   budgetUsed: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCampaignIntegrationSchema = createInsertSchema(campaignIntegrations).omit({
+  id: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -704,6 +812,8 @@ export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
 export type AutoPayment = typeof autoPayments.$inferSelect;
+export type CampaignIntegration = typeof campaignIntegrations.$inferSelect;
+export type InsertCampaignIntegration = z.infer<typeof insertCampaignIntegrationSchema>;
 
 // New review system types
 export type ClipperReview = typeof clipperReviews.$inferSelect;

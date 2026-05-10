@@ -10,6 +10,8 @@ export interface CampaignCompletedCreatorProps {
   target: number;
   achieved: number;
   appUrl: string;
+  // Phase 4 — see CampaignGoalReachedProps.verificationSource.
+  verificationSource?: string;
 }
 
 export function CampaignCompletedCreator(p: CampaignCompletedCreatorProps) {
@@ -29,6 +31,12 @@ export function CampaignCompletedCreator(p: CampaignCompletedCreatorProps) {
         <Text className="text-sm font-semibold text-slate-900 m-0">
           {p.achieved.toLocaleString()} / {p.target.toLocaleString()} {p.goalType}
         </Text>
+        {p.verificationSource && (
+          <>
+            <Text className="text-xs text-slate-500 m-0 mt-2">Verified via</Text>
+            <Text className="text-sm text-slate-900 m-0">{p.verificationSource}</Text>
+          </>
+        )}
         <Text className="text-xs text-slate-500 m-0 mt-2">
           (target met — campaign continues for other clippers and additional events still earn)
         </Text>

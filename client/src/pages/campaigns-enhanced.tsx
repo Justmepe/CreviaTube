@@ -112,7 +112,7 @@ export default function CampaignsEnhanced() {
   }
 
   return (
-    <DashboardLayout title="Enhanced Campaign Management">
+    <DashboardLayout title="Campaign Management">
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center justify-between">

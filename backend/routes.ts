@@ -5,9 +5,10 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./core/services/escrow-service";
 import { trackingService } from "./core/services/tracking-service";
 import { campaignCompletionService } from "./core/services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, revenueTransactions, payoutRecords, systemHealthMetrics, clipperCampaigns, insertPlatformReviewSchema, geographicData, industryBenchmarks, platformFeatures, supportedPlatforms, supportedCountries, supportedLanguages, staticPages, platformEvents, contactInfo, careerPositions, communityGuidelines, payouts } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, revenueTransactions, payoutRecords, systemHealthMetrics, clipperCampaigns, insertPlatformReviewSchema, geographicData, industryBenchmarks, platformFeatures, supportedPlatforms, supportedCountries, supportedLanguages, staticPages, platformEvents, contactInfo, careerPositions, communityGuidelines, payouts, campaignIntegrations } from "../shared/schema.js";
+import { goalsForAccountType, type AccountType, type PrimaryGoal } from "../shared/goal-options";
 import { randomBytes } from "crypto";
-import { sql, eq, and, gte, count, desc, sum } from "drizzle-orm";
+import { sql, eq, and, gte, count, desc, sum, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { collectDeviceFingerprint, detectBot, rateLimit } from "./middleware/bot-detection";
 import type { BotDetectionRequest } from "./middleware/bot-detection";
@@ -21,6 +22,17 @@ import { setupPasswordResetAPI } from "./api/password-reset";
 import { setupTwoFactorAPI } from "./api/two-factor";
 import { setupMetricsAdminAPI } from "./api/metrics-admin";
 import { setupKycAPI } from "./api/kyc";
+import { setupCampaignIntegrationsAPI } from "./api/campaign-integrations";
+import { setupConversionPixelAPI } from "./api/conversion-pixel";
+import { setupShopifyWebhookAPI } from "./api/shopify-webhook";
+import { setupStripeWebhookAPI } from "./api/stripe-webhook";
+import { setupClipperAssignmentAPI } from "./api/clipper-assignment";
+import { setupMmpPostbackAPI } from "./api/mmp-postback";
+import { setupServerPostbackAPI } from "./api/server-postback";
+import { setupOAuthTikTokAPI } from "./api/oauth-tiktok";
+import { setupOAuthInstagramAPI } from "./api/oauth-instagram";
+import { setupAdminCreditAPI } from "./api/admin-credit";
+import { pollAllPostViews } from "./core/services/view-polling";
 import { clipperMatchesRegions, groupByContinent } from "./lib/region";
 import { emit } from "./lib/metrics";
 import { paymentsRoutes } from "./modules/payments/payments.routes";
@@ -32,6 +44,54 @@ let pesapalConfigured = false;
 
 if (process.env.PESAPAL_CONSUMER_KEY && process.env.PESAPAL_CONSUMER_SECRET) {
   pesapalConfigured = true;
+}
+
+// Phase 4 — batch-enrich a list of campaigns with their (redacted)
+// integration status. One query for all campaigns rather than N. Used
+// by the marketplace endpoints so each campaign card can render a
+// "configured / awaiting setup" badge without a follow-up call.
+type CampaignWithIntegrationStatus<T> = T & {
+  integration: null | {
+    pixelId: string | null;
+    hasPostbackSecret: boolean;
+    shopifyDomain: string | null;
+    hasShopifyWebhookSecret: boolean;
+    hasStripeWebhookSecret: boolean;
+    mmpProvider: string | null;
+    mmpAppId: string | null;
+    hasMmpApiKey: boolean;
+  };
+};
+async function enrichWithIntegrationStatus<T extends { id: string }>(
+  rows: T[],
+): Promise<Array<CampaignWithIntegrationStatus<T>>> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  // drizzle's inArray serializes the JS array into a proper IN (...) clause.
+  // The sql`= ANY(${ids})` form passed the array as a single parameter,
+  // which pg then tried to parse as an array literal — failing on UUIDs.
+  const intgRows = await db
+    .select()
+    .from(campaignIntegrations)
+    .where(inArray(campaignIntegrations.campaignId, ids));
+  const byCampaignId = new Map<string, typeof intgRows[number]>();
+  for (const row of intgRows) byCampaignId.set(row.campaignId, row);
+  return rows.map((c) => {
+    const intg = byCampaignId.get(c.id);
+    const integration = intg
+      ? {
+          pixelId: intg.pixelId,
+          hasPostbackSecret: Boolean(intg.postbackSecret),
+          shopifyDomain: intg.shopifyDomain,
+          hasShopifyWebhookSecret: Boolean(intg.shopifyWebhookSecret),
+          hasStripeWebhookSecret: Boolean(intg.stripeWebhookSecret),
+          mmpProvider: intg.mmpProvider,
+          mmpAppId: intg.mmpAppId,
+          hasMmpApiKey: Boolean(intg.mmpApiKey),
+        }
+      : null;
+    return { ...c, integration };
+  });
 }
 
 // Helper function for consistent timestamp formatting
@@ -82,6 +142,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Falls through to a deterministic dev stub when PERSONA_API_KEY isn't
   // set so the flow is testable without a Persona account.
   setupKycAPI(app);
+
+  // Phase 4 — campaign integration config CRUD (pixel id, postback secret,
+  // Shopify/Stripe/MMP creds) plus the conversion pixel + per-provider
+  // webhook receivers. Each webhook is mounted with route-specific
+  // express.raw so HMAC verification gets the original bytes (the
+  // app-level express.json() does not consume the body for these paths).
+  setupCampaignIntegrationsAPI(app);
+  setupConversionPixelAPI(app);
+  setupShopifyWebhookAPI(app);
+  setupStripeWebhookAPI(app);
+  // Mobile Measurement Partner postback receiver (AppsFlyer / Adjust /
+  // Firebase). Token-auth via the campaign's mmp_api_key.
+  setupMmpPostbackAPI(app);
+  // Generic server-to-server postback. HMAC-validated against the
+  // campaign's generated postback_secret. Path /api/postback/:campaignId
+  // doesn't shadow /api/postback/mmp/:campaignId because Express params
+  // match a single path segment.
+  setupServerPostbackAPI(app);
+
+  // Phase 4 — TikTok Login Kit OAuth (clipper connects their TikTok
+  // account so view-polling can call Display API on their behalf).
+  setupOAuthTikTokAPI(app);
+  // Phase 4 — Instagram OAuth via Facebook Login. Clipper connects an
+  // IG Business or Creator account; view-polling reads insights.plays
+  // for the matching media on each sweep.
+  setupOAuthInstagramAPI(app);
+
+  // Phase 4 — admin manual-credit endpoint (POST /api/admin/credit-event).
+  // Pragmatic stopgap for goal types we can't auto-verify (X / Twitter,
+  // declined-OAuth clippers, disputes). Audited via metric_events.
+  setupAdminCreditAPI(app);
+
+  // Phase 4 — admin manual trigger for view-polling. Useful for verifying
+  // a fresh post URL is being read correctly without waiting up to 30 min
+  // for the next scheduled sweep.
+  app.post("/api/admin/poll-views", async (req, res) => {
+    if (!req.isAuthenticated() || (req.user as any)?.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    try {
+      const result = await pollAllPostViews();
+      res.json(result);
+    } catch (err: any) {
+      console.error("Manual view-poll failed:", err);
+      res.status(500).json({ message: err?.message ?? "Sweep failed" });
+    }
+  });
+  // Clipper-side detail / post-URL submission for one assignment.
+  // Mounted before the legacy list endpoint so /:id GET matches here.
+  setupClipperAssignmentAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {
@@ -158,17 +268,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return next();
       }
       const campaign = await storage.getCampaign(id);
-      
+
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
-      
+
       // Check if user has permission to view this campaign
       if (req.user.role === "creator" && campaign.creatorId !== req.user.id) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
-      res.json(campaign);
+
+      // Enrich with the (redacted) integration status so the marketplace
+      // and application pages can render the goal-summary "Verified /
+      // Awaiting setup" badge without a follow-up call. Wrap the single
+      // row in an array because enrichWithIntegrationStatus batches.
+      const [enriched] = await enrichWithIntegrationStatus([campaign]);
+      res.json(enriched);
     } catch (error: any) {
       console.error('Campaign fetch error:', error);
       res.status(500).json({ message: "Failed to fetch campaign", error: error.message });
@@ -204,13 +319,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Specific campaign routes for clipper marketplace
+  // Specific campaign routes for clipper marketplace. The base list comes
+  // from storage.getAvailableCampaigns; we layer on a redacted integration
+  // block (one batch query for all campaigns) so the marketplace UI can
+  // render a "Verified via Stripe" / "Awaiting setup" badge on each card.
   app.get("/api/campaigns/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const campaigns = await storage.getAvailableCampaigns();
-      res.json(campaigns);
+      const enriched = await enrichWithIntegrationStatus(campaigns);
+      res.json(enriched);
     } catch (error: any) {
       console.error('Available campaigns fetch error:', error);
       res.status(500).json({ message: "Failed to fetch available campaigns", error: error.message });
@@ -245,8 +364,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { clipperCampaigns: clipperCampaignsTable, clipperReviews } = await import("../shared/schema.js");
       const myCampaigns = await storage.getCampaignsByCreator(req.user.id);
 
-      // Enrich each campaign with its clippers[] (joined with users) +
-      // canReview / hasReview flags so the My Campaigns page can show the Review button.
+      // Enrich each campaign with its clippers[] + canReview / hasReview
+      // flags + Phase 4 fields: integration status (so the page can show
+      // "configured" / "needs setup"), per-clipper postUrl (so the
+      // creator sees who has posted), and aggregate goal progress
+      // (so the page can show "$3,400 / $5,000 revenue" at a glance).
       const enriched = await Promise.all(myCampaigns.map(async (campaign) => {
         const clippers = await db
           .select({
@@ -258,6 +380,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isCompleted: clipperCampaignsTable.isCompleted,
             completedAt: clipperCampaignsTable.completedAt,
             completionMetrics: clipperCampaignsTable.completionMetrics,
+            // Phase 4 — surface to the creator so they see which
+            // clippers have actually posted vs. just been approved.
+            postUrl: clipperCampaignsTable.postUrl,
+            applicationStatus: clipperCampaignsTable.applicationStatus,
           })
           .from(clipperCampaignsTable)
           .innerJoin(users, eq(clipperCampaignsTable.clipperId, users.id))
@@ -273,6 +399,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ));
         const reviewedSet = new Set(existingReviews.map(r => r.clipperCampaignId));
 
+        // Integration row — redacted (secrets become hasX booleans, same
+        // shape the GET /integration endpoint returns). Null when the
+        // campaigner hasn't configured anything yet.
+        const [intgRow] = await db
+          .select()
+          .from(campaignIntegrations)
+          .where(eq(campaignIntegrations.campaignId, campaign.id))
+          .limit(1);
+        const integration = intgRow
+          ? {
+              pixelId: intgRow.pixelId,
+              hasPostbackSecret: Boolean(intgRow.postbackSecret),
+              shopifyDomain: intgRow.shopifyDomain,
+              hasShopifyWebhookSecret: Boolean(intgRow.shopifyWebhookSecret),
+              hasStripeWebhookSecret: Boolean(intgRow.stripeWebhookSecret),
+              mmpProvider: intgRow.mmpProvider,
+              mmpAppId: intgRow.mmpAppId,
+              hasMmpApiKey: Boolean(intgRow.mmpApiKey),
+            }
+          : null;
+
+        // Aggregate goal progress across every clipper on this campaign.
+        // Filters mirror getClipperProgress: bot-flagged events excluded,
+        // synthetic test events excluded. Goals beyond the canonical
+        // event-counted set (ugc_volume, etc.) are best-effort: 0 here
+        // and the per-clipper completion metric carries the truth.
+        const primaryGoal = (campaign.campaignGoals as any)?.primaryGoal as string | undefined;
+        const goalEventTypeMap: Record<string, string> = {
+          views: "view",
+          clicks: "click",
+          signups: "signup",
+          conversions: "conversion",
+          follows: "follow",
+          subscribes: "subscribe",
+          installs: "install",
+          leads: "lead",
+          code_redemptions: "code_redemption",
+          revenue: "purchase",
+        };
+        const goalEventType = primaryGoal ? goalEventTypeMap[primaryGoal] : undefined;
+        let progressAchieved = 0;
+        let progressTarget: number | null = null;
+        if (primaryGoal) {
+          const goals = campaign.campaignGoals as any;
+          const targetKeyByGoal: Record<string, string> = {
+            code_redemptions: "codeRedemptionsGoal",
+            ugc_volume: "ugcVolumeGoal",
+          };
+          const targetKey = targetKeyByGoal[primaryGoal] || `${primaryGoal}Goal`;
+          progressTarget = typeof goals?.[targetKey] === "number" ? goals[targetKey] : null;
+
+          if (goalEventType) {
+            const [agg] = await db
+              .select({
+                // Revenue uses sum of event_value ($); count-based goals
+                // use sum(coalesce(value,1)) so polling-delta rows count.
+                total: sql<number>`coalesce(sum(coalesce(${trackingEvents.eventValue}::numeric, 1)), 0)::numeric`,
+              })
+              .from(trackingEvents)
+              .where(and(
+                eq(trackingEvents.campaignId, campaign.id),
+                eq(trackingEvents.eventType, goalEventType as any),
+                eq(trackingEvents.flaggedAsBot, false),
+                sql`(${trackingEvents.metadata} IS NULL OR ${trackingEvents.metadata} NOT LIKE '%"test":true%')`,
+              ));
+            progressAchieved = Number(agg?.total) || 0;
+          } else if (primaryGoal === "ugc_volume") {
+            // Aggregate = number of clippers with approved status + post URL.
+            progressAchieved = clippers.filter(
+              (c) => c.applicationStatus === "approved" && c.postUrl,
+            ).length;
+          }
+        }
+
         return {
           ...campaign,
           clippers: clippers.map(c => ({
@@ -280,6 +480,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             canReview: c.isCompleted,
             hasReview: reviewedSet.has(c.id),
           })),
+          integration,
+          progress: primaryGoal
+            ? {
+                primaryGoal,
+                target: progressTarget,
+                achieved: progressAchieved,
+                percentage:
+                  progressTarget && progressTarget > 0
+                    ? Math.min(100, (progressAchieved / progressTarget) * 100)
+                    : 0,
+              }
+            : null,
         };
       }));
 
@@ -352,6 +564,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         creatorId: req.user.id,
         fundingStatus: "pending", // All campaigns start as pending funding
       });
+
+      // Server-side check that the chosen primaryGoal is offered to the
+      // creator's accountType. The frontend filters by GOALS_FOR_PERSONA,
+      // but a hand-crafted POST could otherwise sneak in a goal we don't
+      // know how to verify for that audience.
+      const primaryGoal = (validatedData.campaignGoals as any)?.primaryGoal as PrimaryGoal | undefined;
+      const accountType = (req.user as any).accountType as AccountType | null | undefined;
+      if (primaryGoal && accountType) {
+        const allowed = goalsForAccountType(accountType, { includeV2: true }).map((g) => g.id);
+        if (!allowed.includes(primaryGoal)) {
+          return res.status(400).json({
+            message: `Goal "${primaryGoal}" is not available for accountType "${accountType}".`,
+            allowed,
+          });
+        }
+      }
 
       const campaign = await storage.createCampaign(validatedData);
       emit("campaign_created", {
@@ -1352,10 +1580,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Social media integration endpoints  
+  // Social media integration endpoints
   app.post("/api/users/:id/social-integration", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     // Only allow users to update their own social accounts or admins
     if (req.user.id !== req.params.id && req.user.role !== "admin") {
       return res.status(403).json({ message: "Access denied" });
@@ -1367,6 +1595,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
+  });
+
+  // Disconnect a social account. Drops the OAuth token (TikTok / Instagram)
+  // or the manually-entered profile (YouTube / Twitter / Facebook) from
+  // users.social_accounts. After calling this the clipper-assignment page
+  // will surface the "Connect <platform>" CTA again on relevant
+  // campaigns; view-polling will skip with the OAuth-required reason.
+  const SUPPORTED_SOCIAL_PLATFORMS = new Set([
+    "instagram",
+    "tiktok",
+    "youtube",
+    "twitter",
+    "facebook",
+  ]);
+  app.delete("/api/users/me/social/:platform", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const platform = String(req.params.platform).toLowerCase();
+    if (!SUPPORTED_SOCIAL_PLATFORMS.has(platform)) {
+      return res.status(400).json({
+        message: `platform must be one of: ${[...SUPPORTED_SOCIAL_PLATFORMS].join(", ")}`,
+      });
+    }
+
+    const userId = (req.user as any).id as string;
+    const [row] = await db
+      .select({ socialAccounts: users.socialAccounts })
+      .from(users)
+      .where(eq(users.id, userId));
+    const current = (row?.socialAccounts as Record<string, any>) ?? {};
+    if (!(platform in current)) {
+      return res.json({ ok: true, alreadyDisconnected: true });
+    }
+    const next = { ...current };
+    delete next[platform];
+
+    await db
+      .update(users)
+      .set({ socialAccounts: next, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    return res.json({ ok: true, disconnected: platform });
   });
 
   // Get user social accounts

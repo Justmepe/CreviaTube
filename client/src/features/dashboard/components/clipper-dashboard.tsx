@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "./dashboard-layout";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, Wallet, Link as LinkIcon, Copy, ExternalLink, DollarSign, MessageSquare, Quote, Star } from "lucide-react";
+import { TrendingUp, Wallet, Link as LinkIcon, Copy, ExternalLink, DollarSign, MessageSquare, Quote, Star, Settings2 } from "lucide-react";
 
 export default function ClipperDashboard() {
   const { user } = useAuth();
@@ -179,6 +179,15 @@ export default function ClipperDashboard() {
                       onClick={() => window.open(getTrackingUrl(cc.trackingCode), '_blank')}
                     >
                       <ExternalLink className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                      onClick={() => (window.location.href = `/clipper/campaigns/${cc.id}`)}
+                      title="Manage assignment (post URL, promo code, progress)"
+                    >
+                      <Settings2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

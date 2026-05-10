@@ -7,7 +7,7 @@
 //
 // At the schema level we have:
 //   - users.role:           "creator" | "clipper" | "admin"
-//   - users.accountType:    "influencer" | "business" | null
+//   - users.accountType:    "influencer" | "founder" | "business" | null
 //   - users.campaignerStage: "established_brand" | "early_brand" |
 //                           "solo_creator" | "founder_prelaunch" | null
 //
@@ -41,6 +41,6 @@ export const CAMPAIGNER_STAGE_PROGRESSION: CampaignerStage[] = [
 
 export type ResolvableUser = {
   role: "creator" | "clipper" | "admin";
-  accountType?: "influencer" | "business" | null;
+  accountType?: "influencer" | "founder" | "business" | null;
   campaignerStage?: CampaignerStage | null;
 };

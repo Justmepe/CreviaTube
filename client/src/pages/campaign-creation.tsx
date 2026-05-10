@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -33,14 +33,31 @@ import {
   Crown,
   Smartphone,
   Sparkles,
+  DollarSign,
+  UserCheck,
+  Ticket,
+  FileVideo,
 } from "lucide-react";
 import { resolvePersona } from "@/features/personas/resolver";
 import { getPersonaConfig } from "@/features/personas/registry";
 import type { CampaignTemplate } from "@/features/personas/registry";
 import type { Persona } from "@/features/personas/types";
 
-// All seven goal types (aligned with eventTypeEnum + new persona goals).
-const GOAL_TYPES = ["views", "clicks", "signups", "conversions", "follows", "subscribes", "installs"] as const;
+// All v1 goal types (aligned with shared/goal-options.ts GOAL_CATALOG).
+// New in Phase 4: revenue, leads, code_redemptions, ugc_volume.
+const GOAL_TYPES = [
+  "views",
+  "clicks",
+  "signups",
+  "conversions",
+  "follows",
+  "subscribes",
+  "installs",
+  "revenue",
+  "leads",
+  "code_redemptions",
+  "ugc_volume",
+] as const;
 type GoalType = typeof GOAL_TYPES[number];
 
 // Frontend zod for the form. Backend re-validates via insertCampaignSchema.
@@ -58,6 +75,11 @@ const campaignSchema = z.object({
     follow: z.number().min(0).optional(),
     subscribe: z.number().min(0).optional(),
     install: z.number().min(0).optional(),
+    // Phase 4 — new event types.
+    purchase: z.number().min(0).optional(),         // revenue goals — paid per verified purchase event
+    lead: z.number().min(0).optional(),             // lead-gen goals — paid per qualified lead
+    codeRedemption: z.number().min(0).optional(),   // promo-code goals — paid per redemption
+    post: z.number().min(0).optional(),             // ugc-volume goals — paid per approved post
   }),
   campaignGoals: z.object({
     primaryGoal: z.enum(GOAL_TYPES),
@@ -68,6 +90,11 @@ const campaignSchema = z.object({
     followsGoal: z.number().int().min(0).optional(),
     subscribesGoal: z.number().int().min(0).optional(),
     installsGoal: z.number().int().min(0).optional(),
+    // Phase 4 — new goal targets (revenue is $-valued; the rest are counts).
+    revenueGoal: z.number().min(0).optional(),
+    leadsGoal: z.number().int().min(0).optional(),
+    codeRedemptionsGoal: z.number().int().min(0).optional(),
+    ugcVolumeGoal: z.number().int().min(0).optional(),
   }),
   minFollowers: z.number().int().min(0),
 });
@@ -110,20 +137,26 @@ const LANGUAGES = [
 type GoalOption = { value: GoalType; label: string; icon: any; helper: string };
 
 const ALL_GOAL_OPTIONS: Record<GoalType, GoalOption> = {
-  views:       { value: "views",       label: "Verified views",   icon: Eye,                helper: "Best for awareness / reach campaigns" },
-  clicks:      { value: "clicks",      label: "Link clicks",      icon: MousePointerClick,  helper: "Best for traffic / app installs" },
-  signups:     { value: "signups",     label: "Signups",          icon: UserPlus,           helper: "Best for lead gen / waitlists" },
-  conversions: { value: "conversions", label: "Conversions",      icon: TrendingUp,         helper: "Best for revenue / paid actions" },
-  follows:     { value: "follows",     label: "Follower growth",  icon: Heart,              helper: "Convert viewers into followers on your channel" },
-  subscribes:  { value: "subscribes",  label: "Paid subscribers", icon: Crown,              helper: "Drive paid-tier signups (Patreon, Substack, course)" },
-  installs:    { value: "installs",    label: "App installs",     icon: Smartphone,         helper: "iOS / Android installs from the clip" },
+  views:            { value: "views",            label: "Verified views",         icon: Eye,                helper: "Best for awareness / reach campaigns" },
+  clicks:           { value: "clicks",           label: "Link clicks",            icon: MousePointerClick,  helper: "Best for traffic / app installs" },
+  signups:          { value: "signups",          label: "Signups",                icon: UserPlus,           helper: "Best for lead gen / waitlists" },
+  conversions:      { value: "conversions",      label: "Conversions",            icon: TrendingUp,         helper: "Best for revenue / paid actions" },
+  follows:          { value: "follows",          label: "Follower growth",        icon: Heart,              helper: "Convert viewers into followers on your channel" },
+  subscribes:       { value: "subscribes",       label: "Paid subscribers",       icon: Crown,              helper: "Drive paid-tier signups (Patreon, Substack, course)" },
+  installs:         { value: "installs",         label: "App installs",           icon: Smartphone,         helper: "iOS / Android installs from the clip" },
+  revenue:          { value: "revenue",          label: "Sales / revenue",        icon: DollarSign,         helper: "$-valued purchases verified via Shopify or Stripe webhook" },
+  leads:            { value: "leads",            label: "Qualified leads",        icon: UserCheck,          helper: "Form fills / demo bookings, verified via pixel" },
+  code_redemptions: { value: "code_redemptions", label: "Promo-code redemptions", icon: Ticket,             helper: "Each clipper gets a unique code. Webhook attributes redemptions back" },
+  ugc_volume:       { value: "ugc_volume",       label: "UGC volume",             icon: FileVideo,          helper: "Goal hits when N clippers post approved content" },
 };
 
-// Which goal types each persona can pick. Mirrors the registry templates.
+// Which goal types each persona can pick. Mirrors shared/goal-options.ts —
+// kept as a static map here so the UI can layer on lucide icons + helper
+// text the shared module shouldn't depend on.
 const GOALS_FOR_PERSONA: Record<Persona, GoalType[]> = {
-  brand:      ["views", "clicks", "signups", "conversions"],
+  brand:      ["views", "clicks", "signups", "conversions", "revenue", "leads", "code_redemptions", "ugc_volume"],
   influencer: ["views", "follows", "clicks", "subscribes"],
-  founder:    ["views", "signups", "installs", "conversions"],
+  founder:    ["views", "clicks", "signups", "installs", "leads", "code_redemptions"],
   clipper:    [],
   admin:      [],
 };
@@ -132,24 +165,32 @@ const GOALS_FOR_PERSONA: Record<Persona, GoalType[]> = {
 // Single-source-of-truth fix for the singular/plural mismatch the
 // completion-bonus calc was hitting (goal "views" vs rate key "view").
 const GOAL_TO_RATE_KEY: Record<GoalType, keyof CampaignFormData["rewardRates"]> = {
-  views:       "view",
-  clicks:      "click",
-  signups:     "signup",
-  conversions: "conversion",
-  follows:     "follow",
-  subscribes:  "subscribe",
-  installs:    "install",
+  views:            "view",
+  clicks:           "click",
+  signups:          "signup",
+  conversions:      "conversion",
+  follows:          "follow",
+  subscribes:       "subscribe",
+  installs:         "install",
+  revenue:          "purchase",
+  leads:            "lead",
+  code_redemptions: "codeRedemption",
+  ugc_volume:       "post",
 };
 
 // Goal type → goal-amount field name (camelCase for form path).
 const GOAL_TO_AMOUNT_FIELD: Record<GoalType, keyof CampaignFormData["campaignGoals"]> = {
-  views:       "viewsGoal",
-  clicks:      "clicksGoal",
-  signups:     "signupsGoal",
-  conversions: "conversionsGoal",
-  follows:     "followsGoal",
-  subscribes:  "subscribesGoal",
-  installs:    "installsGoal",
+  views:            "viewsGoal",
+  clicks:           "clicksGoal",
+  signups:          "signupsGoal",
+  conversions:      "conversionsGoal",
+  follows:          "followsGoal",
+  subscribes:       "subscribesGoal",
+  installs:         "installsGoal",
+  revenue:          "revenueGoal",
+  leads:            "leadsGoal",
+  code_redemptions: "codeRedemptionsGoal",
+  ugc_volume:       "ugcVolumeGoal",
 };
 
 export default function CampaignCreation() {
@@ -158,6 +199,11 @@ export default function CampaignCreation() {
   const [, setLocation] = useLocation();
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  // Phase 4 — edit-mode support. /my-campaigns "Edit" stashes the
+  // campaign in sessionStorage and navigates here with ?edit=true.
+  // editingId !== null means we're patching an existing campaign;
+  // submit-button copy and the mutation path branch on it.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Resolve the user's persona and look up their template playbook + the
   // subset of goal types they're allowed to pick. Defaults gracefully to
@@ -188,6 +234,64 @@ export default function CampaignCreation() {
       minFollowers: 1000,
     },
   });
+
+  // Hydrate from sessionStorage on mount when ?edit=true is in the URL.
+  // Robust to malformed JSON / missing fields — failures fall back to a
+  // fresh-create state silently. We clear sessionStorage on success so
+  // a refresh doesn't replay the prefill.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") !== "true") return;
+    const raw = sessionStorage.getItem("editCampaign");
+    if (!raw) return;
+    try {
+      const c = JSON.parse(raw);
+      if (!c?.id) return;
+      // Decode the JSON-stringified columns back into form-shaped values.
+      const platforms: string[] = (() => {
+        try { return JSON.parse(c.targetPlatforms || "[]"); } catch { return []; }
+      })();
+      const rewardRates = (() => {
+        try { return JSON.parse(c.rewardRates || "{}"); } catch { return {}; }
+      })();
+      const reqs = (() => {
+        try { return JSON.parse(c.requirements || "{}"); } catch { return {}; }
+      })();
+      form.reset({
+        name: c.name ?? "",
+        description: c.description ?? "",
+        budget: String(c.budget ?? "100"),
+        duration: Number(c.duration ?? 7),
+        targetPlatforms: Array.isArray(platforms) ? platforms : [],
+        rewardRates: {
+          view:           Number(rewardRates.view ?? 0) || undefined,
+          click:          Number(rewardRates.click ?? 0) || undefined,
+          signup:         Number(rewardRates.signup ?? 0) || undefined,
+          conversion:     Number(rewardRates.conversion ?? 0) || undefined,
+          follow:         Number(rewardRates.follow ?? 0) || undefined,
+          subscribe:      Number(rewardRates.subscribe ?? 0) || undefined,
+          install:        Number(rewardRates.install ?? 0) || undefined,
+          purchase:       Number(rewardRates.purchase ?? 0) || undefined,
+          lead:           Number(rewardRates.lead ?? 0) || undefined,
+          codeRedemption: Number(rewardRates.codeRedemption ?? 0) || undefined,
+          post:           Number(rewardRates.post ?? 0) || undefined,
+        },
+        campaignGoals: c.campaignGoals && c.campaignGoals.primaryGoal
+          ? c.campaignGoals
+          : { primaryGoal: defaultGoal },
+        minFollowers: Number(reqs.minFollowers ?? 0),
+      });
+      setSelectedCountries(Array.isArray(reqs.geography) ? reqs.geography : []);
+      setSelectedLanguages(Array.isArray(reqs.languages) ? reqs.languages : []);
+      setEditingId(String(c.id));
+      sessionStorage.removeItem("editCampaign");
+    } catch (err) {
+      console.error("Failed to load campaign for edit:", err);
+    }
+    // Run once on mount — we deliberately ignore exhaustive deps so this
+    // doesn't re-fire after the form's defaultGoal changes mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Apply a registry template to the form. Pre-fills name, description,
   // primaryGoal + that goal's amount, and the matching reward rate. The
@@ -230,11 +334,27 @@ export default function CampaignCreation() {
         }),
         campaignGoals: data.campaignGoals,
       };
+      // Edit-mode: PATCH the existing row. Create-mode: POST a new one.
+      // The endpoint that PATCH hits is the same handler the legacy
+      // enhanced-campaign-creation page used.
+      if (editingId) {
+        const res = await apiRequest("PATCH", `/api/campaigns/${editingId}`, payload);
+        return await res.json();
+      }
       const res = await apiRequest("POST", "/api/campaigns", payload);
       return await res.json();
     },
     onSuccess: (campaign: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns/my-campaigns"] });
+      if (editingId) {
+        toast({
+          title: "Campaign updated",
+          description: "Your changes are saved.",
+        });
+        setLocation("/my-campaigns");
+        return;
+      }
       toast({
         title: "Campaign created",
         description: "Now fund it with USDC to make it live.",
@@ -244,7 +364,7 @@ export default function CampaignCreation() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to create campaign",
+        title: editingId ? "Failed to save changes" : "Failed to create campaign",
         description: error.message,
         variant: "destructive",
       });
@@ -255,19 +375,23 @@ export default function CampaignCreation() {
   const escrowAmount = budgetNumber * 0.8;
 
   return (
-    <DashboardLayout title="Create Campaign">
+    <DashboardLayout title={editingId ? "Edit campaign" : "Create campaign"}>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Page header */}
-        <div>
+        {/* Persona badge + tagline. The DashboardLayout already renders
+            the page-level h1 ("Create campaign" / "Edit campaign"), so
+            we don't repeat it here — just the persona context + the
+            short instruction line. */}
+        <div className="-mt-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
               {personaConfig.shortLabel}
             </span>
             <span className="text-xs text-slate-500">{personaConfig.oneLiner}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">New campaign</h1>
-          <p className="text-slate-600 mt-1">
-            Set the goal, fund USDC into escrow, clippers post, payouts fire when you hit it.
+          <p className="text-slate-600">
+            {editingId
+              ? "Update your campaign settings. Changes apply immediately to anyone applying or polling next."
+              : "Set the goal, fund USDC into escrow, clippers post, payouts fire when you hit it."}
           </p>
         </div>
 
@@ -281,17 +405,20 @@ export default function CampaignCreation() {
               <h2 className="text-base font-semibold text-slate-900">Pick a starting point</h2>
               <span className="text-xs text-slate-500">— optional, you can build from scratch too</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* 2-column grid on large screens (was 4 — descriptions
+                were long enough that 4 narrow columns wrapped each word
+                onto its own line, making the cards look broken). */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {personaConfig.templates.map((tpl) => (
                 <button
                   key={tpl.id}
                   type="button"
                   onClick={() => applyTemplate(tpl)}
-                  className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm transition"
+                  className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm transition flex flex-col gap-1.5"
                 >
-                  <div className="font-semibold text-sm mb-1">{tpl.name}</div>
+                  <div className="font-semibold text-sm">{tpl.name}</div>
                   <div className="text-xs text-slate-600 leading-snug">{tpl.description}</div>
-                  <div className="mt-2.5 text-xs text-blue-700 font-medium">
+                  <div className="mt-1 text-xs text-blue-700 font-medium">
                     ${tpl.defaultRewardRate} {tpl.rewardRateUnit}
                   </div>
                 </button>
@@ -466,27 +593,36 @@ export default function CampaignCreation() {
                   {/* Numeric input for the chosen goal */}
                   <FormField
                     control={form.control}
-                    name={`campaignGoals.${primaryGoal}Goal` as any}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Target {primaryGoal}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder={primaryGoal === "views" ? "100000" : "1000"}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Payouts auto-release when a clipper reaches this many verified {primaryGoal}.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    name={`campaignGoals.${GOAL_TO_AMOUNT_FIELD[primaryGoal as GoalType]}` as any}
+                    render={({ field }) => {
+                      const goalLabel = ALL_GOAL_OPTIONS[primaryGoal as GoalType]?.label ?? primaryGoal;
+                      const isRevenue = primaryGoal === "revenue";
+                      return (
+                        <FormItem>
+                          <FormLabel>
+                            Target — {goalLabel}{isRevenue ? " (USDC)" : ""}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              step={isRevenue ? "0.01" : "1"}
+                              placeholder={primaryGoal === "views" ? "100000" : isRevenue ? "5000" : "1000"}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(
+                                  isRevenue ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0,
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Payouts auto-release once verified {goalLabel.toLowerCase()} reaches this number.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </section>
 
@@ -500,13 +636,17 @@ export default function CampaignCreation() {
                     {goalsForThisPersona.map((opt) => {
                       const rateKey = GOAL_TO_RATE_KEY[opt.value];
                       const labelMap: Record<GoalType, string> = {
-                        views: "Per 1,000 views (USDC)",
-                        clicks: "Per click (USDC)",
-                        signups: "Per signup (USDC)",
-                        conversions: "Per conversion (USDC)",
-                        follows: "Per new follow (USDC)",
-                        subscribes: "Per paid subscriber (USDC)",
-                        installs: "Per install (USDC)",
+                        views:            "Per 1,000 views (USDC)",
+                        clicks:           "Per click (USDC)",
+                        signups:          "Per signup (USDC)",
+                        conversions:      "Per conversion (USDC)",
+                        follows:          "Per new follow (USDC)",
+                        subscribes:       "Per paid subscriber (USDC)",
+                        installs:         "Per install (USDC)",
+                        revenue:          "Per verified purchase (USDC)",
+                        leads:            "Per qualified lead (USDC)",
+                        code_redemptions: "Per code redemption (USDC)",
+                        ugc_volume:       "Per approved post (USDC)",
                       };
                       return (
                         <FormField
@@ -629,7 +769,9 @@ export default function CampaignCreation() {
                     className="bg-gradient-to-r from-blue-700 to-emerald-700 hover:from-blue-800 hover:to-emerald-800 text-white shadow-md"
                   >
                     <Zap className="h-4 w-4 mr-2" />
-                    {createCampaignMutation.isPending ? "Creating…" : "Create draft & continue to funding"}
+                    {createCampaignMutation.isPending
+                      ? (editingId ? "Saving…" : "Creating…")
+                      : (editingId ? "Save changes" : "Create draft & continue to funding")}
                   </Button>
                 </div>
 

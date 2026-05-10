@@ -19,7 +19,8 @@ import {
   Star,
   Folder,
   Crown,
-  Users as UsersIcon
+  Users as UsersIcon,
+  FileText,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -51,6 +52,10 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
         { name: "Revenue", href: "/admin/revenue", icon: Activity },
         { name: "Metrics", href: "/admin/metrics", icon: BarChart3 },
+        // Phase 4 — manual credit for goals we can't auto-verify
+        // (X posts, declined-OAuth clippers, disputes). Audited via
+        // metric_events.
+        { name: "Manual credit", href: "/admin/credit-event", icon: FileText },
       ];
     }
 

@@ -21,6 +21,9 @@ import CampaignsMarketplace from "@/pages/campaigns-marketplace";
 import Payouts from "@/features/payments/components/payouts";
 import AdminUsers from "@/features/admin/components/admin-users";
 import CampaignFunding from "@/pages/campaign-funding";
+import CampaignIntegration from "@/pages/campaign-integration";
+import ClipperAssignment from "@/pages/clipper-assignment";
+import AdminCreditEventPage from "@/pages/admin-credit-event";
 import SocialIntegration from "@/pages/social-integration";
 import ProfileSettings from "@/features/profile/components/profile-settings";
 import ComprehensiveAdminDashboard from "@/features/admin/components/admin-dashboard";
@@ -30,7 +33,13 @@ import BotMonitoring from "@/pages/bot-monitoring";
 import ClipperApplication from "@/pages/clipper-application";
 import CreatorApplicationReview from "@/pages/creator-application-review";
 import RealRevenueAnalytics from "@/pages/real-revenue-analytics";
-import EnhancedCampaignCreation from "@/pages/enhanced-campaign-creation";
+// EnhancedCampaignCreation is intentionally NOT imported. The previous
+// implementation used a stale CampaignWizard with deprecated `depositsGoal` /
+// `tradesGoal` fields that pre-date the Phase 4 goal catalog. It would
+// silently corrupt Phase 4 campaigns when used to edit them. The route
+// `/campaigns/create-enhanced` now points at the canonical CampaignCreation
+// component below; that component reads `?edit=true` + sessionStorage and
+// PATCHes the existing row instead of POSTing a new one.
 import CampaignsEnhanced from "@/pages/campaigns-enhanced";
 import ClipperDirectoryPage from "@/pages/clipper-directory";
 import ClipperProfilePage from "@/pages/clipper-profile";
@@ -73,9 +82,11 @@ function Router() {
       <ProtectedRoute path="/metrics" component={MetricsDashboard} />
       <ProtectedRoute path="/campaigns" component={CampaignsRoute} />
       <ProtectedRoute path="/campaigns/create" component={CampaignCreation} />
-      <ProtectedRoute path="/campaigns/create-enhanced" component={EnhancedCampaignCreation} />
+      <ProtectedRoute path="/campaigns/create-enhanced" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/new" component={CampaignCreation} />
       <ProtectedRoute path="/campaigns/:id/funding" component={CampaignFunding} />
+      <ProtectedRoute path="/campaigns/:id/integration" component={CampaignIntegration} />
+      <ProtectedRoute path="/clipper/campaigns/:id" component={ClipperAssignment} />
       <ProtectedRoute path="/campaigns/:id/apply" component={ClipperApplication} />
       <ProtectedRoute path="/creator/applications" component={CreatorApplicationReview} />
       <ProtectedRoute path="/social-integration" component={SocialIntegration} />
@@ -93,6 +104,7 @@ function Router() {
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/real-analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/admin/metrics" component={AdminMetricsPage} />
+      <ProtectedRoute path="/admin/credit-event" component={AdminCreditEventPage} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/clipper-directory" component={ClipperDirectoryPage} />
       <ProtectedRoute path="/clippers/:id" component={ClipperProfilePage} />

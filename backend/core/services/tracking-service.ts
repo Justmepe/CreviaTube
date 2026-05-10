@@ -2,9 +2,27 @@ import { db } from "../../db";
 import { trackingEvents, users, campaigns, clipperCampaigns, socialMetrics } from "../../../shared/schema.js";
 import { eq, and, desc, sum, count, sql } from "drizzle-orm";
 
+// Mirrors event_type pgEnum in shared/schema.ts. Phase 4 added purchase,
+// lead, code_redemption. The legacy 'deposit' / 'trade' values were
+// stripped in migration 0005 — kept off this union deliberately.
+export type TrackedEventType =
+  | 'click'
+  | 'view'
+  | 'signup'
+  | 'conversion'
+  | 'follow'
+  | 'subscribe'
+  | 'install'
+  | 'purchase'
+  | 'lead'
+  | 'code_redemption';
+
 export interface TrackingData {
   clipperCampaignId: string;
-  eventType: 'click' | 'view' | 'signup' | 'deposit' | 'trade' | 'conversion';
+  eventType: TrackedEventType;
+  // Only set for value-bearing events (revenue/$). Persisted as
+  // tracking_events.event_value (decimal) and SUMmed for revenue goals.
+  eventValue?: number;
   userAgent?: string;
   ipAddress?: string;
   referrer?: string;
@@ -63,9 +81,16 @@ export class TrackingService {
       }
 
       const rewardRates = JSON.parse(campaign.rewardRates);
-      const rewardAmount = parseFloat(rewardRates[data.eventType] || "0");
+      // Most event types match their reward-rate key 1:1 (view/click/etc).
+      // code_redemption is stored as camelCase rewardRates.codeRedemption
+      // so the JSON stays readable.
+      const rateKey = data.eventType === 'code_redemption' ? 'codeRedemption' : data.eventType;
+      const rewardAmount = parseFloat(rewardRates[rateKey] || "0");
 
-      // Create tracking event
+      // Create tracking event. eventValue defaults to "1" so count-based
+      // goals can still SUM(coalesce(value,1)) cleanly. Revenue events
+      // (eventType=purchase) pass the order $ amount, which gets SUMmed
+      // for revenue-goal progress.
       const [trackingEvent] = await db
         .insert(trackingEvents)
         .values({
@@ -73,7 +98,7 @@ export class TrackingService {
           campaignId: clipperCampaign.campaignId,
           clipperCampaignId: data.clipperCampaignId,
           eventType: data.eventType,
-          eventValue: "1", // Default value for count-based events
+          eventValue: (data.eventValue ?? 1).toString(),
           rewardAmount: rewardAmount.toString(),
           status: "verified", // Auto-verify for now
           metadata: JSON.stringify({

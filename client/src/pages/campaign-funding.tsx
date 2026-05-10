@@ -133,7 +133,16 @@ export default function CampaignFunding() {
                   </div>
                 )}
               </div>
-              <Button onClick={() => setLocation("/campaigns")} className="mt-6">View Campaigns</Button>
+              <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                <Button variant="outline" onClick={() => setLocation(`/campaigns/${campaign.id}/integration`)}>
+                  Configure integration
+                </Button>
+                <Button onClick={() => setLocation("/campaigns")}>View Campaigns</Button>
+              </div>
+              <p className="text-xs text-green-700/80 mt-3 text-center max-w-sm">
+                For revenue / signup / install / lead campaigns, set up the conversion pixel or
+                webhook so we can verify clipper-driven results.
+              </p>
             </CardContent>
           </Card>
         </div>

@@ -11,10 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Instagram, 
-  Youtube, 
-  Twitter, 
+import {
+  Instagram,
+  Youtube,
+  Twitter,
   Facebook,
   Plus,
   Link,
@@ -22,7 +22,9 @@ import {
   Eye,
   TrendingUp,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Unlink,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -126,6 +128,55 @@ export default function SocialIntegration() {
     },
   });
 
+  // Disconnect drops the OAuth token (TikTok/IG) or manually-entered
+  // profile (YouTube/Twitter/Facebook) from users.social_accounts.
+  // For TikTok/IG specifically, the per-campaign "Connect <platform>"
+  // CTA on /clipper/campaigns/:id resurfaces after disconnect, so the
+  // clipper can re-OAuth with a different account if they meant to.
+  const disconnectMutation = useMutation({
+    mutationFn: async (platform: string) => {
+      const res = await apiRequest("DELETE", `/api/users/me/social/${platform}`);
+      return (await res.json()) as { ok: boolean; disconnected?: string };
+    },
+    onSuccess: (_data, platform) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Clipper-assignment pages also surface connection state — invalidate
+      // any cached coverage so the banner flips back to "Connect" without
+      // requiring a hard refresh.
+      queryClient.invalidateQueries({ queryKey: ["/api/clipper-campaigns"] });
+      toast({
+        title: "Disconnected",
+        description: `Your ${platformInfo[platform as keyof typeof platformInfo]?.name ?? platform} account has been disconnected.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Couldn't disconnect",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // OAuth-connected accounts have an accessToken stored. Manual
+  // entries don't. Used to annotate each card with "OAuth connected"
+  // vs "Manually entered" so users know what they're disconnecting.
+  function isOAuthConnected(platform: string, data: any): boolean {
+    if (!data) return false;
+    if (platform === "tiktok") return Boolean(data.accessToken && data.refreshToken);
+    if (platform === "instagram") return Boolean(data.accessToken && data.businessAccountId);
+    return Boolean(data.accessToken);
+  }
+
+  function confirmDisconnect(platform: string) {
+    const name = platformInfo[platform as keyof typeof platformInfo]?.name ?? platform;
+    const confirmed = window.confirm(
+      `Disconnect your ${name} account? You'll need to reconnect to resume auto-verification on ${name} campaigns.`,
+    );
+    if (confirmed) disconnectMutation.mutate(platform);
+  }
+
   const onSubmit = (data: SocialIntegrationData) => {
     integrateSocialMutation.mutate(data);
   };
@@ -135,14 +186,13 @@ export default function SocialIntegration() {
   return (
     <DashboardLayout title="Social Media Integration">
       <div className="max-w-4xl space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Social Media Integration</h1>
-          <p className="text-gray-600 mt-2">
-            Connect your social media accounts to enable automatic tracking of views, engagement, and follower growth.
-            This helps clippers get paid accurately based on their performance.
-          </p>
-        </div>
+        {/* Subhead — the DashboardLayout already renders the page title
+            as an <h1>; we used to duplicate it here. Now just the
+            descriptive paragraph. */}
+        <p className="text-gray-600 -mt-4">
+          Connect your social media accounts to enable automatic tracking of views, engagement, and follower growth.
+          This helps clippers get paid accurately based on their performance.
+        </p>
 
         {/* Integration Benefits */}
         <Alert className="border-teal-200 bg-teal-50">
@@ -173,17 +223,37 @@ export default function SocialIntegration() {
                 {Object.entries(connectedAccounts).map(([platform, data]: [string, any]) => {
                   const info = platformInfo[platform as keyof typeof platformInfo];
                   const Icon = info?.icon || Plus;
-                  
+                  const oauth = isOAuthConnected(platform, data);
+                  const isDisconnecting =
+                    disconnectMutation.isPending &&
+                    (disconnectMutation.variables as unknown as string) === platform;
+
                   return (
                     <div key={platform} className={`p-4 rounded-lg border ${info?.borderColor} ${info?.bgColor}`}>
-                      <div className="flex items-center gap-3 mb-2">
-                        <Icon className={`h-5 w-5 ${info?.color}`} />
-                        <div>
-                          <h3 className="font-semibold">{info?.name}</h3>
-                          <p className="text-sm text-muted-foreground">@{data.username}</p>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Icon className={`h-5 w-5 ${info?.color} flex-shrink-0`} />
+                          <div className="min-w-0">
+                            <h3 className="font-semibold">{info?.name}</h3>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {data.username ? `@${data.username}` : "Connected"}
+                            </p>
+                          </div>
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                          onClick={() => confirmDisconnect(platform)}
+                          disabled={isDisconnecting}
+                          title={`Disconnect ${info?.name ?? platform}`}
+                        >
+                          <Unlink className="h-3.5 w-3.5 mr-1" />
+                          {isDisconnecting ? "…" : "Disconnect"}
+                        </Button>
                       </div>
-                      
+
                       {data.followerCount && (
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
@@ -192,10 +262,31 @@ export default function SocialIntegration() {
                           </div>
                         </div>
                       )}
-                      
-                      <Badge variant="outline" className="mt-2 text-green-600 border-green-200">
-                        Connected
-                      </Badge>
+
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <Badge variant="outline" className="text-green-700 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Connected
+                        </Badge>
+                        {oauth ? (
+                          <Badge
+                            variant="outline"
+                            className="text-blue-700 border-blue-200 bg-white"
+                            title="Connected via OAuth — auto-verified view counts where supported"
+                          >
+                            <ShieldCheck className="h-3 w-3 mr-1" />
+                            OAuth
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-slate-700 border-slate-200 bg-white"
+                            title="Manually entered — no auto-verification"
+                          >
+                            Manual
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

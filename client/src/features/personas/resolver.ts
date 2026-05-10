@@ -8,10 +8,11 @@ import type { Persona, ResolvableUser } from "./types";
  *   2. role=clipper           → "clipper"
  *   3. role=creator + campaignerStage="founder_prelaunch" → "founder"
  *   4. role=creator + campaignerStage="solo_creator"      → "influencer"
- *   5. role=creator + accountType="influencer"            → "influencer"
- *   6. role=creator + accountType="business"              → "brand"
+ *   5. role=creator + accountType="founder"               → "founder"
+ *   6. role=creator + accountType="influencer"            → "influencer"
+ *   7. role=creator + accountType="business"              → "brand"
  *      (covers established_brand and early_brand stages)
- *   7. fallback                → "brand"  (safest default for the campaigner
+ *   8. fallback                → "brand"  (safest default for the campaigner
  *                               flow; legacy users without accountType set
  *                               see the brand experience, which is the most
  *                               feature-rich)
@@ -28,6 +29,7 @@ export function resolvePersona(user: ResolvableUser | null | undefined): Persona
   if (user.campaignerStage === "founder_prelaunch") return "founder";
   if (user.campaignerStage === "solo_creator") return "influencer";
 
+  if (user.accountType === "founder") return "founder";
   if (user.accountType === "influencer") return "influencer";
   if (user.accountType === "business") return "brand";
 

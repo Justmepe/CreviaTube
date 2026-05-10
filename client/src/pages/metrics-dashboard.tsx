@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ const platformIcons = {
 export default function MetricsDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const { data: metrics, isLoading, error } = useQuery<MetricsData>({
     queryKey: ["/api/metrics"],
@@ -323,7 +325,11 @@ export default function MetricsDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setLocation("/social-integration")}
+                >
                   <Smartphone className="h-4 w-4 mr-2" />
                   Connect Social Accounts
                 </Button>

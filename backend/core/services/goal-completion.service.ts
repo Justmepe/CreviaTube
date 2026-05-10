@@ -3,6 +3,34 @@ import { campaigns, clipperCampaigns, trackingEvents, users } from "../../../sha
 import { eq, and, sql } from "drizzle-orm";
 import { EscrowService } from "./escrow-service";
 
+// Most campaign-goal targets live at JSON key `${goalType}Goal`. Two of
+// the Phase 4 goal types use camelCase keys instead of literal
+// snake_case_concat to keep the JSON readable. Mirror these in
+// campaign-completion.ts and shared/goal-options.ts when adding new goals.
+const TARGET_KEY_BY_GOAL: Record<string, string> = {
+  code_redemptions: 'codeRedemptionsGoal',
+  ugc_volume: 'ugcVolumeGoal',
+};
+function goalTargetKey(goalType: string): string {
+  return TARGET_KEY_BY_GOAL[goalType] || `${goalType}Goal`;
+}
+
+// Goal type → reward-rate key (what the campaigner configured the per-event
+// payout under). Mirrors campaign-completion.ts and the form's GOAL_TO_RATE_KEY.
+const GOAL_TO_RATE_KEY: Record<string, string> = {
+  views: 'view',
+  clicks: 'click',
+  signups: 'signup',
+  conversions: 'conversion',
+  follows: 'follow',
+  subscribes: 'subscribe',
+  installs: 'install',
+  revenue: 'purchase',
+  leads: 'lead',
+  code_redemptions: 'codeRedemption',
+  ugc_volume: 'post',
+};
+
 export interface GoalCompletionResult {
   success: boolean;
   completedClippers: Array<{
@@ -91,7 +119,7 @@ export class GoalCompletionService {
 
       const goals = campaign.campaignGoals as any;
       const primaryGoal = goals.primaryGoal;
-      const targetValue = goals[`${primaryGoal}Goal`];
+      const targetValue = goals[goalTargetKey(primaryGoal)];
 
       if (!primaryGoal || !targetValue) {
         return { success: true, completedClippers: [], errors: [] };
@@ -163,42 +191,77 @@ export class GoalCompletionService {
   }
 
   /**
-   * Get clipper's progress for a specific goal type
+   * Get clipper's progress for a specific goal type. Most goals are
+   * count-based (rows of a given event_type); revenue is value-based
+   * (sum of event_value over purchase events); ugc_volume is binary
+   * (this clipper's submission is approved + has a verified post URL).
    */
   private async getClipperProgress(campaignId: string, clipperId: string, goalType: string): Promise<number> {
+    // ugc_volume doesn't read tracking events — verification lives on the
+    // submission record.
+    if (goalType === 'ugc_volume') {
+      const [row] = await db
+        .select({
+          applicationStatus: clipperCampaigns.applicationStatus,
+          postUrl: clipperCampaigns.postUrl,
+        })
+        .from(clipperCampaigns)
+        .where(
+          and(
+            eq(clipperCampaigns.campaignId, campaignId),
+            eq(clipperCampaigns.clipperId, clipperId),
+          ),
+        );
+      return row?.applicationStatus === 'approved' && row.postUrl ? 1 : 0;
+    }
+
+    // Map goal type → the event_type whose rows we count, plus whether
+    // we count rows or sum event_value (revenue is the only sum-based goal).
+    const goalToEventType: Record<string, string> = {
+      views: 'view',
+      clicks: 'click',
+      signups: 'signup',
+      conversions: 'conversion',
+      follows: 'follow',
+      subscribes: 'subscribe',
+      installs: 'install',
+      leads: 'lead',
+      code_redemptions: 'code_redemption',
+      revenue: 'purchase',
+    };
+    const eventType = goalToEventType[goalType];
+    if (!eventType) return 0;
+
     const [progress] = await db
       .select({
-        totalViews: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'view' THEN 1 END)`,
-        totalClicks: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'click' THEN 1 END)`,
-        totalSignups: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'signup' THEN 1 END)`,
-        totalDeposits: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'deposit' THEN 1 END)`,
-        totalTrades: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'trade' THEN 1 END)`,
-        totalConversions: sql<number>`COUNT(CASE WHEN ${trackingEvents.eventType} = 'conversion' THEN 1 END)`,
+        // sum(coalesce(value,1)) so single-row writes (eventValue defaults
+        // to "1") and delta-bearing writes (e.g., view-polling) both add
+        // up to the right count. See the matching aggregation in
+        // campaign-completion.ts:getClipperProgress for context.
+        countSum: sql<number>`coalesce(sum(coalesce(${trackingEvents.eventValue}::numeric, 1))::int, 0)`,
+        valueSum: sql<number>`coalesce(sum(${trackingEvents.eventValue}::numeric), 0)::numeric`,
       })
       .from(trackingEvents)
       .where(
         and(
           eq(trackingEvents.campaignId, campaignId),
-          eq(trackingEvents.clipperId, clipperId)
-        )
+          eq(trackingEvents.clipperId, clipperId),
+          eq(trackingEvents.eventType, eventType as any),
+          // Exclude bot-flagged events from qualification. Convention
+          // matches getBotDetectionStats; NULL rows (rare) get excluded
+          // too, which is the conservative choice.
+          eq(trackingEvents.flaggedAsBot, false),
+          // Exclude synthetic events fired by the integration-test tool.
+          // metadata is text, plain LIKE so a malformed row can't crash
+          // the query.
+          sql`(${trackingEvents.metadata} IS NULL OR ${trackingEvents.metadata} NOT LIKE '%"test":true%')`,
+        ),
       );
 
-    switch (goalType) {
-      case 'views':
-        return progress?.totalViews || 0;
-      case 'clicks':
-        return progress?.totalClicks || 0;
-      case 'signups':
-        return progress?.totalSignups || 0;
-      case 'deposits':
-        return progress?.totalDeposits || 0;
-      case 'trades':
-        return progress?.totalTrades || 0;
-      case 'conversions':
-        return progress?.totalConversions || 0;
-      default:
-        return 0;
+    if (goalType === 'revenue') {
+      return Number(progress?.valueSum) || 0;
     }
+    return Number(progress?.countSum) || 0;
   }
 
   /**
@@ -207,15 +270,25 @@ export class GoalCompletionService {
   private async calculateCompletionReward(campaign: any, achievedValue: number, goalType: string): Promise<number> {
     try {
       const rewardRates = JSON.parse(campaign.rewardRates);
-      const baseReward = rewardRates[goalType] || 0;
-      
-      // Base reward calculation
-      let totalReward = baseReward * achievedValue;
-      
+      // goalType is plural ("views"/"revenue"); reward rates are keyed by
+      // the singular event type ("view"/"purchase"). Map before lookup or
+      // we silently fall through to 0 for every Phase 4 goal.
+      const rateKey = GOAL_TO_RATE_KEY[goalType] || goalType;
+      const baseReward = parseFloat(rewardRates[rateKey] || "0");
+
+      // Base reward calculation. For revenue goals achievedValue is a $
+      // amount, not a count — multiplying by per-event rate would double-
+      // count. Treat the configured rate as a percentage of revenue
+      // instead. For all other goals, achievedValue * per-event rate.
+      let totalReward =
+        goalType === 'revenue'
+          ? achievedValue * baseReward
+          : baseReward * achievedValue;
+
       // Add completion bonus (10% of accumulated rewards)
       const completionBonus = totalReward * 0.10;
       totalReward += completionBonus;
-      
+
       return Math.round(totalReward * 100) / 100; // Round to 2 decimal places
     } catch (error) {
       console.error('Error calculating completion reward:', error);
@@ -347,8 +420,8 @@ export class GoalCompletionService {
       }
 
       const primaryGoal = goals.primaryGoal;
-      const targetValue = goals[`${primaryGoal}Goal`];
-      
+      const targetValue = goals[goalTargetKey(primaryGoal)];
+
       if (!targetValue) {
         return { completed: false };
       }

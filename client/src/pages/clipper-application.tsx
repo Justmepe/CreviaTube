@@ -12,28 +12,45 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { 
-  FileText, 
-  Video, 
-  Image, 
-  Mic, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  FileText,
+  Video,
+  Image,
+  Mic,
+  AlertTriangle,
+  CheckCircle,
   Clock,
   Brain,
   User,
   Shield,
   Zap
 } from "lucide-react";
+import { CampaignGoalSummary } from "@/features/campaigns/components/campaign-goal-summary";
 
 interface Campaign {
   id: string;
-  title: string;
+  // Schema column is `name`; legacy fields here used `title`. Render
+  // both so neither shape breaks during the transition.
+  name?: string;
+  title?: string;
   description: string;
   budget: number;
   rewardRates: string;
   requirements: string;
   targetPlatforms: string[];
+  // Phase 4 — surfaced on the campaign-header card via CampaignGoalSummary
+  // so clippers see what they're optimizing for before submitting.
+  campaignGoals?: Record<string, any> | null;
+  integration?: null | {
+    pixelId: string | null;
+    hasPostbackSecret: boolean;
+    shopifyDomain: string | null;
+    hasShopifyWebhookSecret: boolean;
+    hasStripeWebhookSecret: boolean;
+    mmpProvider: string | null;
+    mmpAppId: string | null;
+    hasMmpApiKey: boolean;
+  };
 }
 
 interface AIDetectionResult {
@@ -223,10 +240,20 @@ export default function ClipperApplication() {
       {/* Campaign Header */}
       <Card>
         <CardHeader>
-          <CardTitle>Apply to Campaign: {campaign.title}</CardTitle>
+          <CardTitle>Apply to Campaign: {campaign.name ?? campaign.title}</CardTitle>
           <CardDescription>{campaign.description}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Phase 4 — goal + verification context so the clipper
+              understands what they're optimizing for before they
+              spend time creating content. variant="full" surfaces the
+              "Verified via …" caption since the apply page has room. */}
+          <CampaignGoalSummary
+            campaignGoals={campaign.campaignGoals ?? null}
+            integration={campaign.integration ?? null}
+            variant="full"
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
               <p className="font-medium text-muted-foreground">Budget</p>
