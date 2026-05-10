@@ -1466,6 +1466,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Campaign-driven metrics for a creator (business / founder / influencer).
+  // Aggregates across every campaign the user owns. Bot-flagged events and
+  // synthetic test events (metadata.test=true) are excluded — same filter
+  // shape the goal-completion service uses, so these numbers match the
+  // per-campaign progress bars on /my-campaigns.
+  app.get("/api/metrics/campaigner", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (req.user.role !== "creator") {
+      return res.status(403).json({ message: "Creators only" });
+    }
+    const userId = (req.user as any).id as string;
+
+    try {
+      // Campaign counts + budget sums.
+      const myCampaigns = await db
+        .select({
+          id: campaigns.id,
+          status: campaigns.status,
+          budget: campaigns.budget,
+          fundingStatus: campaigns.fundingStatus,
+        })
+        .from(campaigns)
+        .where(eq(campaigns.creatorId, userId));
+
+      const activeCampaigns = myCampaigns.filter((c) => c.status === "active").length;
+      const draftCampaigns = myCampaigns.filter((c) => c.status === "draft").length;
+      const completedCampaigns = myCampaigns.filter((c) => c.status === "completed").length;
+      const totalBudget = myCampaigns.reduce((s, c) => s + (parseFloat(c.budget) || 0), 0);
+      const fundedBudget = myCampaigns
+        .filter((c) => c.fundingStatus === "funded")
+        .reduce((s, c) => s + (parseFloat(c.budget) || 0), 0);
+
+      const campaignIds = myCampaigns.map((c) => c.id);
+
+      // Event counts + revenue sum across every campaign this user owns,
+      // applying the same bot/test filters as the per-campaign progress
+      // queries. countSum uses sum(coalesce(value,1)) so view-poll deltas
+      // count correctly. valueSum is for revenue.
+      let perTypeBreakdown: Array<{
+        eventType: string;
+        countSum: number;
+        valueSum: number;
+      }> = [];
+      if (campaignIds.length > 0) {
+        const rows = await db
+          .select({
+            eventType: trackingEvents.eventType,
+            countSum: sql<number>`coalesce(sum(coalesce(${trackingEvents.eventValue}::numeric, 1))::int, 0)`,
+            valueSum: sql<number>`coalesce(sum(${trackingEvents.eventValue}::numeric), 0)::numeric`,
+          })
+          .from(trackingEvents)
+          .where(
+            and(
+              inArray(trackingEvents.campaignId, campaignIds),
+              eq(trackingEvents.flaggedAsBot, false),
+              sql`(${trackingEvents.metadata} IS NULL OR ${trackingEvents.metadata} NOT LIKE '%"test":true%')`,
+            ),
+          )
+          .groupBy(trackingEvents.eventType);
+        perTypeBreakdown = rows.map((r) => ({
+          eventType: r.eventType as string,
+          countSum: Number(r.countSum) || 0,
+          valueSum: Number(r.valueSum) || 0,
+        }));
+      }
+
+      const eventCount = (type: string) =>
+        perTypeBreakdown.find((b) => b.eventType === type)?.countSum ?? 0;
+      const totalRevenue =
+        perTypeBreakdown.find((b) => b.eventType === "purchase")?.valueSum ?? 0;
+
+      // Clipper pipeline: unique approved clippers across my campaigns,
+      // plus how many goal-completed.
+      let totalApprovedClippers = 0;
+      let goalsHit = 0;
+      let pendingApplications = 0;
+      if (campaignIds.length > 0) {
+        const ccRows = await db
+          .select({
+            id: clipperCampaigns.id,
+            clipperId: clipperCampaigns.clipperId,
+            isApproved: clipperCampaigns.isApproved,
+            isCompleted: clipperCampaigns.isCompleted,
+            applicationStatus: clipperCampaigns.applicationStatus,
+          })
+          .from(clipperCampaigns)
+          .where(inArray(clipperCampaigns.campaignId, campaignIds));
+        const approvedClipperIds = new Set(
+          ccRows.filter((r) => r.isApproved).map((r) => r.clipperId),
+        );
+        totalApprovedClippers = approvedClipperIds.size;
+        goalsHit = ccRows.filter((r) => r.isCompleted).length;
+        pendingApplications = ccRows.filter(
+          (r) =>
+            r.applicationStatus === "creator_review" ||
+            r.applicationStatus === "ai_scanning" ||
+            r.applicationStatus === "ai_flagged" ||
+            r.applicationStatus === "content_pending",
+        ).length;
+      }
+
+      res.json({
+        campaigns: {
+          active: activeCampaigns,
+          draft: draftCampaigns,
+          completed: completedCampaigns,
+          total: myCampaigns.length,
+        },
+        budget: {
+          total: Math.round(totalBudget * 100) / 100,
+          funded: Math.round(fundedBudget * 100) / 100,
+        },
+        revenue: Math.round(totalRevenue * 100) / 100,
+        events: {
+          views: eventCount("view"),
+          clicks: eventCount("click"),
+          signups: eventCount("signup"),
+          conversions: eventCount("conversion"),
+          purchases: perTypeBreakdown.find((b) => b.eventType === "purchase")?.countSum ?? 0,
+          leads: eventCount("lead"),
+          installs: eventCount("install"),
+          subscribes: eventCount("subscribe"),
+          follows: eventCount("follow"),
+          codeRedemptions: eventCount("code_redemption"),
+        },
+        clippers: {
+          approved: totalApprovedClippers,
+          goalsHit,
+          pendingApplications,
+        },
+      });
+    } catch (error: any) {
+      console.error("Campaigner metrics fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch campaigner metrics", error: error.message });
+    }
+  });
+
   app.post("/api/metrics/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
