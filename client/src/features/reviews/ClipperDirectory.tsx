@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Star, Filter, Users, TrendingUp, Clock, Award } from 'lucide-react';
+import { Star, Filter, Users, TrendingUp, Clock, Award, Trophy } from 'lucide-react';
 import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getQueryFn } from '@/lib/queryClient';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 interface ClipperProfile {
   clipperId: string;
@@ -48,19 +49,49 @@ const TIER_ICONS = {
   diamond: '💫',
 };
 
-function ClipperCard({ clipper }: { clipper: ClipperProfile }) {
+// Rank badge tone — the top 3 get medals, everyone else gets a neutral
+// pill. Keeps the leaderboard motivational without making rank #47 feel
+// pointless.
+const RANK_TONE: Record<number, string> = {
+  1: 'bg-yellow-400 text-yellow-950 border-yellow-500',
+  2: 'bg-slate-300 text-slate-900 border-slate-400',
+  3: 'bg-orange-300 text-orange-950 border-orange-500',
+};
+
+function ClipperCard({
+  clipper,
+  rank,
+  isViewer,
+}: {
+  clipper: ClipperProfile;
+  rank: number;
+  isViewer: boolean;
+}) {
   const rating = parseFloat(clipper.averageRating);
   const successRate = parseFloat(clipper.successRate);
+  const rankTone = RANK_TONE[rank] ?? 'bg-slate-100 text-slate-800 border-slate-200';
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card
+      className={`hover:shadow-lg transition-shadow ${
+        isViewer ? 'ring-2 ring-emerald-400 shadow-md' : ''
+      }`}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
+              <Badge variant="outline" className={`font-bold ${rankTone}`}>
+                #{rank}
+              </Badge>
               {clipper.clipperName}
-              <Badge 
-                variant="outline" 
+              {isViewer && (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-200">
+                  You
+                </Badge>
+              )}
+              <Badge
+                variant="outline"
                 className={TIER_COLORS[clipper.tier as keyof typeof TIER_COLORS]}
               >
                 {TIER_ICONS[clipper.tier as keyof typeof TIER_ICONS]} {clipper.tier}
@@ -161,6 +192,9 @@ function ClipperCard({ clipper }: { clipper: ClipperProfile }) {
 }
 
 export function ClipperDirectory() {
+  const { user } = useAuth();
+  const isClipperViewer = user?.role === 'clipper';
+
   const [filters, setFilters] = useState({
     minRating: 'all',
     tier: 'all',
@@ -172,6 +206,20 @@ export function ClipperDirectory() {
     queryKey: ['/api/clippers/top', filters],
     queryFn: getQueryFn<ClipperProfile[]>({ on401: 'throw' }),
   });
+
+  // Rank from the unfiltered list — filtering shouldn't shift your
+  // standing. The API already returns rows sorted by rankingScore DESC
+  // (then averageRating DESC), so the array index is the global rank.
+  const rankByClipperId = new Map<string, number>();
+  (clippers ?? []).forEach((c, i) => rankByClipperId.set(c.clipperId, i + 1));
+
+  // Find the viewing clipper's row, if they're on the board at all.
+  // A clipper with no completed campaigns won't appear here yet.
+  const viewerRow = isClipperViewer && user
+    ? clippers?.find((c) => c.clipperId === user.id)
+    : null;
+  const viewerRank = viewerRow ? rankByClipperId.get(viewerRow.clipperId) ?? null : null;
+  const totalRanked = clippers?.length ?? 0;
 
   const filteredClippers = clippers?.filter(clipper => {
     if (filters.search && !clipper.clipperName.toLowerCase().includes(filters.search.toLowerCase())) {
@@ -192,11 +240,54 @@ export function ClipperDirectory() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Find Top Clippers</h1>
+        <h1 className="text-2xl font-bold">
+          {isClipperViewer ? 'Clipper Leaderboard' : 'Find Top Clippers'}
+        </h1>
         <p className="text-gray-600">
-          Browse our directory of top-rated clippers based on reviews, performance, and success rates.
+          {isClipperViewer
+            ? 'Ranked by performance score, then average rating. Every approved campaign moves you up.'
+            : 'Browse our directory of top-rated clippers based on reviews, performance, and success rates.'}
         </p>
       </div>
+
+      {/* Clipper-only "your rank" affordance. Three states:
+            - On the board → big rank pill + "out of N"
+            - On the board but no decisions yet → API returns empty/no row → handled by next branch
+            - Not on the board → motivational nudge to complete a campaign */}
+      {isClipperViewer && !isLoading && (
+        viewerRank ? (
+          <Card className="border-emerald-200 bg-emerald-50">
+            <CardContent className="py-4 flex items-center gap-3">
+              <Trophy className="w-6 h-6 text-emerald-700 shrink-0" />
+              <div>
+                <p className="text-sm text-emerald-900">
+                  You're <span className="font-bold text-lg">#{viewerRank}</span>
+                  {totalRanked > 0 && (
+                    <span className="text-emerald-800"> of {totalRanked} ranked clippers</span>
+                  )}
+                </p>
+                <p className="text-xs text-emerald-800">
+                  Complete more campaigns and collect 5-star reviews to climb.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="py-4 flex items-center gap-3">
+              <Trophy className="w-6 h-6 text-amber-700 shrink-0" />
+              <div>
+                <p className="text-sm text-amber-900 font-medium">
+                  You're not on the board yet
+                </p>
+                <p className="text-xs text-amber-800">
+                  Complete your first approved campaign to enter the leaderboard.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      )}
 
       {/* Filters */}
       <Card>
@@ -301,7 +392,12 @@ export function ClipperDirectory() {
         ) : filteredClippers && filteredClippers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredClippers.map((clipper) => (
-              <ClipperCard key={clipper.clipperId} clipper={clipper} />
+              <ClipperCard
+                key={clipper.clipperId}
+                clipper={clipper}
+                rank={rankByClipperId.get(clipper.clipperId) ?? 0}
+                isViewer={isClipperViewer && user?.id === clipper.clipperId}
+              />
             ))}
           </div>
         ) : (
