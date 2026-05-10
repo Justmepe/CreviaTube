@@ -53,6 +53,15 @@ async function loadOwnedAssignment(req: Request, res: Response, id: string) {
       isCompleted: clipperCampaigns.isCompleted,
       applicationStatus: clipperCampaigns.applicationStatus,
       rejectionReason: clipperCampaigns.rejectionReason,
+      // Phase 5 — structured rejection-reason code from the shared
+      // catalog. Renders alongside the freeform rejectionReason on
+      // the clipper-assignment page so the clipper sees both
+      // category + nuance.
+      rejectionReasonCode: clipperCampaigns.rejectionReasonCode,
+      // Phase 5 — surface the URL submission so the clipper can
+      // re-watch what they sent (especially useful on rejection).
+      submissionUrl: clipperCampaigns.submissionUrl,
+      submissionKind: clipperCampaigns.submissionKind,
       completedAt: clipperCampaigns.completedAt,
       joinedAt: clipperCampaigns.joinedAt,
       campaign: {
@@ -149,6 +158,9 @@ export function setupClipperAssignmentAPI(app: Express): void {
         isCompleted: row.isCompleted,
         applicationStatus: row.applicationStatus,
         rejectionReason: row.rejectionReason,
+        rejectionReasonCode: row.rejectionReasonCode,
+        submissionUrl: row.submissionUrl,
+        submissionKind: row.submissionKind,
         completedAt: row.completedAt,
         joinedAt: row.joinedAt,
       },

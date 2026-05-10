@@ -27,11 +27,17 @@ import { setupConversionPixelAPI } from "./api/conversion-pixel";
 import { setupShopifyWebhookAPI } from "./api/shopify-webhook";
 import { setupStripeWebhookAPI } from "./api/stripe-webhook";
 import { setupClipperAssignmentAPI } from "./api/clipper-assignment";
+import { setupClipperReputationAPI } from "./api/clipper-reputation";
 import { setupMmpPostbackAPI } from "./api/mmp-postback";
 import { setupServerPostbackAPI } from "./api/server-postback";
 import { setupOAuthTikTokAPI } from "./api/oauth-tiktok";
 import { setupOAuthInstagramAPI } from "./api/oauth-instagram";
 import { setupAdminCreditAPI } from "./api/admin-credit";
+import {
+  setupCreatorClipperTrustAPI,
+  resolveAutoApproveDecision,
+  markTrustNotified,
+} from "./api/creator-clipper-trust";
 import { pollAllPostViews } from "./core/services/view-polling";
 import { clipperMatchesRegions, groupByContinent } from "./lib/region";
 import { emit } from "./lib/metrics";
@@ -174,6 +180,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // declined-OAuth clippers, disputes). Audited via metric_events.
   setupAdminCreditAPI(app);
 
+  // Phase 5 — creator-clipper trust: per-pair auto-approve toggle.
+  // GET/PUT /api/creator/clipper-trust/:clipperId, GET .../clipper-trust list.
+  setupCreatorClipperTrustAPI(app);
+
   // Phase 4 — admin manual trigger for view-polling. Useful for verifying
   // a fresh post URL is being read correctly without waiting up to 30 min
   // for the next scheduled sweep.
@@ -192,6 +202,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clipper-side detail / post-URL submission for one assignment.
   // Mounted before the legacy list endpoint so /:id GET matches here.
   setupClipperAssignmentAPI(app);
+
+  // Phase 5 Slice E — public reputation aggregate per clipper.
+  // GET /api/clippers/:id/reputation. Mounted before the modules/reviews
+  // router so its more specific subpaths still match (top, profile, reviews).
+  setupClipperReputationAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {
@@ -872,20 +887,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { 
-        submittedContent, 
-        contentType, 
-        contentDescription, 
-        aiDetectionResult, 
-        aiConfidence, 
-        aiFlags 
+      const {
+        submittedContent,
+        contentType,
+        contentDescription,
+        aiDetectionResult,
+        aiConfidence,
+        aiFlags,
+        // Phase 5 — media URL submission path. submissionKind ∈ ('text','url').
+        // Defaults to 'text' so existing clients keep working.
+        submissionUrl,
+        submissionKind: rawSubmissionKind,
       } = req.body;
 
-      // Verify AI detection was performed
-      if (!aiDetectionResult || aiDetectionResult.recommendation === 'reject') {
-        return res.status(400).json({ 
-          message: "Content must pass AI detection before application submission" 
-        });
+      const submissionKind: "text" | "url" =
+        rawSubmissionKind === "url" ? "url" : "text";
+
+      // Branch validation by submission kind. URL submissions skip AI
+      // detection (we can't AI-scan a video link); the creator does
+      // visual review on the embedded player. Text submissions keep
+      // the existing AI-gate.
+      if (submissionKind === "url") {
+        if (!submissionUrl || typeof submissionUrl !== "string") {
+          return res.status(400).json({
+            message: "submissionUrl is required when submissionKind='url'",
+          });
+        }
+        try {
+          const u = new URL(submissionUrl.trim());
+          if (u.protocol !== "http:" && u.protocol !== "https:") {
+            return res.status(400).json({ message: "submissionUrl must be http(s)" });
+          }
+        } catch {
+          return res.status(400).json({ message: "submissionUrl is not a valid URL" });
+        }
+      } else {
+        if (!aiDetectionResult || aiDetectionResult.recommendation === "reject") {
+          return res.status(400).json({
+            message: "Content must pass AI detection before application submission",
+          });
+        }
       }
 
       // Check if clipper already applied to this campaign
@@ -932,10 +973,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const trackingCode = `${req.params.id}_${req.user.id}_${randomBytes(8).toString('hex')}`;
-      
-      // Determine application status based on AI result
+
+      // Determine application status. URL submissions go straight to
+      // creator_review (no AI scan applies to a media link). Text
+      // submissions branch on the AI detection recommendation.
       let applicationStatus = 'content_pending';
-      if (aiDetectionResult.recommendation === 'approve') {
+      if (submissionKind === "url") {
+        applicationStatus = 'creator_review';
+      } else if (aiDetectionResult.recommendation === 'approve') {
         applicationStatus = 'creator_review';
       } else if (aiDetectionResult.recommendation === 'review') {
         applicationStatus = 'creator_review';
@@ -947,12 +992,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clipperId: req.user.id,
         campaignId: req.params.id,
         trackingCode,
-        submittedContent,
+        submittedContent: submissionKind === "url" ? null : submittedContent,
+        submissionUrl: submissionKind === "url" ? submissionUrl.trim() : null,
+        submissionKind,
         contentType,
         contentDescription,
-        aiDetectionResult,
-        aiConfidence,
-        aiFlags,
+        aiDetectionResult: submissionKind === "url" ? null : aiDetectionResult,
+        aiConfidence: submissionKind === "url" ? null : aiConfidence,
+        aiFlags: submissionKind === "url" ? null : aiFlags,
         applicationStatus,
         isApproved: false
       };
@@ -962,7 +1009,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         campaignId: req.params.id,
         applicationStatus,
       }, req.user.id);
-      res.status(201).json(clipperCampaign);
+
+      // Phase 5 — auto-approve check. If this clipper has a trust row
+      // with the creator that flips auto_approve=true AND meets the
+      // threshold, run the application straight through to 'approved'
+      // here. The first time this fires for the pair we send the
+      // celebratory "you're trusted" email; subsequent auto-approvals
+      // get the regular application_approved email so we don't spam.
+      let finalRow = clipperCampaign;
+      try {
+        const [campaignFull] = await db
+          .select({ creatorId: campaigns.creatorId, name: campaigns.name })
+          .from(campaigns)
+          .where(eq(campaigns.id, req.params.id))
+          .limit(1);
+        if (campaignFull?.creatorId && applicationStatus === 'creator_review') {
+          const decision = await resolveAutoApproveDecision(
+            campaignFull.creatorId,
+            req.user.id,
+          );
+          if (decision.shouldAutoApprove && decision.trust) {
+            // Approve through the same path the creator review uses —
+            // mints promo code, increments trust counter, fires the
+            // ugc_volume completion check.
+            finalRow = await storage.reviewClipperApplication(
+              clipperCampaign.id,
+              "approve",
+              "[Auto-approved by creator trust]",
+              campaignFull.creatorId,
+            );
+            emit("application_decision", {
+              applicationId: clipperCampaign.id,
+              action: "approve",
+              autoApproved: true,
+            }, campaignFull.creatorId);
+
+            // Pick the email based on whether this is the first time
+            // auto-approve has fired for this pair.
+            const isFirstAuto = !decision.trust.firstAutoApproveNotifiedAt;
+            void (async () => {
+              try {
+                const [{ sendEmail, APP_URL }, React] = await Promise.all([
+                  import("./lib/email"),
+                  import("react"),
+                ]);
+                const [creatorRow] = await db
+                  .select({ fullName: users.fullName })
+                  .from(users)
+                  .where(eq(users.id, campaignFull.creatorId))
+                  .limit(1);
+                const creatorName = creatorRow?.fullName ?? "the creator";
+
+                if (isFirstAuto) {
+                  const { ClipperTrusted } = await import(
+                    "./emails/clipper-trusted"
+                  );
+                  await sendEmail({
+                    kind: "clipper_trusted",
+                    to: (req.user as any).email,
+                    subject: `You're a trusted clipper for ${creatorName}`,
+                    react: React.createElement(ClipperTrusted, {
+                      fullName: (req.user as any).fullName,
+                      campaignName: campaignFull.name,
+                      campaignId: req.params.id,
+                      creatorName,
+                      approvedCount: decision.trust.approvedCount + 1,
+                      appUrl: APP_URL,
+                    }),
+                    dedupeKey: `clipper_trusted:${decision.trust.id}`,
+                    userId: req.user.id,
+                  });
+                  await markTrustNotified(decision.trust.id);
+                } else {
+                  const { ApplicationDecision } = await import(
+                    "./emails/application-decision"
+                  );
+                  await sendEmail({
+                    kind: "application_approved",
+                    to: (req.user as any).email,
+                    subject: `Auto-approved for "${campaignFull.name}"`,
+                    react: React.createElement(ApplicationDecision, {
+                      fullName: (req.user as any).fullName,
+                      campaignName: campaignFull.name,
+                      campaignId: req.params.id,
+                      approved: true,
+                      notes: "Auto-approved — you're a trusted clipper for this creator.",
+                      appUrl: APP_URL,
+                    }),
+                    dedupeKey: `application_approved:${clipperCampaign.id}`,
+                    userId: req.user.id,
+                  });
+                }
+              } catch (err) {
+                console.error("auto-approve email failed:", err);
+              }
+            })();
+          }
+        }
+      } catch (err) {
+        console.error("auto-approve evaluation failed:", err);
+      }
+
+      res.status(201).json(finalRow);
     } catch (error: any) {
       console.error('Application error:', error);
       res.status(400).json({ message: "Failed to submit application", error: error.message });
@@ -991,24 +1139,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { action, notes } = req.body;
+      const { action, notes, reasonCode } = req.body;
       const applicationId = req.params.id;
 
       if (action !== 'approve' && action !== 'reject') {
         return res.status(400).json({ message: "Invalid action" });
       }
 
-      const result = await storage.reviewClipperApplication(applicationId, action, notes, req.user.id);
+      // Phase 5 — structured rejection reason. Required on reject, must
+      // be a known code from the shared catalog. Approve calls ignore
+      // any reasonCode the client sends.
+      let validatedReasonCode: string | null = null;
+      if (action === 'reject') {
+        const { isValidRejectionReason } = await import("../shared/rejection-reasons");
+        if (!reasonCode || !isValidRejectionReason(reasonCode)) {
+          return res.status(400).json({
+            message:
+              "A rejection reason is required. Pick one from the catalog.",
+          });
+        }
+        validatedReasonCode = reasonCode;
+      }
+
+      const result = await storage.reviewClipperApplication(
+        applicationId,
+        action,
+        notes,
+        req.user.id,
+        validatedReasonCode,
+      );
       emit("application_decision", { applicationId, action }, req.user.id);
 
-      // Notify the clipper of the decision (fire-and-forget).
+      // Notify the clipper of the decision (fire-and-forget). Email
+      // includes the structured reason on rejection so the clipper sees
+      // a consistent vocabulary they can act on.
       void (async () => {
         try {
-          const [{ ApplicationDecision }, { sendEmail, APP_URL }, React] = await Promise.all([
-            import("./emails/application-decision"),
-            import("./lib/email"),
-            import("react"),
-          ]);
+          const [{ ApplicationDecision }, { sendEmail, APP_URL }, React, reasons] =
+            await Promise.all([
+              import("./emails/application-decision"),
+              import("./lib/email"),
+              import("react"),
+              import("../shared/rejection-reasons"),
+            ]);
           const [appRow] = await db
             .select({
               clipperId: clipperCampaigns.clipperId,
@@ -1035,6 +1208,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               campaignId: appRow.campaignId,
               approved: action === "approve",
               notes: notes || undefined,
+              rejectionReasonLabel:
+                action === "reject"
+                  ? reasons.getRejectionReasonLabel(validatedReasonCode) ?? undefined
+                  : undefined,
               appUrl: APP_URL,
             }),
             dedupeKey: `application_${action}:${applicationId}`,

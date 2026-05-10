@@ -4,7 +4,19 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, ArrowLeft, Eye, MousePointer, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Star,
+  ArrowLeft,
+  Eye,
+  MousePointer,
+  UserPlus,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getQueryFn } from "@/lib/queryClient";
 import { ClipperProfileBlock } from "@/features/reviews/clipper-profile-block";
@@ -16,6 +28,26 @@ type Stats = {
   totalViewsGenerated: number;
   totalClicksGenerated: number;
   totalSignupsGenerated: number;
+};
+
+// Phase 5 Slice E — verified track record aggregate, computed
+// server-side from clipper_campaigns. Distinct from clipperStats
+// (which is engagement metrics): this is the trust signal a creator
+// looks at before approving an application.
+type Reputation = {
+  totalApplications: number;
+  totalApproved: number;
+  totalRejected: number;
+  totalCompleted: number;
+  approvalRate: number | null;
+  avgTimeToApprovalSeconds: number | null;
+  completionRate: number | null;
+  topCreators: Array<{
+    creatorId: string;
+    creatorName: string | null;
+    approvedCount: number;
+    lastApprovedAt: string | null;
+  }>;
 };
 
 type Review = {
@@ -47,6 +79,12 @@ export default function ClipperProfilePage() {
     enabled: !!clipperId,
   });
 
+  const { data: reputation } = useQuery<Reputation>({
+    queryKey: [`/api/clippers/${clipperId}/reputation`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!clipperId,
+  });
+
   if (!clipperId) {
     return (
       <DashboardLayout title="Clipper">
@@ -63,6 +101,13 @@ export default function ClipperProfilePage() {
         </Button>
 
         <ClipperProfileBlock clipperId={clipperId} reviewLimit={5} />
+
+        {/* Phase 5 Slice E — Verified track record. Cross-campaign
+            reputation: how often this clipper's submissions get
+            approved, how fast creators decide, who they've worked
+            with most. Renders even with zero history (the empty
+            state is itself a useful signal). */}
+        <VerifiedTrackRecord reputation={reputation} />
 
         {/* Lifetime engagement stats */}
         {profile?.stats && (
@@ -112,6 +157,160 @@ export default function ClipperProfilePage() {
       </div>
     </DashboardLayout>
   );
+}
+
+function VerifiedTrackRecord({ reputation }: { reputation?: Reputation }) {
+  if (!reputation) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            Verified track record
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-24 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const {
+    totalApproved,
+    totalRejected,
+    totalCompleted,
+    approvalRate,
+    avgTimeToApprovalSeconds,
+    completionRate,
+    topCreators,
+  } = reputation;
+
+  // Empty state — clipper has no decisions on file. Frame it as
+  // "new" rather than "0%" so creators don't read it as failure.
+  if (approvalRate === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            Verified track record
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            No decisions on file yet — this clipper hasn't been reviewed
+            on any campaign. Their first approval will start the record.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-emerald-600" />
+          Verified track record
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat
+            icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+            label="Approved"
+            value={totalApproved.toLocaleString()}
+            sub={
+              approvalRate !== null
+                ? `${(approvalRate * 100).toFixed(0)}% approval rate`
+                : undefined
+            }
+          />
+          <Stat
+            icon={<XCircle className="h-4 w-4 text-rose-600" />}
+            label="Rejected"
+            value={totalRejected.toLocaleString()}
+          />
+          <Stat
+            icon={<TrendingUp className="h-4 w-4 text-blue-600" />}
+            label="Completed"
+            value={totalCompleted.toLocaleString()}
+            sub={
+              completionRate !== null
+                ? `${(completionRate * 100).toFixed(0)}% of approved`
+                : undefined
+            }
+          />
+          <Stat
+            icon={<Clock className="h-4 w-4 text-amber-600" />}
+            label="Avg approval time"
+            value={formatDuration(avgTimeToApprovalSeconds)}
+          />
+        </div>
+
+        {topCreators.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Top creators worked with
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {topCreators.map((c) => (
+                <Badge
+                  key={c.creatorId}
+                  variant="outline"
+                  className="text-xs"
+                  title={
+                    c.lastApprovedAt
+                      ? `Last approved ${new Date(c.lastApprovedAt).toLocaleDateString()}`
+                      : undefined
+                  }
+                >
+                  {c.creatorName ?? "Creator"} · {c.approvedCount}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-md border p-3 space-y-0.5">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="text-lg font-semibold leading-tight">{value}</div>
+      {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+
+// Format a duration in seconds as "12m" / "3.4h" / "2.1d". Returns
+// "—" for null so the stat tile renders without a layout jump.
+function formatDuration(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = seconds / 60;
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const hours = minutes / 60;
+  if (hours < 48) return `${hours.toFixed(1)}h`;
+  const days = hours / 24;
+  return `${days.toFixed(1)}d`;
 }
 
 function ReviewList({ reviews, loading }: { reviews?: Review[]; loading: boolean }) {

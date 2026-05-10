@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -23,9 +24,13 @@ import {
   Brain,
   User,
   Shield,
-  Zap
+  Zap,
+  Link2,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { CampaignGoalSummary } from "@/features/campaigns/components/campaign-goal-summary";
+import { recognizeMediaHost } from "@shared/media-host";
 
 interface Campaign {
   id: string;
@@ -72,11 +77,33 @@ export default function ClipperApplication() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
+  // Phase 5 — submission kind toggle. "text" keeps the legacy
+  // AI-scan flow (paste your script / caption / etc.). "url" is for
+  // video clippers: paste a Drive / YouTube / Streamable / Loom link
+  // and the creator watches it on the review page.
+  const [submissionKind, setSubmissionKind] = useState<"text" | "url">("text");
+  const [submissionUrl, setSubmissionUrl] = useState("");
+
   const [submittedContent, setSubmittedContent] = useState("");
   const [contentType, setContentType] = useState<"text" | "video" | "image" | "audio">("text");
   const [contentDescription, setContentDescription] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AIDetectionResult | null>(null);
+
+  // Recognize the host as the clipper types so we can show an
+  // inline sharing-settings hint and a host badge. Recomputes on
+  // every keystroke — cheap, all in-memory regex/URL parsing.
+  const hostInfo = recognizeMediaHost(submissionUrl);
+  const trimmedUrl = submissionUrl.trim();
+  const urlIsValid = (() => {
+    if (!trimmedUrl) return false;
+    try {
+      const u = new URL(trimmedUrl);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  })();
 
   // Fetch campaign details
   const { data: campaign, isLoading } = useQuery<Campaign>({
@@ -168,6 +195,24 @@ export default function ClipperApplication() {
   };
 
   const handleSubmitApplication = () => {
+    if (submissionKind === "url") {
+      if (!urlIsValid) {
+        toast({
+          title: "Invalid URL",
+          description: "Paste a full http(s) link to your clip.",
+          variant: "destructive",
+        });
+        return;
+      }
+      submitApplicationMutation.mutate({
+        submissionKind: "url",
+        submissionUrl: trimmedUrl,
+        contentType,
+        contentDescription,
+      });
+      return;
+    }
+
     if (!aiResult || aiResult.recommendation === 'reject') {
       toast({
         title: "Cannot Submit",
@@ -178,6 +223,7 @@ export default function ClipperApplication() {
     }
 
     submitApplicationMutation.mutate({
+      submissionKind: "text",
       submittedContent,
       contentType,
       contentDescription,
@@ -282,112 +328,234 @@ export default function ClipperApplication() {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <User className="h-5 w-5" />
-            <span>Submit Your Original Content</span>
+            <span>Submit Your Content</span>
           </CardTitle>
           <CardDescription>
-            Create and submit authentic, user-generated content. AI-generated content will be automatically detected and rejected.
+            Paste a link to your clip (preferred for video) or paste the
+            text directly. Text submissions run through AI detection;
+            URL submissions go straight to the creator for review.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Content Type Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="contentType">Content Type</Label>
-            <Select value={contentType} onValueChange={(value: any) => setContentType(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select content type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="text">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4" />
-                    <span>Text Content</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="video">
-                  <div className="flex items-center space-x-2">
-                    <Video className="h-4 w-4" />
-                    <span>Video Content</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="image">
-                  <div className="flex items-center space-x-2">
-                    <Image className="h-4 w-4" />
-                    <span>Image Content</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="audio">
-                  <div className="flex items-center space-x-2">
-                    <Mic className="h-4 w-4" />
-                    <span>Audio Content</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Tabs
+            value={submissionKind}
+            onValueChange={(v) => setSubmissionKind(v as "text" | "url")}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="url" data-testid="tab-submit-url">
+                <Link2 className="h-4 w-4 mr-2" /> Link to clip
+              </TabsTrigger>
+              <TabsTrigger value="text" data-testid="tab-submit-text">
+                <FileText className="h-4 w-4 mr-2" /> Paste text
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Content Description */}
-          <div className="space-y-2">
-            <Label htmlFor="contentDescription">Content Description</Label>
-            <Input
-              id="contentDescription"
-              placeholder="Briefly describe your content strategy and approach..."
-              value={contentDescription}
-              onChange={(e) => setContentDescription(e.target.value)}
-            />
-          </div>
-
-          {/* Main Content */}
-          <div className="space-y-2">
-            <Label htmlFor="submittedContent">
-              Your Content {getContentTypeIcon(contentType)}
-            </Label>
-            <Textarea
-              id="submittedContent"
-              placeholder={`Enter your original ${contentType} content here. Be authentic and personal - avoid generic or AI-generated text.`}
-              value={submittedContent}
-              onChange={(e) => setSubmittedContent(e.target.value)}
-              rows={8}
-              className="min-h-[200px]"
-            />
-            <p className="text-xs text-muted-foreground">
-              Tip: Include personal experiences, opinions, and authentic language to pass AI detection.
-            </p>
-          </div>
-
-          {/* AI Analysis Button */}
-          <div className="flex justify-center">
-            <Button
-              onClick={handleAnalyzeContent}
-              disabled={isAnalyzing || !submittedContent.trim()}
-              className="flex items-center space-x-2"
-            >
-              <Brain className="h-4 w-4" />
-              {isAnalyzing ? (
-                <>
-                  <Zap className="h-4 w-4 animate-pulse" />
-                  <span>Analyzing Content...</span>
-                </>
-              ) : (
-                <span>Analyze Content for AI</span>
-              )}
-            </Button>
-          </div>
-
-          {/* Analysis Progress */}
-          {isAnalyzing && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>AI Detection in Progress</span>
-                <span>Analyzing patterns...</span>
+            {/* URL submission */}
+            <TabsContent value="url" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="submissionUrl">Clip URL</Label>
+                <Input
+                  id="submissionUrl"
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://drive.google.com/file/d/... or https://youtu.be/..."
+                  value={submissionUrl}
+                  onChange={(e) => setSubmissionUrl(e.target.value)}
+                  data-testid="input-submission-url"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Google Drive, YouTube, Vimeo, Streamable, Loom, Dropbox,
+                  or a direct .mp4/.webm link. Anything else still works,
+                  it just won't preview inline.
+                </p>
               </div>
-              <Progress value={75} className="w-full" />
-            </div>
-          )}
+
+              {trimmedUrl && (
+                <Alert
+                  className={
+                    hostInfo.host === "unknown"
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-blue-200 bg-blue-50"
+                  }
+                >
+                  <Info
+                    className={
+                      hostInfo.host === "unknown"
+                        ? "h-4 w-4 text-amber-600"
+                        : "h-4 w-4 text-blue-600"
+                    }
+                  />
+                  <AlertDescription>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{hostInfo.label}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {hostInfo.embedKind === "iframe"
+                          ? "Embeds inline"
+                          : hostInfo.embedKind === "video"
+                          ? "Plays inline"
+                          : "Opens in new tab"}
+                      </Badge>
+                    </div>
+                    {hostInfo.sharingHint && (
+                      <p className="text-sm mt-1">{hostInfo.sharingHint}</p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="contentTypeUrl">Content Type</Label>
+                <Select
+                  value={contentType}
+                  onValueChange={(value: any) => setContentType(value)}
+                >
+                  <SelectTrigger id="contentTypeUrl">
+                    <SelectValue placeholder="Select content type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="video">
+                      <div className="flex items-center space-x-2">
+                        <Video className="h-4 w-4" />
+                        <span>Video</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="image">
+                      <div className="flex items-center space-x-2">
+                        <Image className="h-4 w-4" />
+                        <span>Image</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="audio">
+                      <div className="flex items-center space-x-2">
+                        <Mic className="h-4 w-4" />
+                        <span>Audio</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="text">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4" />
+                        <span>Other</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contentDescriptionUrl">
+                  Notes for the creator (optional)
+                </Label>
+                <Input
+                  id="contentDescriptionUrl"
+                  placeholder="Anything they should know before watching..."
+                  value={contentDescription}
+                  onChange={(e) => setContentDescription(e.target.value)}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Text submission (legacy AI-gated path) */}
+            <TabsContent value="text" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="contentType">Content Type</Label>
+                <Select
+                  value={contentType}
+                  onValueChange={(value: any) => setContentType(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select content type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4" />
+                        <span>Text Content</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="video">
+                      <div className="flex items-center space-x-2">
+                        <Video className="h-4 w-4" />
+                        <span>Video Content</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="image">
+                      <div className="flex items-center space-x-2">
+                        <Image className="h-4 w-4" />
+                        <span>Image Content</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="audio">
+                      <div className="flex items-center space-x-2">
+                        <Mic className="h-4 w-4" />
+                        <span>Audio Content</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contentDescription">Content Description</Label>
+                <Input
+                  id="contentDescription"
+                  placeholder="Briefly describe your content strategy and approach..."
+                  value={contentDescription}
+                  onChange={(e) => setContentDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="submittedContent">
+                  Your Content {getContentTypeIcon(contentType)}
+                </Label>
+                <Textarea
+                  id="submittedContent"
+                  placeholder={`Enter your original ${contentType} content here. Be authentic and personal - avoid generic or AI-generated text.`}
+                  value={submittedContent}
+                  onChange={(e) => setSubmittedContent(e.target.value)}
+                  rows={8}
+                  className="min-h-[200px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tip: Include personal experiences, opinions, and
+                  authentic language to pass AI detection.
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleAnalyzeContent}
+                  disabled={isAnalyzing || !submittedContent.trim()}
+                  className="flex items-center space-x-2"
+                >
+                  <Brain className="h-4 w-4" />
+                  {isAnalyzing ? (
+                    <>
+                      <Zap className="h-4 w-4 animate-pulse" />
+                      <span>Analyzing Content...</span>
+                    </>
+                  ) : (
+                    <span>Analyze Content for AI</span>
+                  )}
+                </Button>
+              </div>
+
+              {isAnalyzing && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>AI Detection in Progress</span>
+                    <span>Analyzing patterns...</span>
+                  </div>
+                  <Progress value={75} className="w-full" />
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
-      {/* AI Detection Results */}
-      {aiResult && (
+      {/* AI Detection Results — text path only */}
+      {submissionKind === "text" && aiResult && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -484,13 +652,21 @@ export default function ClipperApplication() {
             <div>
               <h3 className="font-medium">Ready to Submit Application?</h3>
               <p className="text-sm text-muted-foreground">
-                Your content must pass AI detection before you can apply to this campaign.
+                {submissionKind === "url"
+                  ? "Your link will be sent to the creator for review."
+                  : "Your content must pass AI detection before you can apply."}
               </p>
             </div>
             <Button
               onClick={handleSubmitApplication}
-              disabled={!aiResult || aiResult.recommendation === 'reject' || submitApplicationMutation.isPending}
+              disabled={
+                submitApplicationMutation.isPending ||
+                (submissionKind === "url"
+                  ? !urlIsValid
+                  : !aiResult || aiResult.recommendation === "reject")
+              }
               size="lg"
+              data-testid="button-submit-application"
             >
               {submitApplicationMutation.isPending ? "Submitting..." : "Submit Application"}
             </Button>

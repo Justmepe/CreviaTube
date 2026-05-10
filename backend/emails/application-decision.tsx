@@ -8,6 +8,10 @@ export interface ApplicationDecisionProps {
   campaignId: string;
   approved: boolean;
   notes?: string;
+  // Phase 5 — structured rejection-reason label (e.g., "Off-brief",
+  // "Wrong format"). Only set on rejections. Distinct from freeform
+  // notes so the clipper sees both: WHY (category) + nuance (notes).
+  rejectionReasonLabel?: string;
   appUrl: string;
 }
 
@@ -53,6 +57,15 @@ export function ApplicationDecision(p: ApplicationDecisionProps) {
         Hi {p.fullName}, the creator of <strong>{p.campaignName}</strong> chose
         not to move forward with your application this time.
       </Text>
+
+      {p.rejectionReasonLabel && (
+        <Section className="bg-amber-50 rounded-md p-3 my-3 border border-amber-200">
+          <Text className="text-xs text-amber-800 m-0">Reason</Text>
+          <Text className="text-sm font-semibold text-amber-900 m-0">
+            {p.rejectionReasonLabel}
+          </Text>
+        </Section>
+      )}
 
       {p.notes && (
         <Section className="bg-slate-50 rounded-md p-3 my-3 border border-slate-200">

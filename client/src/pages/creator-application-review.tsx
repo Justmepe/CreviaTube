@@ -12,6 +12,10 @@ import { ClipperRating } from "@/features/reviews/clipper-rating";
 import { ClipperProfileBlock } from "@/features/reviews/clipper-profile-block";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { REJECTION_REASONS } from "../../../shared/rejection-reasons";
+import { recognizeMediaHost } from "@shared/media-host";
 import { AiVerdictBanner, AiVerdictPill, AiSignalsBreakdown, verdictFromConfidence, type AiVerdict } from "@/features/reviews/ai-verdict";
 import { 
   CheckCircle, 
@@ -54,10 +58,22 @@ interface ClipperApplication {
   joinedAt: string;
   creatorReviewNotes?: string;
   rejectionReason?: string;
+  rejectionReasonCode?: string | null;
+  // Phase 5 — media URL submission. When submissionKind === 'url',
+  // submittedContent will be null and the review UI embeds a player
+  // for recognized hosts (or falls back to open-in-new-tab).
+  submissionUrl?: string | null;
+  submissionKind?: "text" | "url" | null;
   // Reputation enrichment from clipper_stats (null for new clippers)
   clipperRating?: string | null;
   clipperReviewCount?: number | null;
   clipperTier?: string | null;
+  // Phase 5 — per-creator trust signals for THIS creator. Counts how
+  // many of this clipper's applications have been previously
+  // approved / rejected on the creator's campaigns.
+  approvedCountFromThisClipper?: number;
+  rejectedCountFromThisClipper?: number;
+  lastApprovedFromThisClipperAt?: string | null;
 }
 
 type SortMode = "newest" | "rating_desc" | "reviews_desc" | "ai_safe";
@@ -66,6 +82,10 @@ export default function CreatorApplicationReview() {
   const { toast } = useToast();
   const [selectedApplication, setSelectedApplication] = useState<ClipperApplication | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  // Phase 5 — structured rejection reason. Required when rejecting,
+  // ignored on approve. Same code as the shared/rejection-reasons.ts
+  // catalog so the backend can validate against the closed enum.
+  const [rejectionReasonCode, setRejectionReasonCode] = useState<string>("");
   const [activeTab, setActiveTab] = useState("pending");
   const [sortBy, setSortBy] = useState<SortMode>("newest");
   const [minRating, setMinRating] = useState<string>("any");
@@ -79,14 +99,21 @@ export default function CreatorApplicationReview() {
 
   // Review Application Mutation
   const reviewApplicationMutation = useMutation({
-    mutationFn: async ({ applicationId, action, notes }: { 
-      applicationId: string; 
-      action: 'approve' | 'reject'; 
+    mutationFn: async ({
+      applicationId,
+      action,
+      notes,
+      reasonCode,
+    }: {
+      applicationId: string;
+      action: 'approve' | 'reject';
       notes: string;
+      reasonCode?: string;
     }) => {
       const response = await apiRequest("POST", `/api/clipper-applications/${applicationId}/review`, {
         action,
         notes,
+        reasonCode,
       });
       return response.json();
     },
@@ -98,6 +125,7 @@ export default function CreatorApplicationReview() {
       queryClient.invalidateQueries({ queryKey: ["/api/creator/pending-applications"] });
       setSelectedApplication(null);
       setReviewNotes("");
+      setRejectionReasonCode("");
     },
     onError: (error: any) => {
       toast({
@@ -111,10 +139,22 @@ export default function CreatorApplicationReview() {
   const handleReviewApplication = (action: 'approve' | 'reject') => {
     if (!selectedApplication) return;
 
+    // Reject path: enforce the structured reason here so the API
+    // validation never fires the destructive button while empty.
+    if (action === "reject" && !rejectionReasonCode) {
+      toast({
+        title: "Pick a reason",
+        description: "Choose a rejection reason from the dropdown so the clipper knows why.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     reviewApplicationMutation.mutate({
       applicationId: selectedApplication.id,
       action,
       notes: reviewNotes,
+      reasonCode: action === "reject" ? rejectionReasonCode : undefined,
     });
   };
 
@@ -301,6 +341,15 @@ export default function CreatorApplicationReview() {
                         <ClipperRating clipperId={application.clipperId} asLink />
                       </div>
 
+                      {/* Phase 5 — per-creator trust signal. Counts how
+                          many times this creator has previously approved
+                          (and rejected) work from this clipper. Helps
+                          the creator make a faster judgment call: a
+                          clipper they've approved 7 times before deserves
+                          a different read than a stranger applying for
+                          the first time. */}
+                      <TrustHistoryChip application={application} />
+
                       <h4 className="font-medium mb-2">{application.campaignTitle}</h4>
                       
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -374,21 +423,48 @@ export default function CreatorApplicationReview() {
                         )}
                       </div>
 
-                      {/* Content Preview */}
+                      {/* Content Preview — branches on submissionKind.
+                          URL path embeds the player (iframe/video) for
+                          recognized hosts and falls back to an
+                          open-in-new-tab link for unrecognized ones.
+                          Text path keeps the legacy text dump. */}
                       <div className="space-y-3">
                         <h4 className="font-medium">Submitted Content</h4>
-                        <div className="p-3 bg-muted/30 rounded-lg">
-                          <div className="flex items-center space-x-2 mb-2">
+                        <div className="p-3 bg-muted/30 rounded-lg space-y-3">
+                          <div className="flex items-center space-x-2">
                             <Badge variant="outline">{selectedApplication.contentType}</Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {selectedApplication.contentDescription}
-                            </span>
+                            {selectedApplication.contentDescription && (
+                              <span className="text-sm text-muted-foreground">
+                                {selectedApplication.contentDescription}
+                              </span>
+                            )}
                           </div>
-                          <div className="text-sm max-h-32 overflow-y-auto">
-                            {selectedApplication.submittedContent}
-                          </div>
+
+                          {selectedApplication.submissionKind === "url" &&
+                          selectedApplication.submissionUrl ? (
+                            <SubmissionUrlPreview
+                              url={selectedApplication.submissionUrl}
+                            />
+                          ) : (
+                            <div className="text-sm max-h-32 overflow-y-auto whitespace-pre-wrap">
+                              {selectedApplication.submittedContent}
+                            </div>
+                          )}
                         </div>
                       </div>
+
+                      {/* Phase 5 — trust toggle. Visible only when this
+                          creator has approved this clipper at least once
+                          before; before then there's nothing to "trust"
+                          yet. The component handles its own GET/PUT
+                          against /api/creator/clipper-trust. */}
+                      <TrustToggleBlock
+                        clipperId={selectedApplication.clipperId}
+                        approvedCountFromThisClipper={
+                          selectedApplication.approvedCountFromThisClipper ?? 0
+                        }
+                        clipperUsername={selectedApplication.clipperUsername}
+                      />
 
                       {/* Review Notes */}
                       <div className="space-y-3">
@@ -399,6 +475,31 @@ export default function CreatorApplicationReview() {
                           onChange={(e) => setReviewNotes(e.target.value)}
                           rows={3}
                         />
+                      </div>
+
+                      {/* Phase 5 — structured rejection reason. Required
+                          if rejecting. Reads from the shared catalog so
+                          codes always match the DB CHECK constraint and
+                          the rejection email's category label. */}
+                      <div className="space-y-2">
+                        <Label htmlFor="rejection-reason">
+                          Rejection reason <span className="text-slate-500 font-normal">(required if rejecting)</span>
+                        </Label>
+                        <Select value={rejectionReasonCode} onValueChange={setRejectionReasonCode}>
+                          <SelectTrigger id="rejection-reason">
+                            <SelectValue placeholder="Pick a reason if you're rejecting" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {REJECTION_REASONS.map((r) => (
+                              <SelectItem key={r.code} value={r.code}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{r.label}</span>
+                                  <span className="text-xs text-slate-500">{r.description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Review Actions */}
@@ -511,6 +612,258 @@ export default function CreatorApplicationReview() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Per-creator trust chip. Reads approvedCountFromThisClipper /
+// rejectedCountFromThisClipper / lastApprovedFromThisClipperAt off the
+// application row (computed by the backend correlated subqueries).
+// Three visual states:
+//   - First-time clipper (0 approved, 0 rejected) → small "New to you" tag
+//   - Has prior approvals → green "N approved" + relative-time
+//   - Has prior rejections only → amber "N rejected"
+// Phase 5 — embed the clipper's submitted clip URL inline for the
+// creator's review. Recognized hosts (YouTube / Vimeo / Drive /
+// Streamable / Loom / Dropbox / direct video) render a player so the
+// creator can watch without leaving the page. Unrecognized hosts and
+// platforms that don't support embed (TikTok / IG / X) fall back to a
+// labelled open-in-new-tab link with a sharing-settings caveat.
+function SubmissionUrlPreview({ url }: { url: string }) {
+  const info = recognizeMediaHost(url);
+
+  if (info.embedKind === "iframe" && info.embedSrc) {
+    return (
+      <div className="space-y-2">
+        <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
+          <iframe
+            src={info.embedSrc}
+            className="h-full w-full"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            title={`Clip preview from ${info.label}`}
+          />
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <Badge variant="outline" className="text-xs">{info.label}</Badge>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Open in new tab
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (info.embedKind === "video" && info.embedSrc) {
+    return (
+      <div className="space-y-2">
+        <video
+          src={info.embedSrc}
+          controls
+          className="w-full max-h-[480px] rounded-md border bg-black"
+        />
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <Badge variant="outline" className="text-xs">{info.label}</Badge>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Open in new tab
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback: open-in-new-tab. Used for TikTok / IG / X / unknown hosts.
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Badge variant="outline" className="text-xs">{info.label}</Badge>
+        <span className="text-xs text-amber-800">Inline preview not supported</span>
+      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block break-all text-sm text-blue-700 underline"
+      >
+        {url}
+      </a>
+      {info.sharingHint && (
+        <p className="text-xs text-amber-800">{info.sharingHint}</p>
+      )}
+    </div>
+  );
+}
+
+function TrustHistoryChip({ application }: { application: ClipperApplication }) {
+  const approved = application.approvedCountFromThisClipper ?? 0;
+  const rejected = application.rejectedCountFromThisClipper ?? 0;
+  const lastAt = application.lastApprovedFromThisClipperAt;
+
+  if (approved === 0 && rejected === 0) {
+    return (
+      <Badge variant="outline" className="mb-2 text-xs text-slate-600 border-slate-200">
+        New to you
+      </Badge>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mb-2">
+      {approved > 0 && (
+        <Badge
+          variant="outline"
+          className="text-xs text-green-700 border-green-200 bg-green-50"
+          title={
+            lastAt
+              ? `Last approved ${new Date(lastAt).toLocaleDateString()}`
+              : undefined
+          }
+        >
+          {approved} approved on your campaigns
+        </Badge>
+      )}
+      {rejected > 0 && (
+        <Badge variant="outline" className="text-xs text-amber-700 border-amber-200 bg-amber-50">
+          {rejected} previously rejected
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+// Phase 5 — trust-toggle block on the application review modal.
+// Owns its own GET to fetch the current trust state for this
+// (creator, clipper) pair and a PUT mutation to upsert toggle +
+// threshold. The toggle hides entirely until the creator has at
+// least one prior approval — before then there's nothing to base
+// trust on.
+function TrustToggleBlock({
+  clipperId,
+  approvedCountFromThisClipper,
+  clipperUsername,
+}: {
+  clipperId: string;
+  approvedCountFromThisClipper: number;
+  clipperUsername: string;
+}) {
+  const { toast } = useToast();
+  const trustQuery = useQuery<{
+    trust: null | {
+      id: string;
+      autoApprove: boolean;
+      autoApproveThreshold: number;
+      approvedCount: number;
+    };
+  }>({
+    queryKey: ["/api/creator/clipper-trust", clipperId],
+    enabled: !!clipperId,
+  });
+
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [threshold, setThreshold] = useState<number>(5);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate state from server response once.
+  if (trustQuery.data && !hydrated) {
+    setAutoApprove(Boolean(trustQuery.data.trust?.autoApprove));
+    setThreshold(trustQuery.data.trust?.autoApproveThreshold ?? 5);
+    setHydrated(true);
+  }
+
+  const mutation = useMutation({
+    mutationFn: async (payload: { autoApprove: boolean; threshold: number }) => {
+      const res = await apiRequest(
+        "PUT",
+        `/api/creator/clipper-trust/${clipperId}`,
+        payload,
+      );
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/creator/clipper-trust", clipperId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/creator/pending-applications"] });
+      toast({ title: "Trust settings saved" });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Couldn't save trust settings",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Hide for first-time clippers — there's no signal to base trust on
+  // yet. The block reappears the moment they get their first approval.
+  if (approvedCountFromThisClipper === 0) return null;
+
+  const meetsThreshold = approvedCountFromThisClipper >= threshold;
+
+  return (
+    <div className="space-y-3 p-3 rounded-md border border-blue-200 bg-blue-50/40">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <Label className="text-sm font-medium text-slate-900">
+            Trust @{clipperUsername} — auto-approve future submissions
+          </Label>
+          <p className="text-xs text-slate-600 mt-0.5">
+            When on, applications from this clipper to your campaigns skip
+            review and go straight to approved. They'll get a "you're trusted"
+            email the first time it fires.
+          </p>
+        </div>
+        <Switch
+          checked={autoApprove}
+          onCheckedChange={(v) => {
+            setAutoApprove(v);
+            mutation.mutate({ autoApprove: v, threshold });
+          }}
+          disabled={mutation.isPending}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-xs text-slate-600 whitespace-nowrap">
+          Auto-approve threshold
+        </Label>
+        <Input
+          type="number"
+          min={1}
+          max={1000}
+          value={threshold}
+          onChange={(e) => setThreshold(parseInt(e.target.value || "5", 10) || 5)}
+          onBlur={() => {
+            if (threshold !== (trustQuery.data?.trust?.autoApproveThreshold ?? 5)) {
+              mutation.mutate({ autoApprove, threshold });
+            }
+          }}
+          className="w-20 h-8 text-sm"
+        />
+        <span className="text-xs text-slate-500">
+          approvals before auto-approve unlocks ·{" "}
+          <span className={meetsThreshold ? "text-green-700 font-medium" : ""}>
+            currently {approvedCountFromThisClipper}/{threshold}
+          </span>
+        </span>
+      </div>
+      {autoApprove && !meetsThreshold && (
+        <div className="text-xs text-amber-700">
+          Toggle is on but threshold isn't met yet — auto-approve won't fire
+          until {threshold - approvedCountFromThisClipper} more approval
+          {threshold - approvedCountFromThisClipper === 1 ? "" : "s"}.
+        </div>
+      )}
     </div>
   );
 }

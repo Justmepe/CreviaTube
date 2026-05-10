@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum, json, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, pgEnum, json, real, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -319,7 +319,18 @@ export const clipperCampaigns = pgTable("clipper_campaigns", {
   aiFlags: json("ai_flags").$type<string[]>(), // Array of AI detection flags
   applicationStatus: text("application_status").default("content_pending"), // content_pending, ai_scanning, creator_review, approved, rejected, ai_flagged
   creatorReviewNotes: text("creator_review_notes"), // Creator's review notes
-  rejectionReason: text("rejection_reason"), // Reason for rejection
+  rejectionReason: text("rejection_reason"), // Reason for rejection (legacy freeform)
+  // Phase 5 — structured rejection reason. Closed vocabulary, mirrored in
+  // shared/rejection-reasons.ts. Lets us aggregate "why are clippers
+  // getting rejected on average" for the reputation system. The freeform
+  // rejectionReason / creatorReviewNotes still apply for nuance.
+  rejectionReasonCode: text("rejection_reason_code"),
+  // Phase 5 — media submission via URL. submissionKind ∈ ('text', 'url')
+  // (CHECK in migration 0022); null on legacy rows is treated as 'text'.
+  // URL path skips AI detection and lands directly in creator_review;
+  // review surface embeds the URL in a player when the host is known.
+  submissionUrl: text("submission_url"),
+  submissionKind: text("submission_kind"),
   reviewedAt: timestamp("reviewed_at"), // When creator reviewed the application
 });
 
@@ -394,6 +405,40 @@ export const clipperReviews = pgTable("clipper_reviews", {
 });
 
 // Clipper profile stats (aggregated from reviews and performance)
+// Phase 5 — per (creator, clipper) trust state. One row per pair.
+// Maintained by the review-application path (upserts on every approve)
+// and by the trust-CRUD endpoints (creator toggles auto_approve and
+// tunes the threshold). Read by the apply handler to decide whether
+// to skip creator_review on a new application.
+export const creatorClipperTrust = pgTable("creator_clipper_trust", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creatorId: varchar("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  clipperId: varchar("clipper_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  approvedCount: integer("approved_count").notNull().default(0),
+
+  // Per-creator threshold for the "Trust" toggle to appear in the UI.
+  // Default 5; tunable per-pair so each creator picks their own bar.
+  autoApproveThreshold: integer("auto_approve_threshold").notNull().default(5),
+
+  // The toggle. When true, future applications from this clipper to
+  // this creator's campaigns skip creator_review and land directly
+  // in 'approved'.
+  autoApprove: boolean("auto_approve").notNull().default(false),
+
+  lastApprovedAt: timestamp("last_approved_at"),
+
+  // Set the first time auto_approve fires for this pair so we send
+  // the celebratory "you're trusted" email exactly once. Subsequent
+  // auto-approvals get the standard application_approved email.
+  firstAutoApproveNotifiedAt: timestamp("first_auto_approve_notified_at"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  pairUnique: unique("creator_clipper_trust_pair_unique").on(table.creatorId, table.clipperId),
+}));
+
 export const clipperStats = pgTable("clipper_stats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clipperId: varchar("clipper_id").notNull().references(() => users.id).unique(),
@@ -711,6 +756,12 @@ export const insertCampaignIntegrationSchema = createInsertSchema(campaignIntegr
   updatedAt: true,
 });
 
+export const insertCreatorClipperTrustSchema = createInsertSchema(creatorClipperTrust).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertClipperCampaignSchema = createInsertSchema(clipperCampaigns).omit({
   id: true,
   joinedAt: true,
@@ -814,6 +865,8 @@ export type BudgetEscrow = typeof budgetEscrow.$inferSelect;
 export type AutoPayment = typeof autoPayments.$inferSelect;
 export type CampaignIntegration = typeof campaignIntegrations.$inferSelect;
 export type InsertCampaignIntegration = z.infer<typeof insertCampaignIntegrationSchema>;
+export type CreatorClipperTrust = typeof creatorClipperTrust.$inferSelect;
+export type InsertCreatorClipperTrust = z.infer<typeof insertCreatorClipperTrustSchema>;
 
 // New review system types
 export type ClipperReview = typeof clipperReviews.$inferSelect;

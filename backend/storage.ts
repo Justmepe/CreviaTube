@@ -1,6 +1,6 @@
 import {
   users, campaigns, clipperCampaigns, trackingEvents, payouts, socialMetrics, websiteMetrics,
-  platformReviews, reviewPrompts, clipperStats,
+  platformReviews, reviewPrompts, clipperStats, creatorClipperTrust,
   type User, type InsertUser, type Campaign, type InsertCampaign,
   type ClipperCampaign, type InsertClipperCampaign,
   type TrackingEvent, type InsertTrackingEvent,
@@ -42,7 +42,13 @@ export interface IStorage {
   // AI Content Detection & Application Workflow
   createClipperApplication(applicationData: any): Promise<ClipperCampaign>;
   getPendingApplicationsByCreator(creatorId: string): Promise<any[]>;
-  reviewClipperApplication(applicationId: string, action: 'approve' | 'reject', notes: string, creatorId: string): Promise<ClipperCampaign>;
+  reviewClipperApplication(
+    applicationId: string,
+    action: 'approve' | 'reject',
+    notes: string,
+    creatorId: string,
+    reasonCode?: string | null,
+  ): Promise<ClipperCampaign>;
   
   // Additional campaign methods for marketplace interface
   getClipperApplications(clipperId: string): Promise<any[]>;
@@ -578,6 +584,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingApplicationsByCreator(creatorId: string): Promise<any[]> {
+    // Phase 5 — per-clipper approval count for this creator. The
+    // correlated subqueries below answer "how many of this clipper's
+    // applications have I previously approved across my campaigns,
+    // and when did I last do it?" — the trust signal that the
+    // creator-side review UI surfaces as a chip and that Slice C
+    // turns into the "auto-approve" toggle threshold.
+    //
+    // Per-row correlated subquery is fine for typical pending-app
+    // volumes (<100). If the page ever scales past that, swap to a
+    // single batched GROUP BY + in-memory join.
     const results = await db
       .select({
         id: clipperCampaigns.id,
@@ -586,6 +602,8 @@ export class DatabaseStorage implements IStorage {
         clipperUsername: users.username,
         campaignTitle: campaigns.name,
         submittedContent: clipperCampaigns.submittedContent,
+        submissionUrl: clipperCampaigns.submissionUrl,
+        submissionKind: clipperCampaigns.submissionKind,
         contentType: clipperCampaigns.contentType,
         contentDescription: clipperCampaigns.contentDescription,
         applicationStatus: clipperCampaigns.applicationStatus,
@@ -595,10 +613,33 @@ export class DatabaseStorage implements IStorage {
         joinedAt: clipperCampaigns.joinedAt,
         creatorReviewNotes: clipperCampaigns.creatorReviewNotes,
         rejectionReason: clipperCampaigns.rejectionReason,
+        rejectionReasonCode: clipperCampaigns.rejectionReasonCode,
         // Reputation enrichment (LEFT JOIN — null for clippers with no stats yet)
         clipperRating: clipperStats.averageRating,
         clipperReviewCount: clipperStats.totalReviews,
         clipperTier: clipperStats.tier,
+        // Phase 5 — per-creator trust signals.
+        approvedCountFromThisClipper: sql<number>`(
+          SELECT COUNT(*)::int FROM clipper_campaigns cc2
+          INNER JOIN campaigns c2 ON cc2.campaign_id = c2.id
+          WHERE c2.creator_id = ${creatorId}
+            AND cc2.clipper_id = ${clipperCampaigns.clipperId}
+            AND cc2.is_approved = true
+        )`,
+        lastApprovedFromThisClipperAt: sql<string | null>`(
+          SELECT MAX(cc2.reviewed_at) FROM clipper_campaigns cc2
+          INNER JOIN campaigns c2 ON cc2.campaign_id = c2.id
+          WHERE c2.creator_id = ${creatorId}
+            AND cc2.clipper_id = ${clipperCampaigns.clipperId}
+            AND cc2.is_approved = true
+        )`,
+        rejectedCountFromThisClipper: sql<number>`(
+          SELECT COUNT(*)::int FROM clipper_campaigns cc2
+          INNER JOIN campaigns c2 ON cc2.campaign_id = c2.id
+          WHERE c2.creator_id = ${creatorId}
+            AND cc2.clipper_id = ${clipperCampaigns.clipperId}
+            AND cc2.application_status = 'rejected'
+        )`,
       })
       .from(clipperCampaigns)
       .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
@@ -617,7 +658,8 @@ export class DatabaseStorage implements IStorage {
     applicationId: string,
     action: 'approve' | 'reject',
     notes: string,
-    creatorId: string
+    creatorId: string,
+    reasonCode?: string | null,
   ): Promise<ClipperCampaign> {
     // Verify the application belongs to this creator's campaign
     const applicationDetails = await db
@@ -642,6 +684,13 @@ export class DatabaseStorage implements IStorage {
 
     if (action === 'reject') {
       updateData.rejectionReason = notes || 'Content does not meet campaign requirements';
+      // Phase 5 — store the structured rejection-reason code alongside
+      // the freeform notes. Validation already happened at the route
+      // layer; this just persists it. null when caller didn't supply
+      // (keeps backwards-compatible callers working).
+      if (reasonCode) {
+        updateData.rejectionReasonCode = reasonCode;
+      }
     }
 
     // On approval, mint a unique clipperPromoCode the clipper can share for
@@ -664,6 +713,47 @@ export class DatabaseStorage implements IStorage {
       .set(updateData)
       .where(eq(clipperCampaigns.id, applicationId))
       .returning();
+
+    // Phase 5 — on every approve, increment the creator/clipper trust
+    // counter. Upsert because the first approval establishes the row.
+    // approved_count is what Slice C's "auto-approve threshold" UI
+    // reads to decide whether to show the trust toggle.
+    if (action === 'approve') {
+      try {
+        const [resolved] = await db
+          .select({
+            clipperId: clipperCampaigns.clipperId,
+            creatorId: campaigns.creatorId,
+          })
+          .from(clipperCampaigns)
+          .innerJoin(campaigns, eq(clipperCampaigns.campaignId, campaigns.id))
+          .where(eq(clipperCampaigns.id, applicationId))
+          .limit(1);
+        if (resolved?.creatorId && resolved?.clipperId) {
+          const now = new Date();
+          await db
+            .insert(creatorClipperTrust)
+            .values({
+              creatorId: resolved.creatorId,
+              clipperId: resolved.clipperId,
+              approvedCount: 1,
+              lastApprovedAt: now,
+            })
+            .onConflictDoUpdate({
+              target: [creatorClipperTrust.creatorId, creatorClipperTrust.clipperId],
+              set: {
+                approvedCount: sql`${creatorClipperTrust.approvedCount} + 1`,
+                lastApprovedAt: now,
+                updatedAt: now,
+              },
+            });
+        }
+      } catch (err) {
+        // Trust-counter maintenance is fire-and-forget — never block a
+        // legitimate approval if the upsert hits a transient error.
+        console.error("creator_clipper_trust upsert failed:", err);
+      }
+    }
 
     // ugc_volume goals don't emit tracking events — verification *is* the
     // approval + post URL. Fire the completion check on approve so the

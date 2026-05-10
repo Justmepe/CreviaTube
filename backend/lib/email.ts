@@ -25,6 +25,7 @@ export type EmailKind =
   | "campaign_completed_creator"
   | "application_approved"
   | "application_rejected"
+  | "clipper_trusted"  // Phase 5 — first auto-approval milestone
   | "payout_sent"
   | "payout_failed"
   | "review_received"

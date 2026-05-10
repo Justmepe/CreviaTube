@@ -36,6 +36,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { getGoalDefinition, type PrimaryGoal } from "../../../shared/goal-options";
+import { getRejectionReasonLabel } from "../../../shared/rejection-reasons";
 
 interface AssignmentResponse {
   assignment: {
@@ -48,6 +49,7 @@ interface AssignmentResponse {
     isCompleted: boolean;
     applicationStatus: string | null;
     rejectionReason: string | null;
+    rejectionReasonCode: string | null;
     completedAt: string | null;
     joinedAt: string;
   };
@@ -253,11 +255,22 @@ export default function ClipperAssignment() {
         {isRejected && (
           <Alert className="border-red-300 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-700" />
-            <AlertDescription className="text-red-900 text-sm">
-              <span className="font-medium">Application rejected.</span>
-              {assignment.rejectionReason ? (
-                <span> Reason: {assignment.rejectionReason}</span>
-              ) : null}
+            <AlertDescription className="text-red-900 text-sm space-y-1">
+              <div className="font-medium">Application rejected.</div>
+              {/* Phase 5 — show the structured reason category prominently
+                  (e.g., "Off-brief", "Wrong format") so the clipper
+                  knows what to fix on the next attempt. The freeform
+                  rejectionReason renders below as additional nuance. */}
+              {assignment.rejectionReasonCode && (
+                <div>
+                  <span className="font-medium">Reason: </span>
+                  {getRejectionReasonLabel(assignment.rejectionReasonCode) ??
+                    assignment.rejectionReasonCode}
+                </div>
+              )}
+              {assignment.rejectionReason && (
+                <div className="italic">"{assignment.rejectionReason}"</div>
+              )}
             </AlertDescription>
           </Alert>
         )}
