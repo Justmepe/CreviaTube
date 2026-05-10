@@ -55,7 +55,10 @@ export default function ClipperDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-green-400/10 to-emerald-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-teal-400/10 rounded-full blur-3xl"></div>
       
-      <DashboardLayout title="CreviaTube Clipper Hub">
+      {/* Title intentionally omitted — the inline gradient header
+          below is richer (icon + subtitle + Active Status pill) and
+          a DashboardLayout title would duplicate it. */}
+      <DashboardLayout>
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">
