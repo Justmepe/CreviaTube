@@ -1,6 +1,6 @@
 import {
   users, campaigns, clipperCampaigns, trackingEvents, payouts, socialMetrics, websiteMetrics,
-  platformReviews, reviewPrompts, clipperStats, creatorClipperTrust,
+  platformReviews, reviewPrompts, clipperStats, creatorClipperTrust, subscriptions,
   type User, type InsertUser, type Campaign, type InsertCampaign,
   type ClipperCampaign, type InsertClipperCampaign,
   type TrackingEvent, type InsertTrackingEvent,
@@ -185,9 +185,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAvailableCampaigns(): Promise<Campaign[]> {
-    return await db.select().from(campaigns)
+    // Phase 6 Slice B — priority placement for Premium creators.
+    // Campaigns whose creator has an active premium subscription
+    // float to the top with isFeatured=true. The marketplace UI
+    // reads that flag to render the "Featured" badge.
+    //
+    // Implementation: LEFT JOIN subscriptions on creator_id, evaluate
+    // active-and-not-expired in SQL (so the sort is correct regardless
+    // of whether the daily expiry sweep is behind). ORDER BY
+    // (isFeatured DESC, created_at DESC) so featured rows lead while
+    // each section is still time-ordered.
+    const rows = await db
+      .select({
+        campaign: campaigns,
+        isFeatured: sql<boolean>`
+          (${subscriptions.tier} = 'premium'
+            AND ${subscriptions.status} = 'active'
+            AND ${subscriptions.currentPeriodEnd} > NOW())
+        `,
+      })
+      .from(campaigns)
+      .leftJoin(subscriptions, eq(campaigns.creatorId, subscriptions.userId))
       .where(eq(campaigns.status, "active"))
-      .orderBy(desc(campaigns.createdAt));
+      .orderBy(
+        sql`(${subscriptions.tier} = 'premium'
+          AND ${subscriptions.status} = 'active'
+          AND ${subscriptions.currentPeriodEnd} > NOW()) DESC NULLS LAST`,
+        desc(campaigns.createdAt),
+      );
+
+    // Flatten — the API contract on /api/campaigns/available is a flat
+    // Campaign[] today. We attach the boolean as a non-schema field
+    // that the client TypeScript widens; cleaner than a new endpoint.
+    return rows.map((r) => ({
+      ...r.campaign,
+      isFeatured: Boolean(r.isFeatured),
+    })) as unknown as Campaign[];
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {

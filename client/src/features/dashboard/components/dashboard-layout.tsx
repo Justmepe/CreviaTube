@@ -65,7 +65,9 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Marketplace", href: "/marketplace", icon: TrendingUp },
         { name: "My Campaigns", href: "/campaigns", icon: Users },
         { name: "Top Clippers", href: "/clipper-directory", icon: Star },
-        { name: "Premium", href: "/premium", icon: Crown },
+        // Phase 6 Slice A — /premium nav hidden until at least one
+        // perk is wired. Route still serves the old page if reached
+        // by URL, but nothing in the app links to it.
         { name: "Payouts", href: "/payouts", icon: Wallet },
       ];
     }
@@ -80,7 +82,12 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       { name: "My Campaigns", href: "/my-campaigns", icon: Folder },
       { name: "Clippers", href: "/clippers", icon: Users },
       { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
-      { name: "Premium", href: "/premium", icon: Crown },
+      // Phase 6 Slice C — Founding Creator nav re-enabled for creators
+      // now that the page advertises a real product (Featured placement
+      // is live, badge is live, page copy reflects the offer). Stays
+      // hidden for clippers — they'll get their own tier later in
+      // Slice H.
+      { name: "Founding", href: "/premium", icon: Crown },
     ];
   };
 

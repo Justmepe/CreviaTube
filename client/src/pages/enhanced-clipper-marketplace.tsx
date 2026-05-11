@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { CampaignMatchBadge } from "@/features/campaigns/components/campaign-match-badge";
+import { FoundingCreatorBadge } from "@/features/premium/components/founding-creator-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,6 +97,9 @@ interface Campaign {
     mmpAppId: string | null;
     hasMmpApiKey: boolean;
   };
+  // Phase 6 Slice B — Premium creator marker. Backend annotates each
+  // available-campaign row so featured campaigns can sort/render first.
+  isFeatured?: boolean;
 }
 
 interface ClipperCampaign {
@@ -442,18 +446,32 @@ export default function EnhancedClipperMarketplace() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCampaigns.map((campaign) => (
-                  <Card key={campaign.id} className="hover:shadow-lg transition-shadow">
+                  <Card
+                    key={campaign.id}
+                    className={`hover:shadow-lg transition-shadow ${
+                      campaign.isFeatured ? "ring-1 ring-amber-300 shadow-amber-100" : ""
+                    }`}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <CardTitle className="text-lg line-clamp-2">{campaign.title}</CardTitle>
                           <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {/* Phase 6 Slice B — Featured pill for
+                                Premium creators' campaigns. Sort puts
+                                them first; this is the visual signal. */}
+                            {campaign.isFeatured && (
+                              <Badge className="bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-100">
+                                ⭐ Featured
+                              </Badge>
+                            )}
                             <Badge className={getCreatorTypeColor(campaign.creator.accountType)}>
                               {getCreatorTypeLabel(campaign.creator.accountType)}
                             </Badge>
                             <Badge variant="outline" className="text-xs">
                               by @{campaign.creator.username}
                             </Badge>
+                            <FoundingCreatorBadge userId={campaign.creator.id} />
                             {(() => {
                               const m = matchByCampaignId.get(campaign.id);
                               return m ? <CampaignMatchBadge matchScore={m.matchScore} matchedPlatforms={m.matchedPlatforms} /> : null;

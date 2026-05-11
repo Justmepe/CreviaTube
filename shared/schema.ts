@@ -1132,6 +1132,17 @@ export const subscriptions = pgTable("subscriptions", {
 export type PaymentIntent = typeof paymentIntents.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 
+// Phase 6 Slice C — Founding Creator seat cap. Pre-seeded with 50
+// empty rows in migration 0023; rows get stamped (user_id +
+// claimed_at) atomically at subscription activation. A user can
+// only hold one seat (unique partial index on user_id).
+export const foundingSeats = pgTable("founding_seats", {
+  id: integer("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id),
+  claimedAt: timestamp("claimed_at"),
+});
+export type FoundingSeat = typeof foundingSeats.$inferSelect;
+
 // --- Email infrastructure ---
 // Single-use tokens for email verification (and later: password reset etc).
 export const emailVerificationTokens = pgTable("email_verification_tokens", {

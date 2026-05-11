@@ -58,6 +58,7 @@ import Careers from "@/pages/careers";
 import CommunityGuidelines from "@/pages/community-guidelines";
 import Events from "@/pages/events";
 import PremiumPage from "@/pages/premium";
+import CreatorAnalyticsPage from "@/pages/creator-analytics";
 
 function HomeRoute() {
   const { user } = useAuth();
@@ -110,6 +111,7 @@ function Router() {
       <ProtectedRoute path="/clippers/:id" component={ClipperProfilePage} />
       <ProtectedRoute path="/my-campaigns" component={MyCampaignsPage} />
       <ProtectedRoute path="/premium" component={PremiumPage} />
+      <ProtectedRoute path="/dashboard/analytics" component={CreatorAnalyticsPage} />
       <ProtectedRoute path="/reviews" component={PlatformReviews} />
       <ProtectedRoute path="/platform-reviews" component={PlatformReviews} />
       <ProtectedRoute path="/admin" component={RealRevenueAnalytics} />

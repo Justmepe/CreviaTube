@@ -16,18 +16,46 @@ function basescanTxUrl(txHash: string): string {
   return `${base}/tx/${txHash}`;
 }
 
-// Single subscription tier for v1.
-const PREMIUM_PLAN = {
-  id: "premium",
-  priceUsdc: "5.00", // 5 USDC for 30 days; easy to test on Sepolia
-  durationDays: 30,
-};
+// Phase 6 — Founding Creator tier.
+//
+// The plan price is dynamic: while the founding seat cap isn't full
+// (founding_seats has unclaimed rows), new subscribers pay
+// FOUNDING_PRICE_USDC and get a seat locking their price for life.
+// Once all 50 are taken, new subscribers pay POST_FOUNDING_PRICE_USDC.
+// The intent handler and verify handler both re-check the current
+// price so a creator can't open an intent at $15 and finalize after
+// the cap fills (or vice versa).
+const FOUNDING_PRICE_USDC = "15.00";
+const POST_FOUNDING_PRICE_USDC = "29.00";
+const PREMIUM_DURATION_DAYS = 30;
+
+// resolveCreatorPrice — returns the price this specific user should
+// pay right now. If they already hold a founding seat, they keep the
+// founding price forever (renewals). Otherwise they pay the founding
+// price if seats are still available, else post-founding. Anonymous
+// callers (no userId) get the public price.
+async function resolveCreatorPrice(userId?: string): Promise<string> {
+  const { getFoundingSeatStats } = await import("./founding-seats");
+  const stats = await getFoundingSeatStats(userId);
+  if (stats.isUserFounder) return FOUNDING_PRICE_USDC;
+  const seatsLeft = stats.total - stats.taken;
+  return seatsLeft > 0 ? FOUNDING_PRICE_USDC : POST_FOUNDING_PRICE_USDC;
+}
 
 const INTENT_TTL_MINUTES = 15;
 
 export function setupPaymentsAPI(app: Express): void {
-  app.get("/api/subscription/plan", (_req, res) => {
-    res.json(PREMIUM_PLAN);
+  // Phase 6 — returns the price for THIS user. Anonymous callers
+  // get the public price (founding while seats remain, else
+  // post-founding). Existing founders see their locked $15.
+  app.get("/api/subscription/plan", async (req, res) => {
+    const userId = req.isAuthenticated() ? (req.user as any).id : undefined;
+    const price = await resolveCreatorPrice(userId);
+    res.json({
+      id: "premium",
+      priceUsdc: price,
+      durationDays: PREMIUM_DURATION_DAYS,
+    });
   });
 
   app.get("/api/subscription/current", async (req, res) => {
@@ -63,9 +91,13 @@ export function setupPaymentsAPI(app: Express): void {
 
     if (kind === "subscription") {
       resolvedKind = "subscription";
-      resolvedReference = PREMIUM_PLAN.id;
-      expectedUsdcUnits = toUsdcUnits(PREMIUM_PLAN.priceUsdc);
-      displayAmount = PREMIUM_PLAN.priceUsdc;
+      resolvedReference = "premium";
+      // Re-evaluate price at intent-creation time so the amount the
+      // wallet asks the user to sign matches the current state of the
+      // founding seat cap.
+      const price = await resolveCreatorPrice(req.user.id);
+      expectedUsdcUnits = toUsdcUnits(price);
+      displayAmount = price;
     } else if (kind === "campaign_funding") {
       if (!referenceId) {
         return res.status(400).json({ message: "campaign_funding requires referenceId (campaign id)" });
@@ -168,13 +200,16 @@ export function setupPaymentsAPI(app: Express): void {
     }
 
     if (intent.kind === "subscription") {
-      const periodEnd = await activateSubscription(intent.userId, intent.id, PREMIUM_PLAN.durationDays);
-      // Fire-and-forget confirmation email
+      const periodEnd = await activateSubscription(intent.userId, intent.id, PREMIUM_DURATION_DAYS);
+      // Fire-and-forget confirmation email. We compute the dollar
+      // amount from intent.expectedUsdcUnits so the email reflects
+      // exactly what the user paid (founding $15 vs post-founding $29).
+      const amountPaid = (Number(intent.expectedUsdcUnits) / 1_000_000).toFixed(2);
       void notifySubscriptionPaid({
         userId: intent.userId,
         intentId: intent.id,
         txHash,
-        amountUsdc: PREMIUM_PLAN.priceUsdc,
+        amountUsdc: amountPaid,
         periodEnd,
       });
     } else if (intent.kind === "campaign_funding" && intent.referenceId) {
@@ -332,6 +367,20 @@ async function activateSubscription(userId: string, intentId: string, durationDa
       currentPeriodEnd: newEnd,
       lastPaymentIntentId: intentId,
     });
+    // Phase 6 Slice C — claim a Founding Creator seat on the first
+    // subscription activation. claimFoundingSeatTx is idempotent and
+    // returns false when the cap is hit; we swallow that result
+    // because subscribers past seat #50 simply pay the post-founding
+    // price (the payment intent already locked the right amount).
+    try {
+      const { claimFoundingSeatTx } = await import("./founding-seats");
+      await claimFoundingSeatTx(userId);
+    } catch (err) {
+      // Non-fatal: subscription still activates, the user just
+      // doesn't get the founding-seat row. Surfaces in logs for
+      // manual reconciliation.
+      console.error("[activateSubscription] founding seat claim failed", err);
+    }
     return newEnd;
   }
 

@@ -28,6 +28,9 @@ import { setupShopifyWebhookAPI } from "./api/shopify-webhook";
 import { setupStripeWebhookAPI } from "./api/stripe-webhook";
 import { setupClipperAssignmentAPI } from "./api/clipper-assignment";
 import { setupClipperReputationAPI } from "./api/clipper-reputation";
+import { setupPremiumStatusAPI } from "./api/premium-status";
+import { setupFoundingSeatsAPI } from "./api/founding-seats";
+import { setupCreatorAnalyticsAPI } from "./api/creator-analytics";
 import { setupMmpPostbackAPI } from "./api/mmp-postback";
 import { setupServerPostbackAPI } from "./api/server-postback";
 import { setupOAuthTikTokAPI } from "./api/oauth-tiktok";
@@ -207,6 +210,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/clippers/:id/reputation. Mounted before the modules/reviews
   // router so its more specific subpaths still match (top, profile, reviews).
   setupClipperReputationAPI(app);
+
+  // Phase 6 Slice F — premium status lookup for the Founding Creator
+  // badge. Public-read; nothing sensitive in the payload.
+  setupPremiumStatusAPI(app);
+
+  // Phase 6 Slice C — founding-seats counter + manual claim endpoint.
+  // The production claim path runs from activateSubscription() in
+  // payments.ts; this just surfaces the counter for the /premium page
+  // and gives admins a manual override.
+  setupFoundingSeatsAPI(app);
+
+  // Phase 6 Slice E — Premium-gated creator analytics. 403s free
+  // creators with { requiresPremium: true }.
+  setupCreatorAnalyticsAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {
