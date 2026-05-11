@@ -26,6 +26,13 @@ type FoundingSeats = {
   currentPrice: number;
   isUserFounder: boolean;
 };
+type GuaranteeProgress = {
+  baseline: number;
+  current: number;
+  threshold: number;
+  daysRemaining: number;
+  willTriggerIfEvaluatedNow: boolean;
+} | null;
 
 // Itemized value stack — the dollar values are anchors, not promises.
 // They reinforce that the offer is undervalued at $15. Order matters:
@@ -74,6 +81,9 @@ export default function PremiumPage() {
   const { data: plan } = useQuery<Plan>({ queryKey: ["/api/subscription/plan"] });
   const { data: sub } = useQuery<SubscriptionStatus>({ queryKey: ["/api/subscription/current"] });
   const { data: seats } = useQuery<FoundingSeats>({ queryKey: ["/api/founding-seats/status"] });
+  const { data: guaranteeProgress } = useQuery<GuaranteeProgress>({
+    queryKey: ["/api/subscription/guarantee-status"],
+  });
 
   const isActive = sub?.status === "active" && sub.tier === "premium";
   const isCreator = user?.role === "creator";
@@ -169,6 +179,58 @@ export default function PremiumPage() {
             </Button>
           )}
         </div>
+
+        {/* Phase 6 Slice D — guarantee progress widget. Only renders
+            for active subscribers within their 30-day evaluation
+            window. Shows applications-to-threshold and days-remaining
+            so the creator can see whether they're on track. */}
+        {isActive && guaranteeProgress && (
+          <Card
+            className={
+              guaranteeProgress.willTriggerIfEvaluatedNow
+                ? "border-amber-200 bg-amber-50"
+                : "border-emerald-200 bg-emerald-50"
+            }
+          >
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldCheck
+                  className={
+                    guaranteeProgress.willTriggerIfEvaluatedNow
+                      ? "h-4 w-4 text-amber-700"
+                      : "h-4 w-4 text-emerald-700"
+                  }
+                />
+                30-day guarantee progress
+              </CardTitle>
+              <CardDescription>
+                {guaranteeProgress.willTriggerIfEvaluatedNow
+                  ? "You're below the threshold. If this holds, your USDC is refunded automatically when the window closes."
+                  : "You're on track. Your subscription stays active and Featured placement keeps running."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-700">Applications this window</span>
+                <span className="font-mono">
+                  <strong>{guaranteeProgress.current}</strong>
+                  <span className="text-slate-500">
+                    {" "}
+                    / {guaranteeProgress.threshold} to clear
+                  </span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-700">Baseline (30d before activation)</span>
+                <span className="font-mono">{guaranteeProgress.baseline}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-700">Days remaining</span>
+                <span className="font-mono">{guaranteeProgress.daysRemaining}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Value stack — $350 of value for $15 */}
         <Card>

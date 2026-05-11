@@ -26,6 +26,7 @@ export type EmailKind =
   | "application_approved"
   | "application_rejected"
   | "clipper_trusted"  // Phase 5 — first auto-approval milestone
+  | "guarantee_triggered"  // Phase 6 — Founding Creator refund due
   | "payout_sent"
   | "payout_failed"
   | "review_received"

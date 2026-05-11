@@ -1125,6 +1125,15 @@ export const subscriptions = pgTable("subscriptions", {
   // Stamped after we send the T-3 expiry warning email; reset on every renewal
   // (when currentPeriodEnd advances) so each cycle gets at most one notification.
   notifiedExpiryAt: timestamp("notified_expiry_at"),
+  // Phase 6 Slice D — 30-day money-back guarantee state. Snapshotted
+  // at first activation; the evaluator sweep at day 30 compares
+  // current application counts to the baseline and fires a refund if
+  // lift is insufficient. See migration 0024 for the full rules.
+  baselineApplicationCount: integer("baseline_application_count"),
+  baselineSnapshottedAt: timestamp("baseline_snapshotted_at"),
+  guaranteeEvaluatedAt: timestamp("guarantee_evaluated_at"),
+  guaranteeTriggered: boolean("guarantee_triggered").notNull().default(false),
+  refundTxHash: text("refund_tx_hash"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

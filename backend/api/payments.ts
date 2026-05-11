@@ -360,12 +360,27 @@ async function activateSubscription(userId: string, intentId: string, durationDa
 
   const [existing] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
   if (!existing) {
+    // Phase 6 Slice D — snapshot the baseline application count
+    // for the 30-day guarantee. We count applications across the
+    // creator's campaigns received in the 30 days BEFORE they
+    // subscribed; the evaluator will compare against the 30 days
+    // AFTER. Computed before the insert so we have a clean baseline.
+    let baselineApplicationCount: number | null = null;
+    try {
+      const { snapshotBaselineApplicationCount } = await import("../lib/guarantee");
+      baselineApplicationCount = await snapshotBaselineApplicationCount(userId);
+    } catch (err) {
+      console.error("[activateSubscription] baseline snapshot failed", err);
+    }
+
     await db.insert(subscriptions).values({
       userId,
       tier: "premium",
       status: "active",
       currentPeriodEnd: newEnd,
       lastPaymentIntentId: intentId,
+      baselineApplicationCount,
+      baselineSnapshottedAt: baselineApplicationCount !== null ? now : null,
     });
     // Phase 6 Slice C — claim a Founding Creator seat on the first
     // subscription activation. claimFoundingSeatTx is idempotent and
