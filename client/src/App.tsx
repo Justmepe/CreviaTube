@@ -52,6 +52,7 @@ import AboutUs from "@/pages/about-us";
 import Status from "@/pages/status";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import CookiePolicy from "@/pages/cookie-policy";
 import HelpCenter from "@/pages/help-center";
 import Contact from "@/pages/contact";
 import Careers from "@/pages/careers";
@@ -119,6 +120,7 @@ function Router() {
       <Route path="/status" component={Status} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/cookie-policy" component={CookiePolicy} />
       <Route path="/help-center" component={HelpCenter} />
       <Route path="/contact" component={Contact} />
       <Route path="/careers" component={Careers} />

@@ -500,9 +500,9 @@ export default function LandingPage() {
             { label: "Fees", onClick: () => scrollTo("fees") },
           ]} />
           <FooterCol title="Legal" items={[
-            { label: "Terms of service", onClick: () => setLocation("/terms") },
-            { label: "Privacy policy", onClick: () => setLocation("/privacy") },
-            { label: "Cookie policy", onClick: () => setLocation("/cookies") },
+            { label: "Terms of service", onClick: () => setLocation("/terms-of-service") },
+            { label: "Privacy policy", onClick: () => setLocation("/privacy-policy") },
+            { label: "Cookie policy", onClick: () => setLocation("/cookie-policy") },
             { label: "Contact", onClick: () => setLocation("/contact") },
           ]} />
         </div>
