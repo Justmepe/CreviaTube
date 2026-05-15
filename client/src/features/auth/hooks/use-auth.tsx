@@ -46,9 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
-      // Clear all cached data when logging in to prevent seeing other users' data
-      queryClient.clear();
+      // Set the new user FIRST so the AuthProvider's useQuery observer
+      // sees fresh data without an undefined gap, then wipe everything
+      // else to prevent seeing the previous user's cached lists.
+      //
+      // Earlier code used queryClient.clear() before setQueryData; that
+      // detached the user query's observer chain, so downstream
+      // components (sidebar nav) rendered with user=undefined for one
+      // paint and the nav role-branch fell through to the default.
+      // Bug surfaced as "Founding doesn't appear until I click Settings"
+      // — the Settings button was a hard window.location reload that
+      // masked the orphaned-observer state.
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "/api/user",
+      });
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in to CreviaTube.",
@@ -85,10 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
-      // Clear all cached data when registering to ensure clean state
-      queryClient.clear();
+      // Set user first so the auth observer stays attached, then wipe
+      // every other query to ensure a clean state on a fresh account.
+      // See the matching comment on the login mutation for the bug
+      // history.
       queryClient.setQueryData(["/api/user"], user);
-      
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "/api/user",
+      });
+
       toast({
         title: "Account created successfully!",
         description: "Welcome to CreviaTube. You can now start creating campaigns.",

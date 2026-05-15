@@ -11,6 +11,7 @@ import {
   Zap,
   PlayCircle,
   Plus,
+  Crown,
 } from "lucide-react";
 
 // Lucide ships the old Twitter bird; X rebranded to a different mark.
@@ -219,7 +220,7 @@ export default function LandingPage() {
             <PersonaCard tint="blue" Icon={Building2} title="Brands & businesses" desc="Launching a product or scaling a brand. Skip agency markups. Pay for verified reach, not impressions on a slide deck." />
             <PersonaCard tint="emerald" Icon={Sparkles} title="Creators" desc="Got a course, merch line, or paid community? Spin up a clipping campaign and let other creators distribute it." />
             <PersonaCard tint="indigo" Icon={Zap} title="Founders & entrepreneurs" desc="Pre-seed to growth stage. Treat clippers as a performance-marketing channel. Pay only when you hit the goal." />
-            <PersonaCard tint="amber" Icon={PlayCircle} title="Clippers" desc="You make the content. Browse open campaigns, post your clip, get paid in USDC the moment metrics verify." />
+            <PersonaCard tint="amber" Icon={PlayCircle} title="Clippers" desc="You make the content. Browse open campaigns, climb the leaderboard, get paid in USDC the moment metrics verify." />
           </div>
         </div>
       </section>
@@ -266,9 +267,10 @@ export default function LandingPage() {
                 <h3 className="text-xl font-bold">Earn as a clipper</h3>
               </div>
               <ol className="space-y-5">
-                <Step n={1} tint="emerald" title="Browse open campaigns" body="Filtered to your platforms (TikTok, YouTube Shorts, IG Reels) and audience fit." />
-                <Step n={2} tint="emerald" title="Post your clip" body="Drop the link. Our tracker measures verified views, clicks, and conversions automatically." />
-                <Step n={3} tint="emerald" title="Get paid in USDC" body="Hit the goal, get paid to your wallet. No invoices, no Net-30, no DM follow-ups." />
+                <Step n={1} tint="emerald" title="Browse open campaigns" body="Filtered to your platforms (TikTok, YouTube Shorts, IG Reels) and audience fit. Featured campaigns from Premium creators surface first." />
+                <Step n={2} tint="emerald" title="Submit your clip" body="Paste a Drive / YouTube / Streamable / Loom link — the creator watches it embedded on the review page." />
+                <Step n={3} tint="emerald" title="Build a verified track record" body="Every approval counts. Climb the public leaderboard and unlock auto-approve trust with creators you work with repeatedly." />
+                <Step n={4} tint="emerald" title="Get paid in USDC" body="Hit the goal, get paid to your wallet. No invoices, no Net-30, no DM follow-ups." />
               </ol>
               <button onClick={goToAuth} className="mt-7 inline-flex items-center gap-2 text-emerald-700 font-semibold text-sm hover:gap-3 transition-all">
                 Earn as a clipper <ArrowRight className="w-4 h-4" />
@@ -339,9 +341,9 @@ export default function LandingPage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <TrustCard tint="blue" Icon={Shield} title="Escrow on day one" body="Campaign budget is locked the moment you fund. Clippers see the money before they post." />
-            <TrustCard tint="emerald" Icon={Sparkles} title="AI content review" body="Every submission gets a quality score before it counts toward the goal. Low effort doesn't pay." />
+            <TrustCard tint="emerald" Icon={Sparkles} title="Structured creator review" body="Every text submission runs through AI detection; every URL submission embeds for visual review with structured rejection reasons." />
             <TrustCard tint="indigo" Icon={BarChart3} title="Real-view tracking" body="Bot detection on every event. Inflated numbers get filtered out before payouts." />
-            <TrustCard tint="amber" Icon={Star} title="Reputation, on-chain" body="Clipper ratings stick to the wallet, not the username. No more disposable accounts." />
+            <TrustCard tint="amber" Icon={Star} title="Verified track record" body="Every approval and rejection is logged across campaigns. Creators see your history, you climb the public leaderboard." />
           </div>
         </div>
       </section>
@@ -351,7 +353,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Fees</p>
           <h2 className="text-4xl md:text-5xl font-bold mt-3">One number. No surprises.</h2>
-          <p className="text-slate-600 mt-4 max-w-xl mx-auto">CreviaTube takes a flat 20% of the campaign budget. That's it. No subscription, no hidden cuts on payouts, no swap spreads.</p>
+          <p className="text-slate-600 mt-4 max-w-xl mx-auto">CreviaTube takes a flat 20% of the campaign budget. No hidden cuts on payouts, no swap spreads. Creators who want featured placement can add the Founding tier below — fully optional.</p>
 
           <div className="mt-12 bg-white border border-slate-200 rounded-2xl shadow-lg p-8 text-left">
             <div className="text-sm font-semibold text-slate-500 mb-4">Example: $10,000 campaign</div>
@@ -370,6 +372,75 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="mt-5 text-xs text-slate-500 bg-slate-50 rounded-lg px-4 py-3">No fee on top of clipper payouts. The clipper receives exactly what the campaign rules say they earn.</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FOUNDING CREATOR ============ */}
+      <section id="founding" className="py-24 bg-white border-y border-slate-200">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold brand-grad-text uppercase tracking-wider">Founding Creator · Limited to 50 seats</p>
+            <h2 className="text-4xl md:text-5xl font-bold mt-3 max-w-3xl mx-auto">Get 3× more clipper applications on your next campaign.</h2>
+            <p className="text-slate-600 mt-4 max-w-2xl mx-auto">Optional upgrade for creators who want their campaigns featured at the top of the marketplace, plus advanced analytics and a 30-day money-back guarantee.</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Pricing card */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Crown className="w-5 h-5 text-amber-600" />
+                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full">FOUNDING</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold text-slate-900">$15</span>
+                <span className="text-slate-600">/ 30 days</span>
+              </div>
+              <p className="text-sm text-emerald-700 font-medium mt-2">Locked for life — even after we raise to $29/mo.</p>
+              <p className="text-xs text-slate-600 mt-1">USDC on Base. No bank, no Stripe, just your wallet.</p>
+
+              <ul className="mt-6 space-y-3 text-sm">
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>Featured placement at the top of the clipper marketplace</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>Advanced analytics: per-campaign breakouts, time-to-conversion, top clipper per goal</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>Founding Creator badge next to your name everywhere</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>24-hour priority support</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>Early access to new top-tier clippers</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>One-time campaign brief review by our team</span></li>
+              </ul>
+
+              <button
+                onClick={goToAuth}
+                className="mt-7 w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-6 py-4 rounded-xl shadow-md transition inline-flex items-center justify-center gap-2"
+              >
+                <Crown className="w-4 h-4" />
+                Claim my Founding seat
+              </button>
+            </div>
+
+            {/* Guarantee card */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-8 flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-5 h-5 text-emerald-700" />
+                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full">30-DAY GUARANTEE</span>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900">If it doesn't work, you walk.</h3>
+              <p className="text-slate-700 mt-4 text-sm leading-relaxed">
+                If your campaigns don't get measurably more applications in your first 30 days, your USDC is refunded — back to the wallet you paid from. On-chain. No support tickets, no back-and-forth.
+              </p>
+
+              <div className="mt-6 bg-white border border-emerald-200 rounded-lg p-4 text-sm">
+                <div className="font-semibold text-slate-900 mb-2">How it works</div>
+                <ol className="space-y-2 text-slate-700 list-decimal list-inside">
+                  <li>We snapshot your campaign application count when you subscribe.</li>
+                  <li>30 days later, we compare. Lift below 50%? Refund auto-triggers.</li>
+                  <li>USDC settles to your wallet within 48h. Subscription pauses.</li>
+                </ol>
+              </div>
+
+              <p className="text-xs text-slate-600 mt-auto pt-6">
+                Why the cap at 50? We personally onboard each Founder, learn what works, and ship perks that move money. After 50 seats, price moves to $29/mo for everyone else.
+              </p>
+            </div>
           </div>
         </div>
       </section>
