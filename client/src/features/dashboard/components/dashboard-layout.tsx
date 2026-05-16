@@ -64,11 +64,13 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         // guarantee mechanism. Empty 99% of the time but the one
         // place an admin processes USDC refunds.
         { name: "Refunds", href: "/admin/refunds", icon: ShieldCheck },
-        // Phase 7 Slice D — surface bot-monitoring and the
-        // ComprehensiveAdminDashboard (Control). Both pages existed
-        // but weren't linked from anywhere.
+        // Phase 7 Slice D — surface bot-monitoring (was unlinked).
         { name: "Bot monitoring", href: "/admin/bot-monitoring", icon: ActivityIcon },
-        { name: "Control", href: "/admin/control", icon: Settings },
+        // Note: /admin/control renders the SAME component as / for
+        // admins (ComprehensiveAdminDashboard), so we don't add a
+        // separate "Control" nav entry. If we ever build distinct
+        // platform-config tooling (Phase 7 Slice H), it gets its
+        // own entry then.
         // Phase 4 — manual credit for goals we can't auto-verify
         // (X posts, declined-OAuth clippers, disputes). Audited via
         // metric_events.
