@@ -1,9 +1,44 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// HttpError carries a clean user-facing message plus the raw HTTP
+// status so call sites can branch on status without parsing strings.
+// We attach status as a property rather than subclassing Error
+// because Error subclassing in transpiled TS sometimes drops the
+// prototype chain — properties on a plain Error survive every
+// minifier we've tried.
+export interface HttpError extends Error {
+  status: number;
+}
+
+// Parse the response body once and pull a human-readable message
+// out of it. Server endpoints conventionally return
+// { message: "..." } or { error: "..." }; this normalises both.
+async function extractErrorMessage(res: Response): Promise<string> {
+  // Clone so callers can still inspect the response body if they
+  // want to. Body streams can only be consumed once.
+  const cloned = res.clone();
+  try {
+    const body: any = await cloned.json();
+    if (typeof body?.message === "string" && body.message.length > 0) return body.message;
+    if (typeof body?.error === "string" && body.error.length > 0) return body.error;
+  } catch {
+    // Body isn't JSON; fall through.
+  }
+  try {
+    const text = await res.text();
+    if (text) return text;
+  } catch {
+    // Already-consumed body; ignore.
+  }
+  return res.statusText || `HTTP ${res.status}`;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const message = await extractErrorMessage(res);
+    const err = new Error(message) as HttpError;
+    err.status = res.status;
+    throw err;
   }
 }
 

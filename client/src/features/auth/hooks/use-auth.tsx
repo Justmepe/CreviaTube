@@ -5,7 +5,30 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../../../lib/queryClient";
+import { getQueryFn, apiRequest, queryClient, type HttpError } from "../../../lib/queryClient";
+
+// Map raw backend errors to user-facing strings. apiRequest already
+// throws HttpError with a clean `message` extracted from the JSON body
+// (or the response text), so we only intervene when we want to soften
+// the wording for end users. Anything we don't special-case falls
+// through to `err.message`.
+function friendlyLoginError(err: HttpError): string {
+  if (err.status === 401) return "Invalid username or password.";
+  return err.message || "Login failed. Try again.";
+}
+
+function friendlyRegisterError(err: HttpError): string {
+  const msg = err.message ?? "";
+  if (msg.includes("Username already exists")) {
+    return "This username is already taken. Please choose a different one.";
+  }
+  if (msg.includes("Email already exists")) {
+    return "An account with this email already exists. Try logging in or use a different email.";
+  }
+  // 400s carry useful backend text (validation failures); show them.
+  if (err.status === 400 && msg) return msg;
+  return msg || "Registration failed. Please try again.";
+}
 import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
@@ -33,16 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      // apiRequest throws HttpError on !ok with .message + .status
+      // already cleanly extracted from the JSON body. We just route
+      // it through friendlyLoginError() in onError.
       const res = await apiRequest("POST", "/api/login", credentials);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Login failed" }));
-        // Extract clean error message
-        let errorMessage = errorData.message || "Login failed";
-        if (res.status === 401) {
-          errorMessage = "Invalid username or password";
-        }
-        throw new Error(errorMessage);
-      }
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
@@ -67,10 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "default",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: HttpError | Error) => {
+      const message = "status" in error
+        ? friendlyLoginError(error as HttpError)
+        : error.message || "Login failed. Try again.";
       toast({
         title: "Login failed",
-        description: error.message || "Please check your username and password.",
+        description: message,
         variant: "destructive",
       });
     },
@@ -79,21 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
       const res = await apiRequest("POST", "/api/register", credentials);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Registration failed" }));
-        // Extract clean error message
-        let errorMessage = errorData.message || "Registration failed";
-        if (errorMessage.includes("Username already exists")) {
-          errorMessage = "This username is already taken. Please choose a different one.";
-        } else if (errorMessage.includes("Email already exists")) {
-          errorMessage = "An account with this email already exists. Please use a different email.";
-        } else if (res.status === 400) {
-          errorMessage = errorMessage; // Keep backend message for other validation errors
-        } else {
-          errorMessage = "Registration failed. Please try again.";
-        }
-        throw new Error(errorMessage);
-      }
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
@@ -112,10 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "default",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: HttpError | Error) => {
+      const message = "status" in error
+        ? friendlyRegisterError(error as HttpError)
+        : error.message || "Registration failed.";
       toast({
         title: "Registration failed",
-        description: error.message || "An error occurred during registration. Please try again.",
+        description: message,
         variant: "destructive",
       });
     },
