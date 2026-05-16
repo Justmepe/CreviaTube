@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -92,6 +92,11 @@ export default function SocialIntegration() {
   const form = useForm<SocialIntegrationData>({
     resolver: zodResolver(socialIntegrationSchema),
     defaultValues: {
+      // Default is overwritten by the effect below whenever the
+      // user clicks a platform card. Without that sync the form
+      // submits with whatever's set here regardless of which card
+      // they actually clicked — e.g. "connect YouTube" silently
+      // posted as instagram.
       platform: "instagram",
       username: "",
       profileUrl: "",
@@ -99,6 +104,18 @@ export default function SocialIntegration() {
       accessToken: "",
     },
   });
+
+  // Keep the form's platform field in sync with the platform card
+  // the user has clicked. The hidden FormField at the top of the
+  // form renders {...field}, but earlier code overrode value=
+  // {selectedPlatform} at the DOM level — that bypasses
+  // react-hook-form's state entirely, so form.handleSubmit kept
+  // submitting "instagram" no matter which card was selected.
+  useEffect(() => {
+    if (selectedPlatform) {
+      form.setValue("platform", selectedPlatform as SocialIntegrationData["platform"]);
+    }
+  }, [selectedPlatform, form]);
 
   const { data: socialAccounts = {} } = useQuery({
     queryKey: ["/api/users", user?.id, "social-accounts"],
@@ -363,13 +380,17 @@ export default function SocialIntegration() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  {/* Hidden platform field, driven entirely by
+                      react-hook-form. We sync it from selectedPlatform
+                      via the useEffect above; no DOM-level value
+                      override here. */}
                   <FormField
                     control={form.control}
                     name="platform"
                     render={({ field }) => (
                       <FormItem className="hidden">
                         <FormControl>
-                          <Input {...field} value={selectedPlatform} />
+                          <Input {...field} />
                         </FormControl>
                       </FormItem>
                     )}
