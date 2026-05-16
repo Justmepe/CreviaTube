@@ -63,6 +63,7 @@ import CreatorAnalyticsPage from "@/pages/creator-analytics";
 import AdminRefundsPage from "@/pages/admin-refunds";
 import AdminAuditPage from "@/pages/admin-audit";
 import AdminConfigPage from "@/pages/admin-config";
+import AdminCampaignsPage from "@/pages/admin-campaigns";
 
 function HomeRoute() {
   const { user } = useAuth();
@@ -113,6 +114,7 @@ function Router() {
       <ProtectedRoute path="/admin/refunds" component={AdminRefundsPage} />
       <ProtectedRoute path="/admin/audit" component={AdminAuditPage} />
       <ProtectedRoute path="/admin/config" component={AdminConfigPage} />
+      <ProtectedRoute path="/admin/campaigns" component={AdminCampaignsPage} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/clipper-directory" component={ClipperDirectoryPage} />
       <ProtectedRoute path="/clippers/:id" component={ClipperProfilePage} />

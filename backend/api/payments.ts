@@ -383,7 +383,10 @@ async function notifyCampaignFunded(opts: { campaignId: string; intentId: string
   }
 }
 
-async function fundCampaign(campaignId: string) {
+// Exported so the admin force-fund endpoint (test fixture) can call
+// the same fund logic the on-chain verify path uses. The function is
+// idempotent on `fundingStatus === 'funded'`.
+export async function fundCampaign(campaignId: string) {
   const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
   if (!campaign) return; // intent referenced a now-deleted campaign; the payment is still recorded
   if (campaign.fundingStatus === "funded") return; // idempotent — another verify won the race

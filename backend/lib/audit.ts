@@ -35,6 +35,7 @@ export type AdminAction =
   | "user.kyc_update"
   | "campaign.cancel"
   | "campaign.refund_marked"
+  | "campaign.force_fund"
   | "subscription.cancel"
   | "subscription.refund_marked"
   | "withdrawal.approve"

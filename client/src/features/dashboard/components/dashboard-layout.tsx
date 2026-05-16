@@ -50,13 +50,11 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       return [
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Users", href: "/admin/users", icon: Users },
-        // "Campaigns" used to point at /campaigns which is the
-        // creator-facing browse page; that's confusing for an admin
-        // who wants the platform-wide view. Pointing at /campaigns
-        // still routes through the admin-aware CampaignsRoute so the
-        // admin sees all campaigns there. (A dedicated /admin/campaigns
-        // page is a Slice for Phase 7-D follow-up if we want it.)
-        { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
+        // Phase 7 follow-up — dedicated /admin/campaigns page with
+        // force-fund + cancel actions (test fixtures for the
+        // metrics-tracking E2E flow). Previously this pointed at
+        // /campaigns which is the creator-facing browse page.
+        { name: "Campaigns", href: "/admin/campaigns", icon: TrendingUp },
         { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
         { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
         { name: "Revenue", href: "/admin/revenue", icon: Activity },

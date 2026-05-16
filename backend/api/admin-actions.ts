@@ -232,6 +232,61 @@ export function setupAdminActionsAPI(app: Express): void {
     });
   }
 
+  // ── Admin test fixture: force-fund a campaign without USDC ──────
+  // Use case: end-to-end metrics testing where you don't want to
+  // actually pay on-chain. Flips the campaign to status='active' +
+  // fundingStatus='funded' and seeds the budget_escrow row with the
+  // campaign budget. Idempotent — re-running on an already-funded
+  // campaign is a no-op. Audit row written tagged with reason so
+  // the trail makes clear this was a test-fixture path, not a real
+  // payment.
+  app.post("/api/admin/campaigns/:id/force-fund", async (req: Request, res: Response) => {
+    if (!requireAdmin(req, res)) return;
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+    if (reason.length < 5) {
+      return res.status(400).json({
+        message: "reason is required (min 5 chars) — explain why this is being force-funded",
+      });
+    }
+    try {
+      const [before] = await db
+        .select({
+          id: campaigns.id,
+          name: campaigns.name,
+          fundingStatus: campaigns.fundingStatus,
+          budget: campaigns.budget,
+          creatorId: campaigns.creatorId,
+        })
+        .from(campaigns)
+        .where(eq(campaigns.id, req.params.id))
+        .limit(1);
+      if (!before) return res.status(404).json({ message: "Campaign not found" });
+      if (before.fundingStatus === "funded") {
+        return res.status(409).json({ message: "Campaign is already funded" });
+      }
+
+      const { fundCampaign } = await import("./payments");
+      await fundCampaign(before.id);
+
+      await logAdminAction(req, {
+        action: "campaign.force_fund",
+        targetType: "campaign",
+        targetId: before.id,
+        payload: {
+          reason,
+          campaignName: before.name,
+          budget: before.budget,
+          creatorId: before.creatorId,
+        },
+      });
+
+      res.json({ ok: true, campaignId: before.id, budget: before.budget });
+    } catch (err: any) {
+      console.error("[campaign.force-fund] failed", err);
+      res.status(500).json({ message: "Force-fund failed", error: err.message });
+    }
+  });
+
   // ── Slice H: read + write platform config ───────────────────────
   app.get("/api/admin/config", async (req: Request, res: Response) => {
     if (!requireAdmin(req, res)) return;
