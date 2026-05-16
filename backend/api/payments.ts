@@ -287,6 +287,36 @@ async function notifySubscriptionPaid(opts: {
       dedupeKey: `subscription_paid:${opts.intentId}`,
       userId: u.id,
     });
+
+    // Phase 7 Slice A — admin notice. Pulls the current
+    // founding-seat stats so the email can show the running tally.
+    try {
+      const { notifyAdmin } = await import("../lib/admin-notify");
+      const { AdminSubscriptionPaid } = await import("../emails/admin-subscription-paid");
+      const { getFoundingSeatStats } = await import("./founding-seats");
+      const stats = await getFoundingSeatStats(u.id);
+      await notifyAdmin({
+        kind: "admin_subscription_paid",
+        subject: `${stats.isUserFounder ? "Founding seat claimed" : "Sub paid"} · ${opts.amountUsdc} USDC · @${u.username}`,
+        react: React.createElement(AdminSubscriptionPaid, {
+          userId: u.id,
+          username: u.username,
+          email: u.email,
+          fullName: u.fullName,
+          amountUsdc: opts.amountUsdc,
+          periodEnd: opts.periodEnd.toISOString(),
+          isFounder: stats.isUserFounder,
+          foundingSeatsTaken: stats.taken,
+          foundingSeatsTotal: stats.total,
+          txHash: opts.txHash,
+          basescanUrl: basescanTxUrl(opts.txHash),
+          appUrl: APP_URL,
+        }),
+        dedupeKey: `admin_subscription_paid:${opts.intentId}`,
+      });
+    } catch (e) {
+      console.error("admin notify subscription-paid failed:", e);
+    }
   } catch (e) {
     console.error("notifySubscriptionPaid failed:", e);
   }
@@ -316,6 +346,32 @@ async function notifyCampaignFunded(opts: { campaignId: string; intentId: string
       dedupeKey: `campaign_funded:${opts.intentId}`,
       userId: u.id,
     });
+
+    // Phase 7 Slice A — admin notice. Parallel send (don't block the
+    // creator's confirmation on the admin one).
+    try {
+      const { notifyAdmin } = await import("../lib/admin-notify");
+      const { AdminCampaignFunded } = await import("../emails/admin-campaign-funded");
+      await notifyAdmin({
+        kind: "admin_campaign_funded",
+        subject: `Campaign funded · ${parseFloat(c.budget).toFixed(2)} USDC · ${c.name}`,
+        react: React.createElement(AdminCampaignFunded, {
+          campaignId: c.id,
+          campaignName: c.name,
+          creatorUsername: u.username,
+          creatorEmail: u.email,
+          amountUsdc: parseFloat(c.budget).toFixed(2),
+          platformFeeUsdc: c.platformFee,
+          escrowUsdc: c.escrowBalance,
+          txHash: opts.txHash,
+          basescanUrl: basescanTxUrl(opts.txHash),
+          appUrl: APP_URL,
+        }),
+        dedupeKey: `admin_campaign_funded:${opts.intentId}`,
+      });
+    } catch (e) {
+      console.error("admin notify campaign-funded failed:", e);
+    }
   } catch (e) {
     console.error("notifyCampaignFunded failed:", e);
   }

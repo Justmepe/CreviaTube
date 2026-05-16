@@ -227,6 +227,38 @@ export function setupAuth(app: Express) {
         fullName: user.fullName,
       }).catch(err => console.error("Failed to issue verification email:", err));
 
+      // Phase 7 Slice A — admin notice that a new user signed up.
+      // Fire-and-forget; the admin-notify helper swallows errors so
+      // a slow SMTP can't 500 the user-facing signup.
+      void (async () => {
+        try {
+          const [{ notifyAdmin }, { AdminNewSignup }, { APP_URL }, React] =
+            await Promise.all([
+              import("./lib/admin-notify"),
+              import("./emails/admin-new-signup"),
+              import("./lib/email"),
+              import("react"),
+            ]);
+          await notifyAdmin({
+            kind: "admin_new_signup",
+            subject: `New signup · @${user.username} (${user.role})`,
+            react: React.createElement(AdminNewSignup, {
+              userId: user.id,
+              username: user.username,
+              email: user.email,
+              fullName: user.fullName,
+              role: user.role,
+              accountType: user.accountType ?? null,
+              country: detectedCountry ?? null,
+              appUrl: APP_URL,
+            }),
+            dedupeKey: `admin_new_signup:${user.id}`,
+          });
+        } catch (err) {
+          console.error("admin notify signup failed:", err);
+        }
+      })();
+
       req.login(user, (err) => {
         if (err) return next(err);
         res.status(201).json({

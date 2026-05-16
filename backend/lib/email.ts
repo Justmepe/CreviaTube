@@ -27,6 +27,9 @@ export type EmailKind =
   | "application_rejected"
   | "clipper_trusted"  // Phase 5 — first auto-approval milestone
   | "guarantee_triggered"  // Phase 6 — Founding Creator refund due
+  | "admin_new_signup"  // Phase 7 Slice A — internal admin notice
+  | "admin_campaign_funded"
+  | "admin_subscription_paid"
   | "payout_sent"
   | "payout_failed"
   | "review_received"

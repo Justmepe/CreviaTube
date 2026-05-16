@@ -11,6 +11,7 @@ import {
   TrendingUp,
   DollarSign,
   Activity,
+  Activity as ActivityIcon,
   Wallet,
   LogOut,
   User,
@@ -21,6 +22,7 @@ import {
   Crown,
   Users as UsersIcon,
   FileText,
+  ShieldCheck,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -47,11 +49,26 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
       return [
         { name: "Dashboard", href: "/", icon: BarChart3 },
         { name: "Users", href: "/admin/users", icon: Users },
+        // "Campaigns" used to point at /campaigns which is the
+        // creator-facing browse page; that's confusing for an admin
+        // who wants the platform-wide view. Pointing at /campaigns
+        // still routes through the admin-aware CampaignsRoute so the
+        // admin sees all campaigns there. (A dedicated /admin/campaigns
+        // page is a Slice for Phase 7-D follow-up if we want it.)
         { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
         { name: "Clipper Directory", href: "/clipper-directory", icon: Star },
         { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
         { name: "Revenue", href: "/admin/revenue", icon: Activity },
         { name: "Metrics", href: "/admin/metrics", icon: BarChart3 },
+        // Phase 7 Slice B — refund queue from the Founding Creator
+        // guarantee mechanism. Empty 99% of the time but the one
+        // place an admin processes USDC refunds.
+        { name: "Refunds", href: "/admin/refunds", icon: ShieldCheck },
+        // Phase 7 Slice D — surface bot-monitoring and the
+        // ComprehensiveAdminDashboard (Control). Both pages existed
+        // but weren't linked from anywhere.
+        { name: "Bot monitoring", href: "/admin/bot-monitoring", icon: ActivityIcon },
+        { name: "Control", href: "/admin/control", icon: Settings },
         // Phase 4 — manual credit for goals we can't auto-verify
         // (X posts, declined-OAuth clippers, disputes). Audited via
         // metric_events.

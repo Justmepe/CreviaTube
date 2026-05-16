@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { escrowService } from "./core/services/escrow-service";
 import { trackingService } from "./core/services/tracking-service";
 import { campaignCompletionService } from "./core/services/campaign-completion";
-import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, revenueTransactions, payoutRecords, systemHealthMetrics, clipperCampaigns, insertPlatformReviewSchema, geographicData, industryBenchmarks, platformFeatures, supportedPlatforms, supportedCountries, supportedLanguages, staticPages, platformEvents, contactInfo, careerPositions, communityGuidelines, payouts, campaignIntegrations } from "../shared/schema.js";
+import { insertCampaignSchema, insertClipperCampaignSchema, insertTrackingEventSchema, users, campaigns, trackingEvents, revenueTransactions, payoutRecords, systemHealthMetrics, clipperCampaigns, insertPlatformReviewSchema, geographicData, industryBenchmarks, platformFeatures, supportedPlatforms, supportedCountries, supportedLanguages, staticPages, platformEvents, contactInfo, careerPositions, communityGuidelines, payouts, campaignIntegrations, paymentIntents } from "../shared/schema.js";
 import { goalsForAccountType, type AccountType, type PrimaryGoal } from "../shared/goal-options";
 import { randomBytes } from "crypto";
 import { sql, eq, and, gte, count, desc, sum, inArray } from "drizzle-orm";
@@ -2321,31 +2321,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/transactions", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "admin") {
-      return res.sendStatus(403);
-    }
-
-    try {
-      // In a real implementation, this would fetch from a transactions table
-      const transactions = await db.select({
-        id: campaigns.id,
-        type: sql`'Campaign Funding'::text`,
-        user: users.username,
-        amount: campaigns.budget,
-        status: campaigns.fundingStatus,
-        date: campaigns.createdAt
-      })
-      .from(campaigns)
-      .innerJoin(users, eq(campaigns.creatorId, users.id))
-      .orderBy(sql`${campaigns.createdAt} DESC`)
-      .limit(10);
-      
-      res.json(transactions);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  // Phase 7 Slice D — orphan endpoint /api/admin/transactions removed.
+  // The /admin/revenue page uses /api/admin/revenue-transactions
+  // (now real, see Slice C); this duplicate had no UI consumer.
 
   app.get("/api/admin/system-health", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
@@ -2529,16 +2507,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // In a real implementation, this would fetch from revenue transactions table
-      const transactions = [
-        { id: "REV-001", type: "Campaign Fee", user: "forex_queen", amount: 500, date: "2024-07-30", source: "Trading Course Campaign" },
-        { id: "REV-002", type: "Subscription", user: "crypto_master", amount: 99, date: "2024-07-30", source: "Premium Plan" },
-        { id: "REV-003", type: "API Access", user: "trade_academy", amount: 299, date: "2024-07-29", source: "Enterprise API" },
-        { id: "REV-004", type: "Transaction Fee", user: "sarah_forex", amount: 25, date: "2024-07-29", source: "Payout Processing" },
-      ];
-      
+      // Phase 7 Slice C — replace mock with real recent revenue
+      // events. We surface the last 50 paid payment_intents joined
+      // to users so the admin sees who paid what and when. Type
+      // mirrors the legacy mock shape so the existing UI doesn't
+      // need to change.
+      const rows = await db
+        .select({
+          id: paymentIntents.id,
+          kind: paymentIntents.kind,
+          referenceId: paymentIntents.referenceId,
+          amountUnits: paymentIntents.expectedUsdcUnits,
+          paidAt: paymentIntents.paidAt,
+          txHash: paymentIntents.txHash,
+          username: users.username,
+        })
+        .from(paymentIntents)
+        .innerJoin(users, eq(paymentIntents.userId, users.id))
+        .where(eq(paymentIntents.status, "paid"))
+        .orderBy(desc(paymentIntents.paidAt))
+        .limit(50);
+
+      const transactions = rows.map((r) => ({
+        id: r.id,
+        type: r.kind === "subscription" ? "Subscription" : "Campaign Fee",
+        user: r.username,
+        amount: Number(r.amountUnits) / 1_000_000,
+        date: r.paidAt ? new Date(r.paidAt).toISOString().slice(0, 10) : null,
+        source:
+          r.kind === "subscription"
+            ? "Founding Creator"
+            : `Campaign ${r.referenceId ?? ""}`.trim(),
+        txHash: r.txHash,
+      }));
+
       res.json(transactions);
     } catch (error: any) {
+      console.error("revenue-transactions error:", error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -2612,76 +2617,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin payout statistics
+  // Admin payout statistics — real aggregates from the payouts table.
+  // Phase 7 Slice C — replaces the previous hardcoded mock numbers.
   app.get("/api/admin/payout-stats", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
       return res.sendStatus(403);
     }
     try {
-      const stats = {
-        totalPaidOut: 28450,
-        pendingPayouts: 3250,
-        platformBalance: 17230,
-        activeClippers: 58,
-        payoutsThisMonth: 12,
-        averagePayoutAmount: 185
-      };
-      res.json(stats);
-    } catch (error) {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const [agg] = await db
+        .select({
+          totalPaidOut: sql<string>`COALESCE(SUM(${payouts.amount}), 0)::text`,
+          payoutCount: sql<number>`COUNT(*)::int`,
+          payoutsThisMonth: sql<number>`COUNT(*) FILTER (WHERE ${payouts.createdAt} >= ${monthStart})::int`,
+          averagePayoutAmount: sql<string>`COALESCE(AVG(${payouts.amount}), 0)::text`,
+          activeClippers: sql<number>`COUNT(DISTINCT ${payouts.clipperId})::int`,
+        })
+        .from(payouts);
+
+      // pendingPayouts: campaigns funded but not yet completed —
+      // total escrow that's still locked.
+      const [pending] = await db
+        .select({
+          pending: sql<string>`COALESCE(SUM(${campaigns.escrowBalance}::numeric), 0)::text`,
+        })
+        .from(campaigns)
+        .where(eq(campaigns.status, "active"));
+
+      res.json({
+        totalPaidOut: Number(agg?.totalPaidOut ?? 0),
+        pendingPayouts: Number(pending?.pending ?? 0),
+        platformBalance: 0, // TODO Phase 7: read from treasury wallet
+        activeClippers: agg?.activeClippers ?? 0,
+        payoutsThisMonth: agg?.payoutsThisMonth ?? 0,
+        averagePayoutAmount: Math.round(Number(agg?.averagePayoutAmount ?? 0)),
+      });
+    } catch (error: any) {
+      console.error("payout-stats error:", error);
       res.status(500).json({ error: "Failed to fetch payout statistics" });
     }
   });
 
-  // Admin payout history (all clippers)
+  // Admin payout history — real rows from the payouts table joined
+  // to users + campaigns. Phase 7 Slice C replaces the mock.
   app.get("/api/admin/payout-history", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "admin") {
       return res.sendStatus(403);
     }
     try {
-      const payoutHistory = [
-        {
-          id: "po-001",
-          clipper: "clipper_mike",
-          campaign: "Forex Trading Course",
-          amount: 150,
-          method: "Bank Transfer",
-          date: "2024-07-30",
-          status: "auto_completed",
-          verification: "50 signups verified"
-        },
-        {
-          id: "po-002",
-          clipper: "social_sam", 
-          campaign: "Crypto Investment Guide",
-          amount: 230,
-          method: "PayPal",
-          date: "2024-07-29",
-          status: "auto_completed",
-          verification: "100 clicks + 15 conversions verified"
-        },
-        {
-          id: "po-003",
-          clipper: "content_creator",
-          campaign: "Trading Signals App", 
-          amount: 180,
-          method: "M-Pesa",
-          date: "2024-07-28",
-          status: "auto_completed",
-          verification: "75 app downloads verified"
-        },
-        {
-          id: "po-004",
-          clipper: "trader_clips",
-          campaign: "MetaTrader Course",
-          amount: 200,
-          method: "Crypto",
-          date: "2024-07-27",
-          status: "auto_completed",
-          verification: "25 course purchases verified"
-        }
-      ];
+      // Payouts schema only carries clipper + amount + status +
+      // recipient wallet + txHash. There's no campaign FK on the
+      // table, so we leave campaign empty for now — wiring that in
+      // requires a separate join through clipperCampaigns when we
+      // need it.
+      const rows = await db
+        .select({
+          id: payouts.id,
+          clipperUsername: users.username,
+          amount: payouts.amount,
+          createdAt: payouts.createdAt,
+          status: payouts.status,
+          txHash: payouts.txHash,
+          recipient: payouts.recipientAddress,
+        })
+        .from(payouts)
+        .innerJoin(users, eq(payouts.clipperId, users.id))
+        .orderBy(desc(payouts.createdAt))
+        .limit(50);
+
+      const payoutHistory = rows.map((r) => ({
+        id: r.id,
+        clipper: r.clipperUsername,
+        campaign: "—",
+        amount: Number(r.amount),
+        method: r.recipient ? "USDC (on-chain)" : "USDC",
+        date: r.createdAt ? new Date(r.createdAt).toISOString().slice(0, 10) : null,
+        status: r.status,
+        verification: r.txHash ? r.txHash.slice(0, 12) + "…" : "",
+      }));
+
       res.json(payoutHistory);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("payout-history error:", error);
       res.status(500).json({ error: "Failed to fetch payout history" });
     }
   });
