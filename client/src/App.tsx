@@ -61,6 +61,7 @@ import Events from "@/pages/events";
 import PremiumPage from "@/pages/premium";
 import CreatorAnalyticsPage from "@/pages/creator-analytics";
 import AdminRefundsPage from "@/pages/admin-refunds";
+import AdminAuditPage from "@/pages/admin-audit";
 
 function HomeRoute() {
   const { user } = useAuth();
@@ -109,6 +110,7 @@ function Router() {
       <ProtectedRoute path="/admin/metrics" component={AdminMetricsPage} />
       <ProtectedRoute path="/admin/credit-event" component={AdminCreditEventPage} />
       <ProtectedRoute path="/admin/refunds" component={AdminRefundsPage} />
+      <ProtectedRoute path="/admin/audit" component={AdminAuditPage} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/clipper-directory" component={ClipperDirectoryPage} />
       <ProtectedRoute path="/clippers/:id" component={ClipperProfilePage} />

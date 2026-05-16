@@ -32,6 +32,7 @@ import { setupPremiumStatusAPI } from "./api/premium-status";
 import { setupFoundingSeatsAPI } from "./api/founding-seats";
 import { setupCreatorAnalyticsAPI } from "./api/creator-analytics";
 import { setupGuaranteeAPI } from "./api/guarantee";
+import { setupAdminActionsAPI } from "./api/admin-actions";
 import { setupMmpPostbackAPI } from "./api/mmp-postback";
 import { setupServerPostbackAPI } from "./api/server-postback";
 import { setupOAuthTikTokAPI } from "./api/oauth-tiktok";
@@ -229,6 +230,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Phase 6 Slice D — 30-day guarantee endpoints: creator progress
   // widget, admin sweep, admin refund queue, admin mark-refunded.
   setupGuaranteeAPI(app);
+
+  // Phase 7 Slices E + F + G + I — admin state-change endpoints:
+  // cancel campaign, cancel subscription, withdrawal approve/reject,
+  // and read the audit log.
+  setupAdminActionsAPI(app);
   
   // User API endpoints
   const fetchUserProfile = async (userId: string) => {

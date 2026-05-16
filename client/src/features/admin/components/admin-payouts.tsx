@@ -97,6 +97,34 @@ export default function AdminPayouts() {
     },
   });
 
+  // Phase 7 Slice I — approve/reject a pending withdrawal.
+  const withdrawalActionMutation = useMutation({
+    mutationFn: async (args: { id: string; verb: "approve" | "reject"; reason?: string }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/withdrawals/${args.id}/${args.verb}`,
+        { reason: args.reason },
+      );
+      return await res.json();
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/withdrawals"] });
+      toast({
+        title: vars.verb === "approve" ? "Withdrawal approved" : "Withdrawal rejected",
+        description: vars.verb === "approve"
+          ? "Status flipped to approved. Audit log entry recorded."
+          : "Status flipped to rejected. Audit log entry recorded.",
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Action failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (statsLoading) {
     return (
       <DashboardLayout>
@@ -358,7 +386,9 @@ export default function AdminPayouts() {
                 </CardContent>
               </Card>
 
-              {/* Withdrawal History — bound to /api/admin/withdrawals. */}
+              {/* Withdrawal History — bound to /api/admin/withdrawals.
+                  Phase 7 Slice I adds approve/reject buttons for any
+                  row still in 'pending' status. */}
               <Card>
                 <CardHeader>
                   <CardTitle>Withdrawal history</CardTitle>
@@ -377,7 +407,7 @@ export default function AdminPayouts() {
                         return (
                           <div
                             key={w.id}
-                            className="flex items-center justify-between p-3 border rounded-lg"
+                            className="flex items-center justify-between p-3 border rounded-lg flex-wrap gap-2"
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -390,6 +420,42 @@ export default function AdminPayouts() {
                                 </div>
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              {w.status === "pending" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                    onClick={() => withdrawalActionMutation.mutate({ id: w.id, verb: "approve" })}
+                                    disabled={withdrawalActionMutation.isPending}
+                                    data-testid={`button-withdrawal-approve-${w.id}`}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-rose-300 text-rose-700 hover:bg-rose-50"
+                                    onClick={() => {
+                                      const reason = window.prompt(
+                                        "Reason for rejecting this withdrawal? (min 5 chars)",
+                                      );
+                                      if (!reason || reason.trim().length < 5) return;
+                                      withdrawalActionMutation.mutate({
+                                        id: w.id,
+                                        verb: "reject",
+                                        reason: reason.trim(),
+                                      });
+                                    }}
+                                    disabled={withdrawalActionMutation.isPending}
+                                    data-testid={`button-withdrawal-reject-${w.id}`}
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                             <div className="text-right">
                               <div className="text-sm text-gray-600">
                                 {date ? new Date(date).toLocaleDateString() : "—"}
@@ -397,8 +463,10 @@ export default function AdminPayouts() {
                               <Badge
                                 variant="default"
                                 className={
-                                  w.status === "completed"
+                                  w.status === "approved" || w.status === "completed"
                                     ? "bg-green-100 text-green-800"
+                                    : w.status === "rejected"
+                                    ? "bg-rose-100 text-rose-800"
                                     : "bg-yellow-100 text-yellow-800"
                                 }
                               >

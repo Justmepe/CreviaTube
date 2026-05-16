@@ -1170,6 +1170,23 @@ export const foundingSeats = pgTable("founding_seats", {
 });
 export type FoundingSeat = typeof foundingSeats.$inferSelect;
 
+// Phase 7 Slice G — admin action audit log. Append-only paper trail
+// for adversarial review (who refunded whom / who suspended whom).
+// See backend/lib/audit.ts for the write helper and migration 0025
+// for the column comments.
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actorId: varchar("actor_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id"),
+  payload: json("payload"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
+
 // --- Email infrastructure ---
 // Single-use tokens for email verification (and later: password reset etc).
 export const emailVerificationTokens = pgTable("email_verification_tokens", {

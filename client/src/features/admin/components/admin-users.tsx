@@ -87,6 +87,36 @@ export default function AdminUsers() {
     },
   });
 
+  // Phase 7 Slice F — cancel a creator's Premium subscription with
+  // optional refund. If refund > 0, status flips to refund_pending
+  // and shows up in the refunds queue for manual USDC payout.
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (args: { userId: string; reason: string; refundAmountUsdc: string }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/subscriptions/${args.userId}/cancel`,
+        { reason: args.reason, refundAmountUsdc: args.refundAmountUsdc },
+      );
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: data?.refundIsPending ? "Subscription cancelled, refund pending" : "Subscription cancelled",
+        description: data?.refundIsPending
+          ? `Process the ${data.refundAmountUsdc} USDC refund from the Refunds queue.`
+          : "No refund queued. Audit row recorded.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cancel failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -360,9 +390,9 @@ export default function AdminUsers() {
                         </DropdownMenuItem>
                         {user.isActive ? (
                           <DropdownMenuItem
-                            onClick={() => updateUserMutation.mutate({ 
-                              userId: user.id, 
-                              updates: { isActive: false } 
+                            onClick={() => updateUserMutation.mutate({
+                              userId: user.id,
+                              updates: { isActive: false }
                             })}
                           >
                             <UserX className="h-4 w-4 mr-2" />
@@ -370,13 +400,41 @@ export default function AdminUsers() {
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
-                            onClick={() => updateUserMutation.mutate({ 
-                              userId: user.id, 
-                              updates: { isActive: true } 
+                            onClick={() => updateUserMutation.mutate({
+                              userId: user.id,
+                              updates: { isActive: true }
                             })}
                           >
                             <UserCheck className="h-4 w-4 mr-2" />
                             Activate
+                          </DropdownMenuItem>
+                        )}
+                        {/* Phase 7 Slice F — cancel subscription. Only
+                            relevant for creators who have an active sub;
+                            we show it unconditionally and let the API
+                            return 404 for users without one. */}
+                        {user.role === "creator" && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const reason = window.prompt(
+                                "Reason for cancelling this subscription? (min 5 chars)",
+                              );
+                              if (!reason || reason.trim().length < 5) return;
+                              const refund = window.prompt(
+                                "USDC amount to refund (0 for no refund):",
+                                "0",
+                              );
+                              if (refund === null) return;
+                              cancelSubscriptionMutation.mutate({
+                                userId: user.id,
+                                reason: reason.trim(),
+                                refundAmountUsdc: refund.trim() || "0",
+                              });
+                            }}
+                            className="text-rose-700"
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            Cancel subscription
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

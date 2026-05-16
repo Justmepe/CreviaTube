@@ -23,6 +23,7 @@ import {
   Users as UsersIcon,
   FileText,
   ShieldCheck,
+  ScrollText,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -66,6 +67,8 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Refunds", href: "/admin/refunds", icon: ShieldCheck },
         // Phase 7 Slice D — surface bot-monitoring (was unlinked).
         { name: "Bot monitoring", href: "/admin/bot-monitoring", icon: ActivityIcon },
+        // Phase 7 Slice G — admin action audit log.
+        { name: "Audit log", href: "/admin/audit", icon: ScrollText },
         // Note: /admin/control renders the SAME component as / for
         // admins (ComprehensiveAdminDashboard), so we don't add a
         // separate "Control" nav entry. If we ever build distinct
