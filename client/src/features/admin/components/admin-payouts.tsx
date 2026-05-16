@@ -4,45 +4,72 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  ArrowUpRight,
-  ArrowDownRight,
+import {
+  DollarSign,
+  Users,
   Clock,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
   Download,
   Banknote,
   CreditCard,
   Wallet,
-  Zap
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
+
+// Phase 7 follow-up — backend endpoints return real data (Slice C);
+// this page used to ignore them and render hardcoded mocks. Now
+// bound to the actual API shape.
+
+interface PayoutStats {
+  totalPaidOut: number;
+  pendingPayouts: number;
+  platformBalance: number;
+  activeClippers: number;
+  payoutsThisMonth: number;
+  averagePayoutAmount: number;
+}
+
+interface PayoutHistoryRow {
+  id: string;
+  clipper: string;
+  campaign: string;
+  amount: number;
+  method: string;
+  date: string | null;
+  status: string;
+  verification: string;
+}
+
+interface WithdrawalRow {
+  id: string;
+  amount: string | number;
+  paymentMethod?: string;
+  method?: string;
+  status: string;
+  createdAt?: string;
+  processedAt?: string | null;
+}
 
 export default function AdminPayouts() {
   const { toast } = useToast();
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("");
 
-  const { data: payoutStats, isLoading: statsLoading } = useQuery({
+  const { data: payoutStats, isLoading: statsLoading } = useQuery<PayoutStats>({
     queryKey: ["/api/admin/payout-stats"],
   });
 
-  const { data: payoutHistory, isLoading: historyLoading } = useQuery({
+  const { data: payoutHistory, isLoading: historyLoading } = useQuery<PayoutHistoryRow[]>({
     queryKey: ["/api/admin/payout-history"],
   });
 
-  const { data: withdrawalHistory, isLoading: withdrawalsLoading } = useQuery({
+  const { data: withdrawalHistory } = useQuery<WithdrawalRow[]>({
     queryKey: ["/api/admin/withdrawals"],
   });
 
@@ -72,7 +99,7 @@ export default function AdminPayouts() {
 
   if (statsLoading) {
     return (
-      <DashboardLayout title="Payout Management">
+      <DashboardLayout>
         <div className="animate-pulse space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
@@ -84,61 +111,74 @@ export default function AdminPayouts() {
     );
   }
 
+  // Format helpers — keep zero showing as "$0" not "$NaN" when the
+  // platform has no activity yet.
+  const fmtCurrency = (n: number | undefined) =>
+    typeof n === "number" && Number.isFinite(n)
+      ? `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+      : "$0";
+  const fmtNumber = (n: number | undefined) =>
+    typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "0";
+
+  const stats = payoutStats;
+  const history = payoutHistory ?? [];
+  const withdrawals = withdrawalHistory ?? [];
+
   return (
-    <DashboardLayout title="Payout Management">
+    <DashboardLayout>
       <div className="space-y-6">
-        {/* Payout Overview Cards */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Payout management</h1>
+          <p className="text-slate-600 mt-1 text-sm">
+            Real-time view of clipper payouts and platform treasury withdrawals.
+          </p>
+        </div>
+
+        {/* Payout Overview Cards — bound to /api/admin/payout-stats. */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="bg-gradient-to-r from-green-50 to-green-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-800">Total Paid Out</CardTitle>
+              <CardTitle className="text-sm font-medium text-green-800">Total paid out</CardTitle>
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-900">$28,450</div>
-              <p className="text-xs text-green-600 flex items-center gap-1">
-                <ArrowUpRight className="h-3 w-3" />
-                +12.5% from last month
+              <div className="text-2xl font-bold text-green-900">{fmtCurrency(stats?.totalPaidOut)}</div>
+              <p className="text-xs text-green-700">
+                {fmtNumber(stats?.payoutsThisMonth)} payout{stats?.payoutsThisMonth === 1 ? "" : "s"} this month
               </p>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-800">Auto-Processing</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-800">Average payout</CardTitle>
               <Zap className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-900">$3,250</div>
-              <p className="text-xs text-blue-600">
-                3 campaigns verified, processing
-              </p>
+              <div className="text-2xl font-bold text-blue-900">{fmtCurrency(stats?.averagePayoutAmount)}</div>
+              <p className="text-xs text-blue-700">Across all completed payouts</p>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-800">Platform Balance</CardTitle>
+              <CardTitle className="text-sm font-medium text-purple-800">In escrow</CardTitle>
               <Wallet className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-900">$17,230</div>
-              <p className="text-xs text-purple-600">
-                Available for withdrawal
-              </p>
+              <div className="text-2xl font-bold text-purple-900">{fmtCurrency(stats?.pendingPayouts)}</div>
+              <p className="text-xs text-purple-700">Locked in active campaigns</p>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-r from-orange-50 to-orange-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-800">Active Clippers</CardTitle>
+              <CardTitle className="text-sm font-medium text-orange-800">Active clippers</CardTitle>
               <Users className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-900">58</div>
-              <p className="text-xs text-orange-600">
-                Earning payouts
-              </p>
+              <div className="text-2xl font-bold text-orange-900">{fmtNumber(stats?.activeClippers)}</div>
+              <p className="text-xs text-orange-700">Clippers who have been paid at least once</p>
             </CardContent>
           </Card>
         </div>
@@ -151,159 +191,103 @@ export default function AdminPayouts() {
             <TabsTrigger value="withdrawals">Platform Withdrawals</TabsTrigger>
           </TabsList>
 
-          {/* Payout History Tab */}
+          {/* Payout History Tab — bound to /api/admin/payout-history. */}
           <TabsContent value="history" className="space-y-4">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Clipper Payout History</CardTitle>
-                    <CardDescription>Complete history of all payouts made to clippers</CardDescription>
+                    <CardTitle>Clipper payout history</CardTitle>
+                    <CardDescription>Last 50 payouts from the platform treasury</CardDescription>
                   </div>
-                  <Button variant="outline" className="flex items-center gap-2">
+                  <Button variant="outline" className="flex items-center gap-2" disabled>
                     <Download className="h-4 w-4" />
                     Export
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Clipper</TableHead>
-                      <TableHead>Campaign</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[
-                      { clipper: "@maya.clips",   campaign: "Fitness app launch",    amount: 450, method: "USDC on Base", date: "2026-05-06", verification: "142,330 verified views" },
-                      { clipper: "@vish_xo",      campaign: "Crypto wallet promo",   amount: 120, method: "USDC on Base", date: "2026-05-05", verification: "2,400 clicks verified" },
-                      { clipper: "@dani.shorts",  campaign: "Beauty drop",           amount: 310, method: "USDC on Base", date: "2026-05-04", verification: "8,000,000 views verified" },
-                      { clipper: "@indiegamer",   campaign: "Wishlist push",         amount:  89, method: "USDC on Base", date: "2026-05-03", verification: "1,250 wishlist signups" },
-                      { clipper: "@boltcaster",   campaign: "$ZAP mint",             amount: 240, method: "USDC on Base", date: "2026-05-02", verification: "2,400 clicks verified" },
-                      { clipper: "@reels.ria",    campaign: "Coach course",          amount:  75, method: "USDC on Base", date: "2026-05-01", verification: "30 paid signups verified" },
-                    ].map((payout, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{payout.clipper}</TableCell>
-                        <TableCell>{payout.campaign}</TableCell>
-                        <TableCell>${payout.amount}</TableCell>
-                        <TableCell>{payout.method}</TableCell>
-                        <TableCell>{payout.date}</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant="default" className="bg-green-100 text-green-800">
-                              <Zap className="h-3 w-3 mr-1" />
-                              Auto-Paid
-                            </Badge>
-                            <div className="text-xs text-gray-600">{payout.verification}</div>
-                          </div>
-                        </TableCell>
+                {historyLoading ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground">
+                    Loading payouts…
+                  </div>
+                ) : history.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <Zap className="h-10 w-10 mx-auto mb-3 text-slate-400" />
+                    <p className="text-sm text-slate-700 font-medium">No payouts yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Once campaign goals are verified and clippers get paid in USDC, they'll appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Clipper</TableHead>
+                        <TableHead>Campaign</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {history.map((payout) => (
+                        <TableRow key={payout.id}>
+                          <TableCell className="font-medium">@{payout.clipper}</TableCell>
+                          <TableCell>{payout.campaign}</TableCell>
+                          <TableCell>{fmtCurrency(payout.amount)}</TableCell>
+                          <TableCell>{payout.method}</TableCell>
+                          <TableCell>{payout.date ?? "—"}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Badge variant="default" className="bg-green-100 text-green-800">
+                                <Zap className="h-3 w-3 mr-1" />
+                                {payout.status}
+                              </Badge>
+                              {payout.verification && (
+                                <div className="text-xs text-gray-600 font-mono">{payout.verification}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Automatic Payouts Tab */}
+          {/* Automatic Processing Tab — explanatory only.
+              We don't currently expose a "processing queue" endpoint
+              because payouts auto-fire on goal completion (Phase 4)
+              rather than queueing for human review. If we ever add
+              a queueing layer, the table goes here. */}
           <TabsContent value="pending" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Automatic Payout Processing</CardTitle>
-                <CardDescription>System automatically pays clippers when campaign objectives are verified</CardDescription>
+                <CardTitle>Automatic payout processing</CardTitle>
+                <CardDescription>
+                  System pays clippers in USDC the moment campaign goals verify.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-3 mb-2">
                     <Zap className="h-5 w-5 text-blue-600" />
-                    <h4 className="font-semibold text-blue-900">How Automatic Payouts Work</h4>
+                    <h4 className="font-semibold text-blue-900">How payouts work</h4>
                   </div>
                   <div className="text-sm text-blue-700 space-y-1">
-                    <p>• System verifies campaign objectives are met (clicks, signups, conversions)</p>
-                    <p>• Automated payment processing triggers within 24 hours</p>
-                    <p>• Funds transfer from campaign escrow (80%) directly to clipper</p>
-                    <p>• No manual approval required - fully automated verification</p>
+                    <p>• A clipper applies, posts the URL, and the goal-verification stack runs against it</p>
+                    <p>• When the campaign-completion check passes, the payout signer sends USDC from the treasury wallet directly to the clipper</p>
+                    <p>• 80% of the campaign budget is reserved for clipper payouts; the platform fee (20%) settles on funding</p>
+                    <p>• No manual approval, no human in the loop unless the guarantee triggers a refund</p>
                   </div>
                 </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Clipper</TableHead>
-                      <TableHead>Campaign</TableHead>
-                      <TableHead>Objective Status</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Payment Status</TableHead>
-                      <TableHead>Processing</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[
-                      { 
-                        clipper: "new_clipper", 
-                        campaign: "AI Trading Bot", 
-                        objective: "50 signups achieved", 
-                        amount: 95, 
-                        status: "processing",
-                        timeLeft: "18 hours" 
-                      },
-                      { 
-                        clipper: "growth_hacker", 
-                        campaign: "Social Growth Course", 
-                        objective: "100 clicks verified", 
-                        amount: 140, 
-                        status: "processing",
-                        timeLeft: "6 hours" 
-                      },
-                      { 
-                        clipper: "tiktok_star", 
-                        campaign: "Influencer Marketing", 
-                        objective: "25 conversions verified", 
-                        amount: 75, 
-                        status: "ready",
-                        timeLeft: "Processing now" 
-                      },
-                    ].map((payout, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{payout.clipper}</TableCell>
-                        <TableCell>{payout.campaign}</TableCell>
-                        <TableCell>
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {payout.objective}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>${payout.amount}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={payout.status === "ready" ? "default" : "secondary"}
-                            className={payout.status === "ready" ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}
-                          >
-                            <Clock className="h-3 w-3 mr-1" />
-                            {payout.status === "ready" ? "Ready" : "Processing"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {payout.status === "ready" ? (
-                              <div className="flex items-center gap-1 text-blue-600">
-                                <Zap className="h-3 w-3 animate-pulse" />
-                                <span className="text-sm font-medium">Processing now</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-600">{payout.timeLeft}</span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Live payout-in-flight tracking is a planned admin tool — for now, see the Payout History tab for what's already shipped.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -323,9 +307,11 @@ export default function AdminPayouts() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="p-4 bg-purple-50 rounded-lg">
-                      <div className="text-sm text-purple-700 font-medium">Available Balance</div>
-                      <div className="text-2xl font-bold text-purple-900">$17,230.00</div>
-                      <div className="text-xs text-purple-600">Platform revenue available for withdrawal</div>
+                      <div className="text-sm text-purple-700 font-medium">Available balance</div>
+                      <div className="text-2xl font-bold text-purple-900">{fmtCurrency(stats?.platformBalance)}</div>
+                      <div className="text-xs text-purple-600">
+                        Platform fee revenue, less withdrawals. Treasury-wallet integration is pending — see Phase 7 Slice H.
+                      </div>
                     </div>
                     
                     <div className="space-y-3">
@@ -372,39 +358,58 @@ export default function AdminPayouts() {
                 </CardContent>
               </Card>
 
-              {/* Withdrawal History */}
+              {/* Withdrawal History — bound to /api/admin/withdrawals. */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Withdrawal History</CardTitle>
-                  <CardDescription>Previous platform fund withdrawals</CardDescription>
+                  <CardTitle>Withdrawal history</CardTitle>
+                  <CardDescription>Previous platform-treasury withdrawals</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { amount: 5000, method: "Bank Transfer", date: "2024-07-25", status: "completed" },
-                      { amount: 3500, method: "PayPal", date: "2024-07-18", status: "completed" },
-                      { amount: 2800, method: "Stripe", date: "2024-07-10", status: "completed" },
-                      { amount: 4200, method: "Bank Transfer", date: "2024-07-03", status: "completed" },
-                    ].map((withdrawal, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <CreditCard className="h-5 w-5 text-purple-600" />
+                  {withdrawals.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                      No platform withdrawals yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {withdrawals.map((w) => {
+                        const amount = typeof w.amount === "string" ? parseFloat(w.amount) : w.amount;
+                        const date = w.processedAt ?? w.createdAt;
+                        return (
+                          <div
+                            key={w.id}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <CreditCard className="h-5 w-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <div className="font-medium">{fmtCurrency(amount)}</div>
+                                <div className="text-sm text-gray-500">
+                                  {w.paymentMethod ?? w.method ?? "—"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-600">
+                                {date ? new Date(date).toLocaleDateString() : "—"}
+                              </div>
+                              <Badge
+                                variant="default"
+                                className={
+                                  w.status === "completed"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }
+                              >
+                                {w.status}
+                              </Badge>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">${withdrawal.amount.toLocaleString()}</div>
-                            <div className="text-sm text-gray-500">{withdrawal.method}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-600">{withdrawal.date}</div>
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            {withdrawal.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
