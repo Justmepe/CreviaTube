@@ -33,6 +33,7 @@ export type AdminAction =
   | "user.deactivate"
   | "user.delete"
   | "user.kyc_update"
+  | "user.test_mode_toggle"
   | "campaign.cancel"
   | "campaign.refund_marked"
   | "campaign.force_fund"

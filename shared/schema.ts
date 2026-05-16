@@ -79,6 +79,11 @@ export const users = pgTable("users", {
   mpesaNumber: text("mpesa_number"),
   isActive: boolean("is_active").notNull().default(true),
   emailVerified: boolean("email_verified").notNull().default(false),
+  // Phase 7 follow-up — when true, campaigns created by this user
+  // are auto-force-funded on creation. Scoped per-account so an
+  // admin can enable it for specific test users without touching
+  // role gates or affecting other admins. See migration 0027.
+  testMode: boolean("test_mode").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 

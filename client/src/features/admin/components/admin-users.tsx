@@ -21,7 +21,8 @@ import {
   UserCheck,
   UserX,
   Eye,
-  Edit
+  Edit,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,6 +41,7 @@ interface User {
   role: "creator" | "clipper" | "admin";
   accountType: string;
   isActive: boolean;
+  testMode?: boolean;
   createdAt: string;
   lastLoginAt?: string;
   _count?: {
@@ -84,6 +86,31 @@ export default function AdminUsers() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  // Per-user test_mode toggle. Flipping ON makes every campaign that
+  // user creates auto-force-fund itself on insertion — lets the
+  // platform owner walk the full creator funnel without USDC for E2E
+  // testing. Scoped per-account; no role gates touched.
+  const testModeMutation = useMutation({
+    mutationFn: async (args: { userId: string; enabled: boolean }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${args.userId}/test-mode`, {
+        enabled: args.enabled,
+      });
+      return await res.json();
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: vars.enabled ? "Test mode ON" : "Test mode OFF",
+        description: vars.enabled
+          ? "Future campaigns from this user will auto-fund on creation."
+          : "Future campaigns will require funding through the normal path.",
+      });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Toggle failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -328,6 +355,16 @@ export default function AdminUsers() {
                           {!user.isActive && (
                             <Badge variant="destructive">Inactive</Badge>
                           )}
+                          {user.testMode && (
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-50 text-amber-900 border-amber-300"
+                              title="Campaigns created by this user auto-fund without USDC"
+                            >
+                              <Zap className="h-3 w-3 mr-1" />
+                              test mode
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           @{user.username} • {user.email}
@@ -407,6 +444,23 @@ export default function AdminUsers() {
                           >
                             <UserCheck className="h-4 w-4 mr-2" />
                             Activate
+                          </DropdownMenuItem>
+                        )}
+                        {/* Per-user test_mode toggle for creators. Lets
+                            the platform owner enable auto-fund on a
+                            specific account for E2E testing without
+                            relaxing role gates globally. */}
+                        {user.role === "creator" && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              testModeMutation.mutate({
+                                userId: user.id,
+                                enabled: !user.testMode,
+                              })
+                            }
+                          >
+                            <Zap className="h-4 w-4 mr-2" />
+                            {user.testMode ? "Disable test mode" : "Enable test mode"}
                           </DropdownMenuItem>
                         )}
                         {/* Phase 7 Slice F — cancel subscription. Only

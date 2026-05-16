@@ -232,6 +232,48 @@ export function setupAdminActionsAPI(app: Express): void {
     });
   }
 
+  // ── Admin test fixture: toggle a user's test_mode flag ─────────
+  // When ON, campaigns created by this user auto-force-fund on
+  // insertion (see backend/routes.ts POST /api/campaigns). Scoped
+  // per-user so we don't have to relax any role gates or grant
+  // admin powers to a creator account.
+  app.post("/api/admin/users/:userId/test-mode", async (req: Request, res: Response) => {
+    if (!requireAdmin(req, res)) return;
+    const enabled = req.body?.enabled === true;
+    try {
+      const [before] = await db
+        .select({ id: users.id, username: users.username, testMode: users.testMode })
+        .from(users)
+        .where(eq(users.id, req.params.userId))
+        .limit(1);
+      if (!before) return res.status(404).json({ message: "User not found" });
+      if (before.testMode === enabled) {
+        return res.json({ ok: true, userId: before.id, testMode: enabled, noop: true });
+      }
+
+      await db
+        .update(users)
+        .set({ testMode: enabled, updatedAt: new Date() })
+        .where(eq(users.id, before.id));
+
+      await logAdminAction(req, {
+        action: "user.test_mode_toggle",
+        targetType: "user",
+        targetId: before.id,
+        payload: {
+          username: before.username,
+          previous: before.testMode,
+          next: enabled,
+        },
+      });
+
+      res.json({ ok: true, userId: before.id, testMode: enabled });
+    } catch (err: any) {
+      console.error("[test-mode] toggle failed", err);
+      res.status(500).json({ message: "Toggle failed", error: err.message });
+    }
+  });
+
   // ── Admin test fixture: force-fund a campaign without USDC ──────
   // Use case: end-to-end metrics testing where you don't want to
   // actually pay on-chain. Flips the campaign to status='active' +

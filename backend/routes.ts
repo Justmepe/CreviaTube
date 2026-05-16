@@ -630,9 +630,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         budget: campaign.budget,
         primaryGoal: (campaign.campaignGoals as any)?.primaryGoal ?? null,
       }, req.user.id);
+
+      // Phase 7 follow-up — per-user test-mode auto-fund hook.
+      // If this creator has test_mode=true, force-fund the campaign
+      // immediately so they can walk the rest of the flow without
+      // bouncing into the admin force-fund tool. Doesn't grant any
+      // extra powers to the user; just bypasses the payment step
+      // for accounts explicitly flagged for E2E testing. Audit row
+      // records this clearly so we can spot it later.
+      let autoFunded = false;
+      if ((req.user as any).testMode === true) {
+        try {
+          const { fundCampaign } = await import("./api/payments");
+          await fundCampaign(campaign.id);
+          const { logAdminAction } = await import("./lib/audit");
+          await logAdminAction(req, {
+            action: "campaign.force_fund",
+            targetType: "campaign",
+            targetId: campaign.id,
+            payload: {
+              reason: "auto: creator test_mode",
+              campaignName: campaign.name,
+              budget: campaign.budget,
+              creatorId: campaign.creatorId,
+            },
+          });
+          autoFunded = true;
+        } catch (err) {
+          // Non-fatal — campaign is still created in 'pending'.
+          // The admin can still manually force-fund it.
+          console.error("[campaign.create] test_mode auto-fund failed", err);
+        }
+      }
+
       res.status(201).json({
         ...campaign,
-        message: "Campaign created successfully. Please fund it to activate."
+        autoFunded,
+        message: autoFunded
+          ? "Campaign created and auto-funded (test_mode)."
+          : "Campaign created successfully. Please fund it to activate.",
       });
     } catch (error) {
       res.status(400).json({ message: "Invalid campaign data", error });
