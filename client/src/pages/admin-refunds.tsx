@@ -113,7 +113,9 @@ export default function AdminRefundsPage() {
   const pending = data?.pending ?? [];
 
   return (
-    <DashboardLayout title="Refunds">
+    // Title intentionally omitted — the inline h1 "Guarantee refund
+    // queue" with the shield icon is the richer header.
+    <DashboardLayout>
       <div className="max-w-6xl mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>

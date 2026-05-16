@@ -73,7 +73,10 @@ export default function AdminMetricsPage() {
   });
 
   return (
-    <DashboardLayout title="Platform metrics">
+    // Title intentionally omitted — the inline header below has the
+    // "Admin · Live from metric_events" badge + subtitle; passing a
+    // DashboardLayout title would duplicate "Platform metrics".
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-end justify-between flex-wrap gap-3">
