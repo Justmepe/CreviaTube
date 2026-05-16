@@ -3,6 +3,9 @@
 // matches the supplied plaintext (scrypt with the format auth.ts
 // expects). Not shipped — call once after seeding and delete.
 
+// Auto-load .env so DATABASE_URL is set when backend/db.ts runs.
+import "dotenv/config";
+
 import { promisify } from "util";
 import { scrypt, timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";

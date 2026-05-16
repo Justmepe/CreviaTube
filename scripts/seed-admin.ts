@@ -2,6 +2,10 @@
 //
 // Run via:   npx tsx scripts/seed-admin.ts
 //
+// Auto-loads .env from the project root, so no --env-file flag is
+// needed. (The runtime app loads env via PM2 / cross-env in dev, but
+// one-off scripts can't rely on that, so we pull dotenv ourselves.)
+//
 // Reads credentials from env vars (preferred for prod) or CLI flags:
 //
 //   ADMIN_USERNAME=peter \
@@ -26,6 +30,12 @@
 // Bypasses insertUserSchema deliberately — that schema (intentionally)
 // omits the `role` column to lock down the public signup endpoint, so
 // the seed has to talk to Drizzle directly.
+
+// Load .env before importing backend/db so DATABASE_URL is set when
+// db.ts initialises its pool. Without this the script crashes with
+// "DATABASE_URL is not set — cannot seed admin." on any host that
+// doesn't auto-export the env (i.e. plain SSH shell on prod).
+import "dotenv/config";
 
 import { eq } from "drizzle-orm";
 import { randomBytes, scrypt } from "crypto";
