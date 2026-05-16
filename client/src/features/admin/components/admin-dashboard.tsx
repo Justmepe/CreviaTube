@@ -116,14 +116,16 @@ export default function AdminDashboard() {
     );
   }
 
-  const navigation = [
-    { name: "Overview", href: "/admin/control", icon: BarChart3, current: true },
-    { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Campaigns", href: "/campaigns", icon: TrendingUp },
-    { name: "Enterprise", href: "/admin/enterprise", icon: Building, badge: enterpriseRequests?.filter(req => req.status === 'pending').length || 0 },
-    { name: "Payouts", href: "/admin/payouts", icon: DollarSign },
-    { name: "Analytics", href: "/admin/analytics", icon: Shield },
-  ];
+  // Phase 7 follow-up — drop the custom navigation override.
+  // The previous block hardcoded a stale "Enterprise" link (removed
+  // in the Phase 1 strip) plus duplicated entries that conflict with
+  // the canonical admin sidebar at dashboard-layout.tsx. Letting
+  // DashboardLayout fall back to its default admin nav keeps every
+  // admin page consistent (Dashboard / Users / Campaigns / Clipper
+  // Directory / Payouts / Revenue / Metrics / Refunds / Bot monitoring
+  // / Control / Manual credit). Also drops the `title` prop —
+  // the inline gradient header below is the richer version and a
+  // layout title would duplicate it.
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative">
@@ -131,8 +133,8 @@ export default function AdminDashboard() {
       <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0.6))] opacity-30"></div>
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl"></div>
-      
-      <DashboardLayout title="CreviaTube Admin Control Center" navigation={navigation}>
+
+      <DashboardLayout>
         <div className="relative z-10 space-y-8">
           {/* Modern Page Header */}
           <div className="flex items-center justify-between">

@@ -20,6 +20,7 @@ import {
   MapPin
 } from "lucide-react";
 import { getQueryFn } from "@/lib/queryClient";
+import { DashboardLayout } from "@/components/dashboard-layout";
 
 interface BotDetectionEvent {
   id: string;
@@ -106,26 +107,29 @@ export default function BotMonitoring() {
 
   if (statsLoading || eventsLoading) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="flex items-center space-x-2">
-          <Shield className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Bot Detection Monitoring</h1>
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-2">
+            <Shield className="h-6 w-6" />
+            <h1 className="text-2xl font-bold">Bot Detection Monitoring</h1>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-16 bg-muted rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-16 bg-muted rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <DashboardLayout>
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -331,5 +335,6 @@ export default function BotMonitoring() {
         </CardContent>
       </Card>
     </div>
+    </DashboardLayout>
   );
 }
