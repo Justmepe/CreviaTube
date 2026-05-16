@@ -737,10 +737,28 @@ export const websiteMetricsRelations = relations(websiteMetrics, ({ one }) => ({
 }));
 
 // Insert schemas
+// SECURITY — omit columns a public signup must never set itself.
+// `role`, `status`, `isActive`, `emailVerified`, `kycStatus`,
+// `kycProvider`, and `walletAddress` are all privileged state; the
+// previous schema let any client send them, which combined with the
+// spread-from-body pattern in /api/register meant anyone could mint
+// an admin account. The seed script (scripts/seed-admin.ts)
+// bypasses this schema and inserts directly via Drizzle when
+// minting platform admins. `countryVerifiedAt` stays in the schema
+// because the signup handler legitimately sets it server-side
+// (phone-country match); the register endpoint destructures req.body
+// explicitly so the client still can't sneak it in.
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  role: true,
+  status: true,
+  isActive: true,
+  emailVerified: true,
+  kycStatus: true,
+  kycProvider: true,
+  walletAddress: true,
 });
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({

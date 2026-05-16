@@ -29,6 +29,25 @@ declare global {
 
 const scryptAsync = promisify(scrypt);
 
+// Sanitize a user row for the wire. Strips secrets (password hash,
+// TOTP secret, email OTP hash) that have no business reaching the
+// client — even our own client. The shared User type still includes
+// these columns because the server uses them; the client should
+// never see them. Used by /api/register and /api/login responses.
+// (/api/user already strips password via fetchUserProfile in
+// routes.ts; this is the matching helper for the auth responses.)
+function toClientUser(user: any) {
+  if (!user) return user;
+  const {
+    password,
+    totpSecret,
+    emailOtpHash,
+    emailOtpExpiresAt,
+    ...safe
+  } = user;
+  return safe;
+}
+
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -96,15 +115,61 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { enterpriseRequestData, campaignerStage, countryIso: claimedCountry, ...userData } = req.body;
+      // SECURITY — destructure ONLY the fields a public signup is
+      // allowed to set. The previous version spread `...userData`
+      // from req.body, which let anyone set role='admin' /
+      // status='active' / emailVerified=true / kycStatus='approved'
+      // / walletAddress on signup. Every privileged column is now
+      // explicitly excluded; new admins can only be minted via the
+      // seed script (scripts/seed-admin.ts) or via an existing
+      // admin's UPDATE.
+      const {
+        username,
+        email,
+        password,
+        fullName,
+        phoneNumber,
+        mpesaNumber,
+        accountType,
+        // Allowed but validated/sanitised below
+        campaignerStage,
+        countryIso: claimedCountry,
+      } = req.body as Record<string, unknown>;
 
-      const existingUser = await storage.getUserByUsername(userData.username);
+      // Reject role-only signups that don't supply the required
+      // fields. The Zod schema would do this too but we keep the
+      // hand-rolled check here so the error is friendly.
+      if (
+        typeof username !== "string" ||
+        typeof email !== "string" ||
+        typeof password !== "string" ||
+        typeof fullName !== "string"
+      ) {
+        return res.status(400).json({ message: "username, email, password, and fullName are required" });
+      }
+
+      // accountType is a soft enum; pass through only known values.
+      const ALLOWED_ACCOUNT_TYPES = new Set([
+        "creator",
+        "influencer",
+        "founder",
+        "business",
+        "brand",
+        "individual",
+        "agency",
+      ]);
+      const safeAccountType =
+        typeof accountType === "string" && ALLOWED_ACCOUNT_TYPES.has(accountType)
+          ? accountType
+          : null;
+
+      const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
       // Check if email already exists
-      const existingEmailUser = await storage.getUserByEmail(userData.email);
+      const existingEmailUser = await storage.getUserByEmail(email);
       if (existingEmailUser) {
         return res.status(400).json({ message: "Email already exists" });
       }
@@ -116,21 +181,29 @@ export function setupAuth(app: Express) {
 
       // Auto-detect country from request headers (CF / proxy). Caller may
       // override via payload but we prefer CF header when present.
-      const detectedCountry = detectCountryIso(req, claimedCountry);
+      const detectedCountry = detectCountryIso(req, claimedCountry as string | undefined);
 
       // Tier-2 region verification: if the user supplied a phone number AND
       // its country dialing code matches our IP-detected country, stamp
       // country_verified_at on signup. Soft signal — proves consistency,
       // not ownership. Real ownership = SMS OTP, deferred to v1.5.
-      const phone = (userData as any).phoneNumber;
+      const phone = typeof phoneNumber === "string" ? phoneNumber : null;
       const countryVerifiedNow =
         detectedCountry && phone && phoneMatchesCountry(phone, detectedCountry)
           ? new Date()
           : null;
 
       const user = await storage.createUser({
-        ...userData,
-        password: await hashPassword(userData.password),
+        username,
+        email,
+        password: await hashPassword(password),
+        fullName,
+        phoneNumber: phone,
+        mpesaNumber: typeof mpesaNumber === "string" ? mpesaNumber : null,
+        accountType: safeAccountType as any,
+        // role intentionally NOT set — defaults to 'clipper' at the DB layer.
+        // status / isActive / emailVerified / kycStatus / walletAddress
+        // intentionally NOT settable from a public signup.
         campaignerStage: stage,
         countryIso: detectedCountry,
         countryVerifiedAt: countryVerifiedNow,
@@ -158,7 +231,7 @@ export function setupAuth(app: Express) {
         if (err) return next(err);
         res.status(201).json({
           success: true,
-          user: user,
+          user: toClientUser(user),
           message: "User registered successfully"
         });
       });
@@ -181,9 +254,9 @@ export function setupAuth(app: Express) {
       
       req.login(user, (err) => {
         if (err) return next(err);
-        res.json({ 
-          success: true, 
-          user: user,
+        res.json({
+          success: true,
+          user: toClientUser(user),
           message: "Login successful"
         });
       });
