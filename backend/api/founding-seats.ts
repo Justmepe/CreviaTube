@@ -22,10 +22,11 @@ import type { Express, Request, Response } from "express";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { db, pool } from "../db";
 import { foundingSeats } from "../../shared/schema";
-
-const FOUNDING_PRICE_USDC = 15;
-const POST_FOUNDING_PRICE_USDC = 29;
-const FOUNDING_SEATS_TOTAL = 50;
+import {
+  getFoundingPriceUsdc,
+  getFoundingSeatsTotal,
+  getPostFoundingPriceUsdc,
+} from "../lib/platform-config";
 
 export async function getFoundingSeatStats(userId?: string): Promise<{
   taken: number;
@@ -36,6 +37,12 @@ export async function getFoundingSeatStats(userId?: string): Promise<{
   // One aggregate query — count claimed rows + check viewer's seat
   // in the same round-trip. The viewer check is cheap; the count
   // hits a 50-row table.
+  const [seatTotalConfig, foundingPriceConfig, postFoundingPriceConfig] = await Promise.all([
+    getFoundingSeatsTotal(),
+    getFoundingPriceUsdc(),
+    getPostFoundingPriceUsdc(),
+  ]);
+
   const [{ taken }] = await db
     .select({ taken: count() })
     .from(foundingSeats)
@@ -51,11 +58,11 @@ export async function getFoundingSeatStats(userId?: string): Promise<{
     isUserFounder = !!row;
   }
 
-  const seatsLeft = FOUNDING_SEATS_TOTAL - Number(taken);
+  const seatsLeft = seatTotalConfig - Number(taken);
   return {
     taken: Number(taken),
-    total: FOUNDING_SEATS_TOTAL,
-    currentPrice: seatsLeft > 0 ? FOUNDING_PRICE_USDC : POST_FOUNDING_PRICE_USDC,
+    total: seatTotalConfig,
+    currentPrice: parseFloat(seatsLeft > 0 ? foundingPriceConfig : postFoundingPriceConfig),
     isUserFounder,
   };
 }
@@ -141,7 +148,7 @@ export function setupFoundingSeatsAPI(app: Express): void {
       if (!claimed) {
         return res.status(409).json({
           message: "All Founding seats are taken.",
-          fallbackPrice: POST_FOUNDING_PRICE_USDC,
+          fallbackPrice: parseFloat(await getPostFoundingPriceUsdc()),
         });
       }
       const stats = await getFoundingSeatStats(targetUserId);

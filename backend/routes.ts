@@ -2237,6 +2237,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         kycUpdatedAt: new Date(),
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
+
+      const { logAdminAction } = await import("./lib/audit");
+      await logAdminAction(req, {
+        action: "user.kyc_update",
+        targetType: "user",
+        targetId: userId,
+        payload: { status: status ?? null, provider: provider ?? "manual", reference: reference ?? null },
+      });
+
       res.json({ success: true, userId, status: status ?? null });
     } catch (error: any) {
       res.status(500).json({ message: "Failed to update KYC status", error: error.message });
@@ -2264,26 +2273,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let updatedStatus = user.status;
+      let auditAction: "user.suspend" | "user.activate" | "user.deactivate" | null = null;
 
       if (action === "deactivate" || status === "inactive") {
         updatedStatus = "inactive";
+        auditAction = "user.deactivate";
       } else if (action === "activate" || status === "active") {
         updatedStatus = "active";
+        auditAction = "user.activate";
       } else if (action === "suspend" || status === "suspended") {
         updatedStatus = "suspended";
+        auditAction = "user.suspend";
       }
 
       // Update user status
       const updatedUser = await storage.updateUserStatus(userId, updatedStatus);
-      
+
       if (!updatedUser) {
         return res.status(404).json({ error: "Failed to update user" });
       }
 
-      res.json({ 
-        success: true, 
+      // Phase 7 Slice G — audit trail of status changes.
+      if (auditAction) {
+        const { logAdminAction } = await import("./lib/audit");
+        await logAdminAction(req, {
+          action: auditAction,
+          targetType: "user",
+          targetId: userId,
+          payload: {
+            previousStatus: user.status,
+            newStatus: updatedStatus,
+            username: user.username,
+          },
+        });
+      }
+
+      res.json({
+        success: true,
         message: `User ${action || 'updated'} successfully`,
-        user: updatedUser 
+        user: updatedUser
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2297,16 +2325,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const { userId } = req.params;
-      
+
       if (!userId) {
         return res.status(400).json({ error: "User ID is required" });
       }
 
+      // Snapshot the user identity BEFORE deletion so the audit row
+      // has something meaningful (the user reference will be NULL on
+      // the deleted row's FK after this completes).
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
       const success = await storage.deleteUser(userId);
-      
+
       if (!success) {
         return res.status(404).json({ error: "User not found or could not be deleted" });
       }
+
+      const { logAdminAction } = await import("./lib/audit");
+      await logAdminAction(req, {
+        action: "user.delete",
+        targetType: "user",
+        targetId: userId,
+        payload: {
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      });
 
       res.json({ success: true, message: "User deleted successfully" });
     } catch (error: any) {

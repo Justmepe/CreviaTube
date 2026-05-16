@@ -212,8 +212,9 @@ export function setupAdminCreditAPI(app: Express): void {
       // the check via the existing manual endpoints if needed.
     }
 
-    // Audit trail — emit() writes both to metric_events and structured
-    // stdout. Searchable for ops review and incident response.
+    // Audit trail — two writes:
+    //   1. emit() to metric_events (product analytics, rolling retention)
+    //   2. logAdminAction() to admin_audit_log (adversarial trail, indefinite)
     emit(
       "admin_event_credited",
       {
@@ -230,6 +231,22 @@ export function setupAdminCreditAPI(app: Express): void {
       },
       admin.id,
     );
+    const { logAdminAction } = await import("../lib/audit");
+    await logAdminAction(req, {
+      action: "credit.manual_post",
+      targetType: "clipper_campaign",
+      targetId: row.id,
+      payload: {
+        clipperId: row.clipperId,
+        campaignId: row.campaignId,
+        campaignName: row.campaignName,
+        eventType: parsed.eventType,
+        eventValue: parsed.eventValue,
+        reason: parsed.reason,
+        evidenceUrl: parsed.evidenceUrl,
+        triggeredCompletion,
+      },
+    });
 
     return res.status(201).json({
       ok: true,

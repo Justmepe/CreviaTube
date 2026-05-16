@@ -1,6 +1,7 @@
 import { db } from "../../db";
 import { budgetEscrow, autoPayments, campaigns, trackingEvents, users, payouts, clipperCampaigns } from "../../../shared/schema";
 import { eq, and, sum } from "drizzle-orm";
+import { getPlatformFeeRate } from "../../lib/platform-config";
 interface PesaPalConfig {
   consumerKey: string;
   consumerSecret: string;
@@ -52,8 +53,9 @@ export class EscrowService {
       const usdToKesRate = 130;
       const totalAmountKES = totalAmountUSD * usdToKesRate;
       
-      const platformFeeAmountUSD = totalAmountUSD * 0.20; // 20% platform fee
-      const escrowAmountUSD = totalAmountUSD * 0.80; // 80% for clippers
+      const feeRate = await getPlatformFeeRate();
+      const platformFeeAmountUSD = totalAmountUSD * feeRate; // configurable platform fee (default 20%)
+      const escrowAmountUSD = totalAmountUSD * (1 - feeRate);
 
       // Process payment through PesaPal (sandbox mode for development)
       const paymentResult = await this.processPesaPalPayment({
@@ -153,8 +155,9 @@ export class EscrowService {
       }
 
       const totalAmountUSD = parseFloat(campaign.budget);
-      const platformFeeAmountUSD = totalAmountUSD * 0.20;
-      const escrowAmountUSD = totalAmountUSD * 0.80;
+      const feeRate = await getPlatformFeeRate();
+      const platformFeeAmountUSD = totalAmountUSD * feeRate;
+      const escrowAmountUSD = totalAmountUSD * (1 - feeRate);
 
       // Create escrow record
       const [escrowRecord] = await db

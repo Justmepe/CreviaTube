@@ -69,6 +69,8 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Bot monitoring", href: "/admin/bot-monitoring", icon: ActivityIcon },
         // Phase 7 Slice G — admin action audit log.
         { name: "Audit log", href: "/admin/audit", icon: ScrollText },
+        // Phase 7 Slice H — runtime platform config (fee, seat cap, prices).
+        { name: "Config", href: "/admin/config", icon: Settings },
         // Note: /admin/control renders the SAME component as / for
         // admins (ComprehensiveAdminDashboard), so we don't add a
         // separate "Control" nav entry. If we ever build distinct

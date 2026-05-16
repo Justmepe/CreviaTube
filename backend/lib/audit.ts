@@ -41,7 +41,8 @@ export type AdminAction =
   | "withdrawal.reject"
   | "credit.manual_post"
   | "guarantee.sweep_run"
-  | "guarantee.refund_marked";
+  | "guarantee.refund_marked"
+  | "config.update";
 
 export interface LogAdminActionArgs {
   action: AdminAction;

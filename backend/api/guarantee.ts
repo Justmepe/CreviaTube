@@ -72,6 +72,14 @@ export function setupGuaranteeAPI(app: Express): void {
         }
       })();
 
+      const { logAdminAction } = await import("../lib/audit");
+      await logAdminAction(req, {
+        action: "guarantee.sweep_run",
+        targetType: "system",
+        targetId: null,
+        payload: { evaluated: result.evaluated, triggered: result.triggered },
+      });
+
       res.json(result);
     } catch (err: any) {
       console.error("[guarantee-sweep] failed", err);
@@ -160,6 +168,15 @@ export function setupGuaranteeAPI(app: Express): void {
           message: "No pending refund found for this user (already paid or never triggered)",
         });
       }
+
+      const { logAdminAction } = await import("../lib/audit");
+      await logAdminAction(req, {
+        action: "guarantee.refund_marked",
+        targetType: "subscription",
+        targetId: req.params.userId,
+        payload: { refundTxHash: txHash },
+      });
+
       res.json({ ok: true });
     } catch (err: any) {
       console.error("[mark-refunded] failed", err);

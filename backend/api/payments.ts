@@ -19,27 +19,33 @@ function basescanTxUrl(txHash: string): string {
 // Phase 6 — Founding Creator tier.
 //
 // The plan price is dynamic: while the founding seat cap isn't full
-// (founding_seats has unclaimed rows), new subscribers pay
-// FOUNDING_PRICE_USDC and get a seat locking their price for life.
-// Once all 50 are taken, new subscribers pay POST_FOUNDING_PRICE_USDC.
-// The intent handler and verify handler both re-check the current
-// price so a creator can't open an intent at $15 and finalize after
-// the cap fills (or vice versa).
-const FOUNDING_PRICE_USDC = "15.00";
-const POST_FOUNDING_PRICE_USDC = "29.00";
+// (founding_seats has unclaimed rows), new subscribers pay the
+// configured founding price and get a seat locking their price for
+// life. Once the cap is hit, new subscribers pay the post-founding
+// price. Phase 7 Slice H — both values are now sourced from
+// platform_config so they're tunable without a deploy.
 const PREMIUM_DURATION_DAYS = 30;
 
 // resolveCreatorPrice — returns the price this specific user should
 // pay right now. If they already hold a founding seat, they keep the
 // founding price forever (renewals). Otherwise they pay the founding
 // price if seats are still available, else post-founding. Anonymous
-// callers (no userId) get the public price.
+// callers (no userId) get the public price. Pulls both prices from
+// platform_config so they can be tuned at runtime.
 async function resolveCreatorPrice(userId?: string): Promise<string> {
-  const { getFoundingSeatStats } = await import("./founding-seats");
-  const stats = await getFoundingSeatStats(userId);
-  if (stats.isUserFounder) return FOUNDING_PRICE_USDC;
+  const [{ getFoundingSeatStats }, { getFoundingPriceUsdc, getPostFoundingPriceUsdc }] =
+    await Promise.all([
+      import("./founding-seats"),
+      import("../lib/platform-config"),
+    ]);
+  const [stats, foundingPrice, postFoundingPrice] = await Promise.all([
+    getFoundingSeatStats(userId),
+    getFoundingPriceUsdc(),
+    getPostFoundingPriceUsdc(),
+  ]);
+  if (stats.isUserFounder) return foundingPrice;
   const seatsLeft = stats.total - stats.taken;
-  return seatsLeft > 0 ? FOUNDING_PRICE_USDC : POST_FOUNDING_PRICE_USDC;
+  return seatsLeft > 0 ? foundingPrice : postFoundingPrice;
 }
 
 const INTENT_TTL_MINUTES = 15;
@@ -382,9 +388,11 @@ async function fundCampaign(campaignId: string) {
   if (!campaign) return; // intent referenced a now-deleted campaign; the payment is still recorded
   if (campaign.fundingStatus === "funded") return; // idempotent — another verify won the race
 
+  const { getPlatformFeeRate } = await import("../lib/platform-config");
+  const feeRate = await getPlatformFeeRate();
   const total = parseFloat(campaign.budget);
-  const platformFee = (total * 0.20).toFixed(2);
-  const escrowBalance = (total * 0.80).toFixed(2);
+  const platformFee = (total * feeRate).toFixed(2);
+  const escrowBalance = (total * (1 - feeRate)).toFixed(2);
 
   await db.update(campaigns).set({
     fundingStatus: "funded",

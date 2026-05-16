@@ -1170,6 +1170,19 @@ export const foundingSeats = pgTable("founding_seats", {
 });
 export type FoundingSeat = typeof foundingSeats.$inferSelect;
 
+// Phase 7 Slice H — runtime platform config (k/v). Read through
+// backend/lib/platform-config.ts with a 60-second in-memory cache.
+// Stores values as text and parses at the call site; keeps the
+// schema simple at the cost of type-checking the cast.
+export const platformConfig = pgTable("platform_config", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+export type PlatformConfig = typeof platformConfig.$inferSelect;
+
 // Phase 7 Slice G — admin action audit log. Append-only paper trail
 // for adversarial review (who refunded whom / who suspended whom).
 // See backend/lib/audit.ts for the write helper and migration 0025

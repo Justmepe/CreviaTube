@@ -232,6 +232,68 @@ export function setupAdminActionsAPI(app: Express): void {
     });
   }
 
+  // ── Slice H: read + write platform config ───────────────────────
+  app.get("/api/admin/config", async (req: Request, res: Response) => {
+    if (!requireAdmin(req, res)) return;
+    try {
+      const { listAllConfig } = await import("../lib/platform-config");
+      const rows = await listAllConfig();
+      res.json({ rows });
+    } catch (err: any) {
+      console.error("[admin-config] read failed", err);
+      res.status(500).json({ message: "Failed to load config" });
+    }
+  });
+
+  app.put("/api/admin/config/:key", async (req: Request, res: Response) => {
+    if (!requireAdmin(req, res)) return;
+    const { key } = req.params;
+    const value = req.body?.value;
+    if (typeof value !== "string" || value.length === 0) {
+      return res.status(400).json({ message: "value must be a non-empty string" });
+    }
+    // Sanity-check well-known keys so a fat-finger doesn't take the
+    // platform fee to 100% or zero out the seat cap.
+    if (key === "platform_fee_bps") {
+      const n = parseInt(value, 10);
+      if (!Number.isFinite(n) || n < 0 || n > 5000) {
+        return res.status(400).json({
+          message: "platform_fee_bps must be an integer between 0 and 5000 (0–50%)",
+        });
+      }
+    }
+    if (key === "founding_seats_total") {
+      const n = parseInt(value, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 10000) {
+        return res.status(400).json({
+          message: "founding_seats_total must be an integer between 1 and 10000",
+        });
+      }
+    }
+    if (key === "founding_price_usdc" || key === "post_founding_price_usdc") {
+      const n = parseFloat(value);
+      if (!Number.isFinite(n) || n < 0 || n > 10000) {
+        return res.status(400).json({ message: "price must be 0–10000 USDC" });
+      }
+    }
+    try {
+      const { setConfig } = await import("../lib/platform-config");
+      await setConfig(key, value, (req.user as any).id);
+
+      await logAdminAction(req, {
+        action: "config.update",
+        targetType: "platform_config",
+        targetId: key,
+        payload: { newValue: value },
+      });
+
+      res.json({ ok: true, key, value });
+    } catch (err: any) {
+      console.error("[admin-config] write failed", err);
+      res.status(500).json({ message: "Failed to update config" });
+    }
+  });
+
   // ── Slice G: read audit log ─────────────────────────────────────
   app.get("/api/admin/audit-log", async (req: Request, res: Response) => {
     if (!requireAdmin(req, res)) return;
