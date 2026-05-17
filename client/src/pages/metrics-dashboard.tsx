@@ -67,12 +67,53 @@ interface CampaignerMetrics {
   clippers: { approved: number; goalsHit: number; pendingApplications: number };
 }
 
+// Per-clip submission tracking — Whop-style. Each row is one clipper's
+// post URL on a campaign, fingerprinted to a platform, with the polled
+// view count and earned $. Returned by GET /api/metrics/submissions.
+interface SubmissionMetrics {
+  role: string;
+  totals: { submissions: number; views: number; earned: number };
+  byPlatform: Record<string, { count: number; views: number }>;
+  submissions: Array<{
+    submissionId: string;
+    campaignId: string;
+    campaignName: string;
+    clipperId: string;
+    clipperUsername: string;
+    postUrl: string;
+    platform: "youtube" | "tiktok" | "instagram" | "x" | "unknown";
+    videoId: string | null;
+    lastViewCount: number;
+    lastViewPolledAt: string | null;
+    earned: number;
+    applicationStatus: string | null;
+    joinedAt: string;
+    tracking: { supported: boolean; reason: string | null };
+  }>;
+}
+
 const platformIcons = {
   instagram: Instagram,
   youtube: Youtube,
   twitter: Twitter,
+  x: Twitter,
   tiktok: Music,
-  facebook: Users
+  facebook: Users,
+  unknown: Globe,
+};
+
+// Human-readable explanation for why a submission can't be auto-tracked.
+// Mirrors SkipReason in backend/core/services/view-polling.ts.
+const trackingReasonText: Record<string, string> = {
+  no_youtube_api_key:
+    "Server is missing YOUTUBE_API_KEY — auto-tracking off until configured.",
+  tiktok_oauth_required:
+    "Clipper needs to connect TikTok before views can be auto-verified.",
+  instagram_oauth_required:
+    "Clipper needs to connect Instagram before views can be auto-verified.",
+  x_paid_api_required:
+    "X (Twitter) view counts require a paid API plan — not tracked.",
+  unknown_platform: "Post URL doesn't match a supported platform.",
 };
 
 export default function MetricsDashboard() {
@@ -93,6 +134,17 @@ export default function MetricsDashboard() {
     queryKey: ["/api/metrics/campaigner"],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === "creator",
+  });
+
+  // Per-clip submission metrics — Whop-style per-post tracking. The
+  // Social Media tab now renders this instead of the old "aggregate
+  // your whole account" path, because for a clipping platform what
+  // matters is each posted clip's view count, not the clipper's
+  // overall TikTok follower total.
+  const { data: submissionMetrics } = useQuery<SubmissionMetrics>({
+    queryKey: ["/api/metrics/submissions"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user,
   });
 
   const syncMutation = useMutation({
@@ -455,99 +507,203 @@ export default function MetricsDashboard() {
         </TabsContent>
 
         <TabsContent value="social" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(metrics?.social || {}).map(([platform, data]) => {
-              const Icon = platformIcons[platform as keyof typeof platformIcons] || Globe;
-              const m = data.metrics;
-              
+          {/* Per-clip submission view (Whop-style). Reads
+              /api/metrics/submissions. For a creator: rows across all
+              their campaigns. For a clipper: their own submissions. */}
+          {(() => {
+            const subs = submissionMetrics?.submissions ?? [];
+            const totals = submissionMetrics?.totals;
+            const byPlatform = submissionMetrics?.byPlatform ?? {};
+            const isCreator = user?.role === "creator";
+
+            if (subs.length === 0) {
               return (
-                <Card key={platform}>
+                <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 capitalize">
-                        <Icon className="h-5 w-5" />
-                        {platform}
-                      </CardTitle>
-                      <Badge variant="outline">
-                        {new Date(data.lastSyncAt).toLocaleDateString()}
-                      </Badge>
-                    </div>
+                    <CardTitle>No submissions yet</CardTitle>
+                    <CardDescription>
+                      {isCreator
+                        ? "Once clippers join your campaigns and submit posts, each clip's verified view count and earnings will appear here."
+                        : "Once you submit a clip URL on a campaign, its verified view count and earnings will appear here."}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Followers</p>
-                        <p className="text-lg font-semibold">
-                          {formatNumber(m.followers || m.subscribers || 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Posts/Videos</p>
-                        <p className="text-lg font-semibold">
-                          {formatNumber(m.posts || m.videos || m.tweets || 0)}
-                        </p>
-                      </div>
-                      {m.views && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Views</p>
-                          <p className="text-lg font-semibold">{formatNumber(m.views)}</p>
-                        </div>
-                      )}
-                      {m.engagementRate && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Engagement</p>
-                          <p className={`text-lg font-semibold ${getEngagementColor(m.engagementRate)}`}>
-                            {m.engagementRate.toFixed(1)}%
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {(m.impressions || m.reach) && (
-                      <>
-                        <Separator />
-                        <div className="grid grid-cols-2 gap-4">
-                          {m.impressions && (
-                            <div>
-                              <p className="text-sm text-muted-foreground">Impressions</p>
-                              <p className="text-lg font-semibold">{formatNumber(m.impressions)}</p>
-                            </div>
-                          )}
-                          {m.reach && (
-                            <div>
-                              <p className="text-sm text-muted-foreground">Reach</p>
-                              <p className="text-lg font-semibold">{formatNumber(m.reach)}</p>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setLocation(isCreator ? "/my-campaigns" : "/campaigns")}
+                    >
+                      <Target className="h-4 w-4 mr-2" />
+                      {isCreator ? "Go to My Campaigns" : "Browse campaigns"}
+                    </Button>
                   </CardContent>
                 </Card>
               );
-            })}
-          </div>
+            }
 
-          {Object.keys(metrics?.social || {}).length === 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>No social media accounts connected</CardTitle>
-                <CardDescription>
-                  Connect your social media accounts to track your performance metrics.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setLocation("/social-integration")}
-                >
-                  <Smartphone className="h-4 w-4 mr-2" />
-                  Connect Social Accounts
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+            return (
+              <>
+                {/* Top-of-tab totals + per-platform breakdown. */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground font-normal">
+                        Submitted clips
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totals?.submissions ?? 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Across {Object.keys(byPlatform).length} platform
+                        {Object.keys(byPlatform).length === 1 ? "" : "s"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground font-normal">
+                        Verified views
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {formatNumber(totals?.views ?? 0)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Last polled from each clip's public URL
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground font-normal">
+                        {isCreator ? "Paid to clippers" : "Earned"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {formatCurrency(totals?.earned ?? 0)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Verified + paid events only
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Per-platform breakdown chips. */}
+                {Object.keys(byPlatform).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(byPlatform).map(([platform, info]) => {
+                      const Icon =
+                        platformIcons[platform as keyof typeof platformIcons] || Globe;
+                      return (
+                        <Badge
+                          key={platform}
+                          variant="outline"
+                          className="flex items-center gap-1.5 py-1 px-2"
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          <span className="capitalize">{platform}</span>
+                          <span className="text-muted-foreground">
+                            · {info.count} clip{info.count === 1 ? "" : "s"} ·{" "}
+                            {formatNumber(info.views)} views
+                          </span>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Per-submission list. Each row = one clipper's post on one
+                    campaign, with the polled view count + tracking status. */}
+                <div className="space-y-3">
+                  {subs.map((s) => {
+                    const Icon =
+                      platformIcons[s.platform as keyof typeof platformIcons] || Globe;
+                    const lastPolled = s.lastViewPolledAt
+                      ? new Date(s.lastViewPolledAt).toLocaleString()
+                      : "never";
+                    const reasonText =
+                      s.tracking.reason && trackingReasonText[s.tracking.reason];
+
+                    return (
+                      <Card key={s.submissionId}>
+                        <CardContent className="pt-4 pb-4">
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Icon className="h-4 w-4" />
+                                <span className="font-semibold capitalize">
+                                  {s.platform}
+                                </span>
+                                {s.tracking.supported ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-green-700 border-green-200"
+                                  >
+                                    Auto-tracked
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-amber-700 border-amber-200"
+                                  >
+                                    Not tracked
+                                  </Badge>
+                                )}
+                              </div>
+                              <a
+                                href={s.postUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline break-all"
+                              >
+                                {s.postUrl}
+                              </a>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {isCreator && (
+                                  <>
+                                    Campaign:{" "}
+                                    <span className="font-medium">{s.campaignName}</span>
+                                    {" · "}
+                                    Clipper:{" "}
+                                    <span className="font-medium">
+                                      @{s.clipperUsername}
+                                    </span>
+                                    {" · "}
+                                  </>
+                                )}
+                                Submitted {new Date(s.joinedAt).toLocaleDateString()}
+                                {" · "}Last polled {lastPolled}
+                              </p>
+                              {!s.tracking.supported && reasonText && (
+                                <p className="text-xs text-amber-700 mt-1">
+                                  {reasonText}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Views</p>
+                              <p className="text-lg font-semibold">
+                                {formatNumber(s.lastViewCount)}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {isCreator ? "Paid" : "Earned"}
+                              </p>
+                              <p className="text-sm font-medium">
+                                {formatCurrency(s.earned)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
         </TabsContent>
 
         {user?.accountType === 'business' && (

@@ -1844,6 +1844,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Per-clip submission tracking. The Whop-style data the Metrics dashboard
+  // actually wants: each clipper-campaign row that has a postUrl, joined
+  // with its fingerprinted platform + the polled view count + earned $.
+  //
+  // Role-scoped:
+  //   creator → submissions across every campaign they own
+  //   clipper → their own submissions
+  //   admin   → admin path; for now mirror creator (returns nothing unless they own a campaign)
+  //
+  // No filtering on submissionUrl — postUrl is the canonical public-post URL
+  // used by the view-polling sweep. Rows without it have nothing to track.
+  app.get("/api/metrics/submissions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).id as string;
+    const role = (req.user as any).role as string;
+
+    try {
+      const { fingerprintPostUrl, viewPollingSupported } = await import(
+        "./core/services/view-polling"
+      );
+
+      const whereForRole =
+        role === "clipper"
+          ? eq(clipperCampaigns.clipperId, userId)
+          : eq(campaigns.creatorId, userId);
+
+      const rows = await db
+        .select({
+          submissionId: clipperCampaigns.id,
+          campaignId: campaigns.id,
+          campaignName: campaigns.name,
+          clipperId: clipperCampaigns.clipperId,
+          clipperUsername: users.username,
+          postUrl: clipperCampaigns.postUrl,
+          lastViewCount: clipperCampaigns.lastViewCount,
+          lastViewPolledAt: clipperCampaigns.lastViewPolledAt,
+          applicationStatus: clipperCampaigns.applicationStatus,
+          joinedAt: clipperCampaigns.joinedAt,
+        })
+        .from(clipperCampaigns)
+        .innerJoin(campaigns, eq(campaigns.id, clipperCampaigns.campaignId))
+        .innerJoin(users, eq(users.id, clipperCampaigns.clipperId))
+        .where(and(whereForRole, sql`${clipperCampaigns.postUrl} IS NOT NULL`))
+        .orderBy(desc(clipperCampaigns.joinedAt));
+
+      // Earned-$ per submission. Same bot/test filters as goal-completion
+      // so the numbers match the per-campaign progress bars on /my-campaigns.
+      const submissionIds = rows.map((r) => r.submissionId);
+      const earnedBySubmission: Record<string, number> = {};
+      if (submissionIds.length > 0) {
+        const earnedRows = await db
+          .select({
+            clipperCampaignId: trackingEvents.clipperCampaignId,
+            total: sql<string>`COALESCE(SUM(${trackingEvents.rewardAmount}), 0)`,
+          })
+          .from(trackingEvents)
+          .where(
+            and(
+              inArray(trackingEvents.clipperCampaignId, submissionIds),
+              inArray(trackingEvents.status, ["verified", "paid"]),
+              eq(trackingEvents.flaggedAsBot, false),
+            ),
+          )
+          .groupBy(trackingEvents.clipperCampaignId);
+        for (const r of earnedRows) {
+          earnedBySubmission[r.clipperCampaignId] = Number(r.total) || 0;
+        }
+      }
+
+      const submissions = rows.map((r) => {
+        const fp = fingerprintPostUrl(r.postUrl);
+        const support = viewPollingSupported(fp.platform);
+        return {
+          submissionId: r.submissionId,
+          campaignId: r.campaignId,
+          campaignName: r.campaignName,
+          clipperId: r.clipperId,
+          clipperUsername: r.clipperUsername,
+          postUrl: r.postUrl,
+          platform: fp.platform,
+          videoId: fp.videoId ?? fp.postCode ?? null,
+          lastViewCount: r.lastViewCount ?? 0,
+          lastViewPolledAt: r.lastViewPolledAt
+            ? new Date(r.lastViewPolledAt).toISOString()
+            : null,
+          earned: earnedBySubmission[r.submissionId] ?? 0,
+          applicationStatus: r.applicationStatus ?? null,
+          joinedAt: new Date(r.joinedAt).toISOString(),
+          tracking: {
+            supported: support.supported,
+            reason: support.reason ?? null,
+          },
+        };
+      });
+
+      // Aggregates the dashboard renders at the top.
+      const totalViews = submissions.reduce((s, x) => s + (x.lastViewCount || 0), 0);
+      const totalEarned = submissions.reduce((s, x) => s + (x.earned || 0), 0);
+      const byPlatform: Record<string, { count: number; views: number }> = {};
+      for (const s of submissions) {
+        const p = s.platform;
+        if (!byPlatform[p]) byPlatform[p] = { count: 0, views: 0 };
+        byPlatform[p].count += 1;
+        byPlatform[p].views += s.lastViewCount || 0;
+      }
+
+      res.json({
+        role,
+        totals: {
+          submissions: submissions.length,
+          views: totalViews,
+          earned: Math.round(totalEarned * 100) / 100,
+        },
+        byPlatform,
+        submissions,
+      });
+    } catch (error: any) {
+      console.error("Submission metrics fetch error:", error);
+      res
+        .status(500)
+        .json({ message: "Failed to fetch submission metrics", error: error.message });
+    }
+  });
+
   app.post("/api/metrics/sync", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
