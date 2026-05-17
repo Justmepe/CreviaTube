@@ -290,17 +290,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClipperCampaignsByClipper(clipperId: string): Promise<ClipperCampaign[]> {
-    return await db
-      .select()
+    // INNER JOIN campaigns so each row carries an embedded
+    // { campaign: { title, description } }. Without this the
+    // clipper marketplace's "My applications" tab crashed on
+    // application.campaign.title with "Cannot read properties of
+    // undefined" — the entire React tree died including the sidebar.
+    // `title` is aliased from the schema's `name` column to match
+    // what the UI has always expected.
+    const rows = await db
+      .select({
+        clipperCampaign: clipperCampaigns,
+        campaignName: campaigns.name,
+        campaignDescription: campaigns.description,
+      })
       .from(clipperCampaigns)
+      .innerJoin(campaigns, eq(campaigns.id, clipperCampaigns.campaignId))
       .where(eq(clipperCampaigns.clipperId, clipperId));
+    return rows.map((r) => ({
+      ...r.clipperCampaign,
+      campaign: {
+        title: r.campaignName,
+        description: r.campaignDescription,
+      },
+    })) as unknown as ClipperCampaign[];
   }
 
   async getClipperCampaignsByCampaign(campaignId: string): Promise<ClipperCampaign[]> {
-    return await db
-      .select()
+    // Same embedding pattern as the by-clipper variant above —
+    // the creator-side dashboard reads the same shape.
+    const rows = await db
+      .select({
+        clipperCampaign: clipperCampaigns,
+        campaignName: campaigns.name,
+        campaignDescription: campaigns.description,
+      })
       .from(clipperCampaigns)
+      .innerJoin(campaigns, eq(campaigns.id, clipperCampaigns.campaignId))
       .where(eq(clipperCampaigns.campaignId, campaignId));
+    return rows.map((r) => ({
+      ...r.clipperCampaign,
+      campaign: {
+        title: r.campaignName,
+        description: r.campaignDescription,
+      },
+    })) as unknown as ClipperCampaign[];
   }
 
   async createClipperCampaign(clipperCampaign: InsertClipperCampaign): Promise<ClipperCampaign> {

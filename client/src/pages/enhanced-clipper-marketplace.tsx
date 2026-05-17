@@ -558,15 +558,27 @@ export default function EnhancedClipperMarketplace() {
                         <Progress value={(campaign.budgetUsed / campaign.budget) * 100} className="h-2" />
                       </div>
 
-                      {/* Action Button */}
+                      {/* Action Button — three states:
+                          1. Owner viewing own campaign → link to applications
+                             review (no apply button for own work)
+                          2. Already applied → disabled "Applied" pill
+                          3. Default → Apply Now */}
                       <div className="pt-2">
-                        {appliedCampaignIds.has(campaign.id) ? (
+                        {user?.id === campaign.creatorId ? (
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setLocation("/creator/applications")}
+                          >
+                            Your campaign · View applications
+                          </Button>
+                        ) : appliedCampaignIds.has(campaign.id) ? (
                           <Button disabled className="w-full">
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Applied
                           </Button>
                         ) : (
-                          <Button 
+                          <Button
                             onClick={() => applyToCampaignMutation.mutate(campaign.id)}
                             disabled={applyToCampaignMutation.isPending}
                             className="w-full bg-teal-600 hover:bg-teal-700"
@@ -677,15 +689,24 @@ export default function EnhancedClipperMarketplace() {
                         <Progress value={(campaign.budgetUsed / campaign.budget) * 100} className="h-2" />
                       </div>
 
-                      {/* Action Button */}
+                      {/* Action Button — same owner / applied / default
+                          three-state pattern as the standard campaigns tab. */}
                       <div className="pt-2">
-                        {appliedCampaignIds.has(campaign.id) ? (
+                        {user?.id === campaign.creatorId ? (
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setLocation("/creator/applications")}
+                          >
+                            Your campaign · View applications
+                          </Button>
+                        ) : appliedCampaignIds.has(campaign.id) ? (
                           <Button disabled className="w-full">
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Applied
                           </Button>
                         ) : (
-                          <Button 
+                          <Button
                             onClick={() => applyToCampaignMutation.mutate(campaign.id)}
                             disabled={applyToCampaignMutation.isPending}
                             className="w-full bg-amber-600 hover:bg-amber-700"
