@@ -38,6 +38,26 @@ import {
   type InstagramTokenSet,
 } from "../../lib/instagram-api";
 
+// Module-level cache for the DB-stored YouTube API key. Hydrated on
+// server boot and on every admin save via refreshYoutubeKeyFromDb().
+// Env wins over DB so a deploy can hard-override the live value.
+// Synchronous resolveYoutubeKey() lets viewPollingSupported() stay
+// sync (it's called inline from the metrics endpoint per-row).
+let _cachedDbYoutubeKey = "";
+
+export function resolveYoutubeKey(): string | undefined {
+  return process.env.YOUTUBE_API_KEY || _cachedDbYoutubeKey || undefined;
+}
+
+export async function refreshYoutubeKeyFromDb(): Promise<void> {
+  try {
+    const { getConfig } = await import("../../lib/platform-config");
+    _cachedDbYoutubeKey = (await getConfig("youtube_api_key")) || "";
+  } catch (err) {
+    console.warn("[view-polling] refreshYoutubeKeyFromDb failed:", err);
+  }
+}
+
 export type SupportedPlatform = "youtube" | "tiktok" | "instagram" | "x" | "unknown";
 
 export interface PostFingerprint {
@@ -272,7 +292,7 @@ export function viewPollingSupported(
 } {
   switch (platform) {
     case "youtube":
-      return process.env.YOUTUBE_API_KEY
+      return resolveYoutubeKey()
         ? { supported: true }
         : { supported: false, reason: "no_youtube_api_key" };
     case "tiktok": {
@@ -333,9 +353,9 @@ export async function pollAllPostViews(): Promise<PollResult> {
     skipped: emptySkipMap(),
   };
 
-  const youtubeKey = process.env.YOUTUBE_API_KEY;
+  const youtubeKey = resolveYoutubeKey();
   if (!youtubeKey) {
-    console.warn("[view-polling] YOUTUBE_API_KEY not set — YouTube rows will skip");
+    console.warn("[view-polling] YOUTUBE_API_KEY not set (env or db) — YouTube rows will skip");
   }
 
   // Pull eligible rows in one query, joining users so we can read each

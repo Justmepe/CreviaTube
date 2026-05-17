@@ -549,6 +549,158 @@ export function setupAdminActionsAPI(app: Express): void {
     }
   });
 
+  // ── Platform integrations (API keys) ────────────────────────────
+  // Separate from /api/admin/config because secrets need different
+  // treatment: redacted reads, source attribution (env vs db), and a
+  // dedicated "test the key works" endpoint that pings the real API.
+  //
+  // YouTube only for now. TikTok/IG OAuth credentials will move here
+  // when we wire those up.
+
+  function redactKey(k: string): string {
+    if (!k) return "";
+    if (k.length <= 8) return "*".repeat(k.length);
+    return k.slice(0, 6) + "…" + k.slice(-4);
+  }
+
+  app.get("/api/admin/integrations", async (req: Request, res: Response) => {
+    if (!requireAdmin(req, res)) return;
+    try {
+      const { getConfig } = await import("../lib/platform-config");
+      const envKey = process.env.YOUTUBE_API_KEY || "";
+      const dbKey = (await getConfig("youtube_api_key")) || "";
+      const effective = envKey || dbKey;
+      // Source attribution: if env is set, it wins regardless of what's
+      // in the DB (intentional — lets prod hard-override).
+      const source: "env" | "db" | "none" = envKey ? "env" : dbKey ? "db" : "none";
+      res.json({
+        youtube: {
+          isSet: !!effective,
+          source,
+          hint: redactKey(effective),
+          envSet: !!envKey,
+          dbSet: !!dbKey,
+        },
+      });
+    } catch (err: any) {
+      console.error("[admin-integrations] read failed", err);
+      res.status(500).json({ message: "Failed to load integrations" });
+    }
+  });
+
+  app.put(
+    "/api/admin/integrations/youtube",
+    async (req: Request, res: Response) => {
+      if (!requireAdmin(req, res)) return;
+      const apiKey =
+        typeof req.body?.apiKey === "string" ? req.body.apiKey.trim() : "";
+      // Empty string = clear the DB-stored key (admin uses the UI's
+      // "Clear" button). Non-empty = upsert.
+      if (apiKey.length > 0 && apiKey.length < 10) {
+        return res
+          .status(400)
+          .json({ message: "API key looks too short — paste the full key" });
+      }
+      try {
+        const { setConfig } = await import("../lib/platform-config");
+        await setConfig("youtube_api_key", apiKey, (req.user as any).id);
+
+        // Refresh the in-process cache so the change takes effect for
+        // this worker immediately (other PM2 workers see it within 60s
+        // via the platform-config cache TTL, or on next refreshYoutubeKeyFromDb).
+        const { refreshYoutubeKeyFromDb } = await import(
+          "../core/services/view-polling"
+        );
+        await refreshYoutubeKeyFromDb();
+
+        await logAdminAction(req, {
+          action: "integration.youtube_key_set",
+          targetType: "integration",
+          targetId: "youtube",
+          // Don't log the actual key — only whether it was cleared or set + length.
+          payload: { cleared: apiKey === "", length: apiKey.length },
+        });
+
+        res.json({ ok: true, cleared: apiKey === "" });
+      } catch (err: any) {
+        console.error("[integration.youtube] write failed", err);
+        res.status(500).json({ message: "Failed to save YouTube API key" });
+      }
+    },
+  );
+
+  // Ping YouTube once to verify the key actually works. Uses a
+  // hardcoded canonical public video (Google's own "Me at the zoo",
+  // the first YouTube video — won't be deleted) so the test isn't
+  // dependent on a specific clipper's URL.
+  //
+  // Accepts an optional apiKey in the body so the admin can test a
+  // key before saving it (paste → test → if ok, save). If no key in
+  // body, tests the currently-stored one.
+  const TEST_VIDEO_ID = "jNQXAC9IVRw"; // "Me at the zoo"
+  app.post(
+    "/api/admin/integrations/youtube/test",
+    async (req: Request, res: Response) => {
+      if (!requireAdmin(req, res)) return;
+      const bodyKey =
+        typeof req.body?.apiKey === "string" ? req.body.apiKey.trim() : "";
+      let keyToTest = bodyKey;
+      if (!keyToTest) {
+        const { getConfig } = await import("../lib/platform-config");
+        keyToTest = process.env.YOUTUBE_API_KEY || (await getConfig("youtube_api_key")) || "";
+      }
+      if (!keyToTest) {
+        return res.status(400).json({
+          ok: false,
+          message: "No key to test — paste one in or save one first.",
+        });
+      }
+      try {
+        const url =
+          `https://www.googleapis.com/youtube/v3/videos` +
+          `?part=statistics&id=${TEST_VIDEO_ID}&key=${encodeURIComponent(keyToTest)}`;
+        const r = await fetch(url);
+        const json = (await r.json().catch(() => ({}))) as any;
+        if (!r.ok) {
+          const reason =
+            json?.error?.message ||
+            `HTTP ${r.status}`;
+          await logAdminAction(req, {
+            action: "integration.youtube_key_test",
+            targetType: "integration",
+            targetId: "youtube",
+            payload: { ok: false, reason, status: r.status },
+          });
+          return res.status(200).json({
+            ok: false,
+            message: reason,
+            hint: r.status === 403
+              ? "Most common: the key is restricted (HTTP referrers / API restrictions) or the YouTube Data API v3 isn't enabled on the Google Cloud project."
+              : r.status === 400
+              ? "Key format looks invalid."
+              : null,
+          });
+        }
+        const views = json?.items?.[0]?.statistics?.viewCount ?? null;
+        await logAdminAction(req, {
+          action: "integration.youtube_key_test",
+          targetType: "integration",
+          targetId: "youtube",
+          payload: { ok: true, sampleViews: views },
+        });
+        res.json({
+          ok: true,
+          message: `Key works. Sample call returned ${views ?? "?"} views for "Me at the zoo".`,
+        });
+      } catch (err: any) {
+        console.error("[integration.youtube.test] failed", err);
+        res
+          .status(500)
+          .json({ ok: false, message: `Network error: ${err.message}` });
+      }
+    },
+  );
+
   // ── Slice G: read audit log ─────────────────────────────────────
   app.get("/api/admin/audit-log", async (req: Request, res: Response) => {
     if (!requireAdmin(req, res)) return;

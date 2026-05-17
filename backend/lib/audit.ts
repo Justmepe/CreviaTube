@@ -45,7 +45,9 @@ export type AdminAction =
   | "credit.manual_post"
   | "guarantee.sweep_run"
   | "guarantee.refund_marked"
-  | "config.update";
+  | "config.update"
+  | "integration.youtube_key_set"
+  | "integration.youtube_key_test";
 
 export interface LogAdminActionArgs {
   action: AdminAction;

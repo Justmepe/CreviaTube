@@ -63,6 +63,12 @@ app.use((req, res, next) => {
   // Initialize auto-sync service
   await autoSyncService.initialize();
 
+  // Hydrate view-polling's YouTube key cache from the platform_config
+  // table (admin-set key takes effect on next worker boot OR when the
+  // admin endpoint refreshes the in-process cache).
+  const { refreshYoutubeKeyFromDb } = await import("./core/services/view-polling");
+  await refreshYoutubeKeyFromDb();
+
   // Daily scheduler (subscription expiry warnings, etc.)
   startScheduler();
   

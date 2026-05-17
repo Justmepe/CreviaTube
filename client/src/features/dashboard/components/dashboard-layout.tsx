@@ -24,6 +24,7 @@ import {
   FileText,
   ShieldCheck,
   ScrollText,
+  KeyRound,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -69,6 +70,10 @@ export function DashboardLayout({ children, navigation: customNavigation, title 
         { name: "Audit log", href: "/admin/audit", icon: ScrollText },
         // Phase 7 Slice H — runtime platform config (fee, seat cap, prices).
         { name: "Config", href: "/admin/config", icon: Settings },
+        // API credentials for view-tracking (YouTube key, future
+        // TikTok/IG/X). Separate from /admin/config so secrets get the
+        // redacted UX (no key shown back after save, dedicated test button).
+        { name: "Integrations", href: "/admin/integrations", icon: KeyRound },
         // Note: /admin/control renders the SAME component as / for
         // admins (ComprehensiveAdminDashboard), so we don't add a
         // separate "Control" nav entry. If we ever build distinct
