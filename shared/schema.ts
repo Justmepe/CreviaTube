@@ -191,6 +191,17 @@ export const campaigns = pgTable("campaigns", {
   // high-budget / regulated-vertical campaigns.
   requiresKyc: boolean("requires_kyc").notNull().default(false),
 
+  // Migration 0028 — source materials the creator supplies so the
+  // clipper has something to actually clip FROM and clear guidance
+  // on what good looks like. All optional; recommended for any new
+  // campaign but legacy rows have them as null.
+  sourceContentUrl: text("source_content_url"),     // long-form video/podcast/stream link
+  brandGuidelines: text("brand_guidelines"),         // free-form text — hooks, tone, do's/don'ts, banned topics
+  exampleClipUrls: text("example_clip_urls").array(), // URLs to clips that exemplify the bar
+  requiredHashtags: text("required_hashtags").array(), // hashtags every submission must include
+  clipLengthSecMin: integer("clip_length_sec_min"),    // min clip duration (optional)
+  clipLengthSecMax: integer("clip_length_sec_max"),    // max clip duration (optional)
+
   campaignGoals: json("campaign_goals").$type<{
     viewsGoal?: number;
     clicksGoal?: number;

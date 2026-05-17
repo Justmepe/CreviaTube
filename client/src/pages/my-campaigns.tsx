@@ -215,6 +215,18 @@ export default function MyCampaignsPage() {
                             {clipper.isCompleted ? 'Completed' :
                              clipper.isApproved ? 'Active' : 'Pending'}
                           </Badge>
+                          {/* Discoverability fix: pending applications used to
+                              be invisible-actionable — creator saw the pill but
+                              didn't know /creator/applications existed. Inline
+                              "Review" link makes the next action one click away. */}
+                          {!clipper.isApproved && !clipper.isCompleted && (
+                            <Link
+                              href="/creator/applications"
+                              className="text-blue-700 hover:underline"
+                            >
+                              Review →
+                            </Link>
+                          )}
                           {clipper.isCompleted && clipper.completedAt && (
                             <span>
                               Completed {new Date(clipper.completedAt).toLocaleDateString()}

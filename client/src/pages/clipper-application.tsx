@@ -28,6 +28,9 @@ import {
   Link2,
   ExternalLink,
   Info,
+  FileText,
+  PlayCircle,
+  Hash,
 } from "lucide-react";
 import { CampaignGoalSummary } from "@/features/campaigns/components/campaign-goal-summary";
 import { recognizeMediaHost } from "@shared/media-host";
@@ -322,6 +325,112 @@ export default function ClipperApplication() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Migration 0028 — Clipper resources. Only renders when the
+          creator supplied any source materials, otherwise stays hidden
+          so legacy / sparsely-filled campaigns don't show empty cards. */}
+      {(campaign.sourceContentUrl ||
+        campaign.brandGuidelines ||
+        (campaign.exampleClipUrls && campaign.exampleClipUrls.length > 0) ||
+        (campaign.requiredHashtags && campaign.requiredHashtags.length > 0) ||
+        campaign.clipLengthSecMin ||
+        campaign.clipLengthSecMax) && (
+        <Card className="border-blue-200 bg-blue-50/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-700" />
+              Clipper resources
+            </CardTitle>
+            <CardDescription>
+              Source content + guidelines from the creator. Read these
+              before posting your clip.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {campaign.sourceContentUrl && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                  <PlayCircle className="h-4 w-4" />
+                  Source content
+                </p>
+                <a
+                  href={campaign.sourceContentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-700 hover:underline break-all"
+                >
+                  {campaign.sourceContentUrl}
+                </a>
+              </div>
+            )}
+
+            {campaign.brandGuidelines && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Brand guidelines
+                </p>
+                <div className="text-sm whitespace-pre-wrap rounded-md border bg-white p-3">
+                  {campaign.brandGuidelines}
+                </div>
+              </div>
+            )}
+
+            {campaign.exampleClipUrls && campaign.exampleClipUrls.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Example clips
+                </p>
+                <ul className="text-sm space-y-1">
+                  {campaign.exampleClipUrls.map((url: string) => (
+                    <li key={url}>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-700 hover:underline break-all inline-flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        {url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-4">
+              {campaign.requiredHashtags && campaign.requiredHashtags.length > 0 && (
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                    <Hash className="h-4 w-4" />
+                    Required tags
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {campaign.requiredHashtags.map((tag: string) => (
+                      <Badge key={tag} variant="outline" className="bg-white">
+                        #{tag.replace(/^#/, "")}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(campaign.clipLengthSecMin || campaign.clipLengthSecMax) && (
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
+                    <Clock className="h-4 w-4" />
+                    Clip length
+                  </p>
+                  <p className="text-sm">
+                    {campaign.clipLengthSecMin ?? "?"}–
+                    {campaign.clipLengthSecMax ?? "?"} seconds
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* UGC Content Submission */}
       <Card>

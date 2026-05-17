@@ -97,6 +97,18 @@ const campaignSchema = z.object({
     ugcVolumeGoal: z.number().int().min(0).optional(),
   }),
   minFollowers: z.number().int().min(0),
+  // Migration 0028 — source materials the creator supplies. Arrays
+  // come through the UI as plain strings (one URL per line for
+  // example clips; comma-separated for hashtags) and get split into
+  // arrays in onSubmit before hitting the API. Schema relaxed to
+  // optional + .or(literal('')) so legacy edit flows that don't
+  // touch these fields don't fail validation.
+  sourceContentUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  brandGuidelines: z.string().optional().or(z.literal("")),
+  exampleClipUrlsText: z.string().optional().or(z.literal("")),
+  requiredHashtagsText: z.string().optional().or(z.literal("")),
+  clipLengthSecMin: z.number().int().min(1).optional(),
+  clipLengthSecMax: z.number().int().min(1).optional(),
 });
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
@@ -232,6 +244,12 @@ export default function CampaignCreation() {
       },
       campaignGoals: { primaryGoal: defaultGoal },
       minFollowers: 1000,
+      sourceContentUrl: "",
+      brandGuidelines: "",
+      exampleClipUrlsText: "",
+      requiredHashtagsText: "",
+      clipLengthSecMin: undefined,
+      clipLengthSecMax: undefined,
     },
   });
 
@@ -280,6 +298,18 @@ export default function CampaignCreation() {
           ? c.campaignGoals
           : { primaryGoal: defaultGoal },
         minFollowers: Number(reqs.minFollowers ?? 0),
+        // Migration 0028 — source materials. Arrays → joined strings
+        // for the textarea / comma-separated input shapes.
+        sourceContentUrl: c.sourceContentUrl ?? "",
+        brandGuidelines: c.brandGuidelines ?? "",
+        exampleClipUrlsText: Array.isArray(c.exampleClipUrls)
+          ? c.exampleClipUrls.join("\n")
+          : "",
+        requiredHashtagsText: Array.isArray(c.requiredHashtags)
+          ? c.requiredHashtags.join(", ")
+          : "",
+        clipLengthSecMin: c.clipLengthSecMin ?? undefined,
+        clipLengthSecMax: c.clipLengthSecMax ?? undefined,
       });
       setSelectedCountries(Array.isArray(reqs.geography) ? reqs.geography : []);
       setSelectedLanguages(Array.isArray(reqs.languages) ? reqs.languages : []);
@@ -320,6 +350,19 @@ export default function CampaignCreation() {
     mutationFn: async (data: CampaignFormData) => {
       // Backend stores reward_rates and target_platforms as JSON-stringified text;
       // campaign_goals is a true json column. Match those shapes.
+      //
+      // Source-material array fields (migration 0028): the form
+      // collects them as strings (textarea / comma-separated input)
+      // because react-hook-form arrays are clunky; we split into
+      // arrays here right before submit. Empty strings stay as null
+      // arrays rather than [""] so SQL ARRAY[] is clean.
+      const splitLines = (s?: string) =>
+        s ? s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean) : null;
+      const splitHashtags = (s?: string) =>
+        s
+          ? s.split(",").map((x) => x.trim().replace(/^#/, "")).filter(Boolean)
+          : null;
+
       const payload = {
         name: data.name,
         description: data.description,
@@ -333,6 +376,12 @@ export default function CampaignCreation() {
           languages: selectedLanguages,
         }),
         campaignGoals: data.campaignGoals,
+        sourceContentUrl: data.sourceContentUrl?.trim() || null,
+        brandGuidelines: data.brandGuidelines?.trim() || null,
+        exampleClipUrls: splitLines(data.exampleClipUrlsText),
+        requiredHashtags: splitHashtags(data.requiredHashtagsText),
+        clipLengthSecMin: data.clipLengthSecMin ?? null,
+        clipLengthSecMax: data.clipLengthSecMax ?? null,
       };
       // Edit-mode: PATCH the existing row. Create-mode: POST a new one.
       // The endpoint that PATCH hits is the same handler the legacy
@@ -520,6 +569,173 @@ export default function CampaignCreation() {
                         </FormItem>
                       )}
                     />
+                  </div>
+                </section>
+
+                <Separator />
+
+                {/* === CLIPPER RESOURCES === */}
+                {/* Migration 0028: what the creator gives clippers so they
+                    can actually make the work. Until this section existed,
+                    clippers had to guess what to clip from and what good
+                    looked like — every Whop-style platform surfaces this
+                    up front. */}
+                <section>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    Clipper resources
+                  </h3>
+                  <p className="text-sm text-slate-600 mt-1 mb-4">
+                    What clippers need to actually make the clip. All
+                    optional but strongly recommended — better source
+                    material + clearer guidelines = better clips.
+                  </p>
+
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="sourceContentUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Source content URL</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="https://www.youtube.com/watch?v=… (your long-form podcast / stream / video)"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            The raw long-form video clippers should clip
+                            FROM. Public YouTube / Google Drive / Dropbox
+                            link works.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="brandGuidelines"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Brand guidelines</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder={
+                                "Tone: …\nWhat to hook on: …\nWhat NOT to clip: …\nRequired credits / tags: @yourbrand …\nBanned topics: …"
+                              }
+                              className="min-h-[140px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Hooks, tone, do's & don'ts. Same kind of thing
+                            you'd put in a brief Google Doc.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="exampleClipUrlsText"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Example clips (one URL per line)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder={
+                                "https://www.tiktok.com/@…/video/…\nhttps://youtube.com/shorts/…"
+                              }
+                              className="min-h-[90px] font-mono text-xs"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Clips that exemplify the bar. Clippers will
+                            mimic the energy of these.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="requiredHashtagsText"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Required hashtags / mentions</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="#yourbrand, #campaignname, @yourhandle"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Comma-separated. Every approved clip should
+                            include these.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="clipLengthSecMin"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Min length (seconds)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="15"
+                                value={field.value ?? ""}
+                                onChange={(e) =>
+                                  field.onChange(
+                                    e.target.value
+                                      ? parseInt(e.target.value)
+                                      : undefined,
+                                  )
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="clipLengthSecMax"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Max length (seconds)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="90"
+                                value={field.value ?? ""}
+                                onChange={(e) =>
+                                  field.onChange(
+                                    e.target.value
+                                      ? parseInt(e.target.value)
+                                      : undefined,
+                                  )
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 </section>
 
