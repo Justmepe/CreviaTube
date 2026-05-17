@@ -64,6 +64,7 @@ import AdminRefundsPage from "@/pages/admin-refunds";
 import AdminAuditPage from "@/pages/admin-audit";
 import AdminConfigPage from "@/pages/admin-config";
 import AdminCampaignsPage from "@/pages/admin-campaigns";
+import AdminCampaignDetailPage from "@/pages/admin-campaign-detail";
 import AdminIntegrationsPage from "@/pages/admin-integrations";
 
 function HomeRoute() {
@@ -116,6 +117,7 @@ function Router() {
       <ProtectedRoute path="/admin/audit" component={AdminAuditPage} />
       <ProtectedRoute path="/admin/config" component={AdminConfigPage} />
       <ProtectedRoute path="/admin/campaigns" component={AdminCampaignsPage} />
+      <ProtectedRoute path="/admin/campaigns/:id" component={AdminCampaignDetailPage} />
       <ProtectedRoute path="/admin/integrations" component={AdminIntegrationsPage} />
       <ProtectedRoute path="/admin/analytics" component={RealRevenueAnalytics} />
       <ProtectedRoute path="/clipper-directory" component={ClipperDirectoryPage} />

@@ -2535,6 +2535,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Single campaign with the creator's username/email + a submission count.
+  // Powers the /admin/campaigns/:id detail page; the master-detail split
+  // means the row click navigates here for all the heavy stuff that the
+  // list view doesn't need to load up front.
+  app.get("/api/admin/campaigns/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    try {
+      const [row] = await db
+        .select({
+          id: campaigns.id,
+          name: campaigns.name,
+          description: campaigns.description,
+          status: campaigns.status,
+          fundingStatus: campaigns.fundingStatus,
+          budget: campaigns.budget,
+          budgetUsed: campaigns.budgetUsed,
+          escrowBalance: campaigns.escrowBalance,
+          duration: campaigns.duration,
+          campaignGoals: campaigns.campaignGoals,
+          createdAt: campaigns.createdAt,
+          fundedAt: campaigns.fundedAt,
+          creatorId: campaigns.creatorId,
+          creatorUsername: users.username,
+          creatorEmail: users.email,
+        })
+        .from(campaigns)
+        .innerJoin(users, eq(users.id, campaigns.creatorId))
+        .where(eq(campaigns.id, req.params.id))
+        .limit(1);
+      if (!row) return res.status(404).json({ message: "Campaign not found" });
+
+      const [{ count: submissionCount }] = await db
+        .select({ count: count() })
+        .from(clipperCampaigns)
+        .where(eq(clipperCampaigns.campaignId, req.params.id));
+
+      res.json({ ...row, submissionCount });
+    } catch (error: any) {
+      console.error("[admin-campaign-detail] failed", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin-scoped per-campaign submission list. Mirrors the shape of
+  // /api/metrics/submissions but skips the role filter — admin sees
+  // every clipper on every campaign. Used by the detail page's
+  // "Submissions" section.
+  app.get("/api/admin/campaigns/:id/submissions", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "admin") {
+      return res.sendStatus(403);
+    }
+    try {
+      const { fingerprintPostUrl, viewPollingSupported } = await import(
+        "./core/services/view-polling"
+      );
+
+      const rows = await db
+        .select({
+          submissionId: clipperCampaigns.id,
+          clipperId: clipperCampaigns.clipperId,
+          clipperUsername: users.username,
+          clipperEmail: users.email,
+          postUrl: clipperCampaigns.postUrl,
+          lastViewCount: clipperCampaigns.lastViewCount,
+          lastViewPolledAt: clipperCampaigns.lastViewPolledAt,
+          applicationStatus: clipperCampaigns.applicationStatus,
+          joinedAt: clipperCampaigns.joinedAt,
+        })
+        .from(clipperCampaigns)
+        .innerJoin(users, eq(users.id, clipperCampaigns.clipperId))
+        .where(eq(clipperCampaigns.campaignId, req.params.id))
+        .orderBy(desc(clipperCampaigns.joinedAt));
+
+      const submissions = rows.map((r) => {
+        const fp = fingerprintPostUrl(r.postUrl);
+        const support = viewPollingSupported(fp.platform);
+        return {
+          submissionId: r.submissionId,
+          clipperId: r.clipperId,
+          clipperUsername: r.clipperUsername,
+          clipperEmail: r.clipperEmail,
+          postUrl: r.postUrl,
+          platform: fp.platform,
+          lastViewCount: r.lastViewCount ?? 0,
+          lastViewPolledAt: r.lastViewPolledAt
+            ? new Date(r.lastViewPolledAt).toISOString()
+            : null,
+          applicationStatus: r.applicationStatus ?? null,
+          joinedAt: new Date(r.joinedAt).toISOString(),
+          tracking: { supported: support.supported, reason: support.reason ?? null },
+        };
+      });
+
+      res.json({ submissions });
+    } catch (error: any) {
+      console.error("[admin-campaign-submissions] failed", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Phase 7 Slice D — orphan endpoint /api/admin/transactions removed.
   // The /admin/revenue page uses /api/admin/revenue-transactions
   // (now real, see Slice C); this duplicate had no UI consumer.
