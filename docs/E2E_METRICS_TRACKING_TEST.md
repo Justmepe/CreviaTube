@@ -29,6 +29,29 @@ rows skip silently with a `[view-polling] YOUTUBE_API_KEY not set
 
 ## 2. Test flow
 
+You have two paths. Pick one.
+
+### Short path (single admin session, ~2 minutes)
+
+For when you just want to prove the polling sweep credits views on a
+post URL end-to-end. Skips the manual apply/approve dance.
+
+- [ ] Sign in as admin, open `/admin/campaigns`.
+- [ ] Create a campaign as any creator (or use an existing draft).
+  primaryGoal=views, target=100, targetPlatforms covers the URL you'll paste.
+- [ ] Click **Force fund** on the campaign row.
+- [ ] Click **Force-assign clipper** on the same row. Enter:
+  - clipper UUID/username/email (any existing user; doesn't need clipper role for tracking — endpoint accepts any user)
+  - a real public YouTube/TikTok/IG URL you want to track
+  - a reason ("e2e metrics shortcut" works)
+- [ ] Click **Run view-poll now** at the top right.
+- [ ] Open `/metrics → Social Media` tab as the clipper user (or as the
+  creator who owns the campaign). The submission row should be there
+  with the polled view count.
+- [ ] `/admin/audit` should show a `campaign.force_assign_clipper` row.
+
+### Long path (full UI flow, two browser sessions)
+
 Run these steps in order. Tick each one off as it passes.
 
 ### Step 1 — Sign in as creator

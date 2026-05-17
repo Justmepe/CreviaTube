@@ -29,12 +29,14 @@
 import type { Express, Request, Response } from "express";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../db";
+import { randomBytes } from "crypto";
 import {
   campaigns,
   subscriptions,
   users,
   budgetEscrow,
   adminAuditLog,
+  clipperCampaigns,
 } from "../../shared/schema";
 import { logAdminAction, type AdminAction } from "../lib/audit";
 
@@ -328,6 +330,162 @@ export function setupAdminActionsAPI(app: Express): void {
       res.status(500).json({ message: "Force-fund failed", error: err.message });
     }
   });
+
+  // ── Admin test fixture: force-assign a clipper + post URL ───────
+  // Use case: testing the metrics dashboard / view-polling pipeline
+  // end-to-end without juggling a second browser session to apply +
+  // get approved + paste the URL. Lands a clipper_campaigns row in
+  // applicationStatus='approved' with postUrl set, exactly the shape
+  // the view-polling sweep + /api/metrics/submissions both consume.
+  //
+  // Idempotent on (clipperId, campaignId): if a row already exists,
+  // updates postUrl + flips to approved instead of inserting a new
+  // one. That way re-running with a corrected URL just edits in
+  // place.
+  //
+  // Accepts the clipper as an id OR a username/email so the admin
+  // doesn't have to look up the UUID first.
+  app.post(
+    "/api/admin/campaigns/:id/force-assign-clipper",
+    async (req: Request, res: Response) => {
+      if (!requireAdmin(req, res)) return;
+      const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+      if (reason.length < 5) {
+        return res.status(400).json({
+          message: "reason is required (min 5 chars)",
+        });
+      }
+      const clipperRef =
+        typeof req.body?.clipperId === "string" ? req.body.clipperId.trim() : "";
+      const postUrl =
+        typeof req.body?.postUrl === "string" ? req.body.postUrl.trim() : "";
+      if (!clipperRef) {
+        return res
+          .status(400)
+          .json({ message: "clipperId (UUID, username, or email) is required" });
+      }
+      if (!postUrl || !/^https?:\/\//i.test(postUrl)) {
+        return res.status(400).json({
+          message: "postUrl is required and must start with http(s)://",
+        });
+      }
+
+      try {
+        const [campaign] = await db
+          .select({
+            id: campaigns.id,
+            name: campaigns.name,
+            creatorId: campaigns.creatorId,
+            status: campaigns.status,
+            fundingStatus: campaigns.fundingStatus,
+          })
+          .from(campaigns)
+          .where(eq(campaigns.id, req.params.id))
+          .limit(1);
+        if (!campaign) return res.status(404).json({ message: "Campaign not found" });
+
+        // Resolve the clipper ref. Try id first, fall back to username/email.
+        const [clipper] = await db
+          .select({ id: users.id, username: users.username, email: users.email })
+          .from(users)
+          .where(
+            sql`${users.id} = ${clipperRef} OR ${users.username} = ${clipperRef} OR ${users.email} = ${clipperRef}`,
+          )
+          .limit(1);
+        if (!clipper) {
+          return res.status(404).json({
+            message: `No user found matching '${clipperRef}' (tried id, username, email)`,
+          });
+        }
+
+        // Idempotent upsert: one row per (clipper, campaign).
+        const [existing] = await db
+          .select({ id: clipperCampaigns.id })
+          .from(clipperCampaigns)
+          .where(
+            and(
+              eq(clipperCampaigns.clipperId, clipper.id),
+              eq(clipperCampaigns.campaignId, campaign.id),
+            ),
+          )
+          .limit(1);
+
+        let submissionId: string;
+        let action: "created" | "updated";
+        if (existing) {
+          await db
+            .update(clipperCampaigns)
+            .set({
+              postUrl,
+              submissionUrl: postUrl,
+              submissionKind: "url",
+              applicationStatus: "approved",
+              isApproved: true,
+              reviewedAt: new Date(),
+            })
+            .where(eq(clipperCampaigns.id, existing.id));
+          submissionId = existing.id;
+          action = "updated";
+        } else {
+          const trackingCode = `force_${campaign.id}_${clipper.id}_${randomBytes(4).toString("hex")}`;
+          const [inserted] = await db
+            .insert(clipperCampaigns)
+            .values({
+              clipperId: clipper.id,
+              campaignId: campaign.id,
+              trackingCode,
+              postUrl,
+              submissionUrl: postUrl,
+              submissionKind: "url",
+              applicationStatus: "approved",
+              isApproved: true,
+              reviewedAt: new Date(),
+            })
+            .returning({ id: clipperCampaigns.id });
+          submissionId = inserted.id;
+          action = "created";
+        }
+
+        await logAdminAction(req, {
+          action: "campaign.force_assign_clipper",
+          targetType: "clipper_campaign",
+          targetId: submissionId,
+          payload: {
+            reason,
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            clipperId: clipper.id,
+            clipperUsername: clipper.username,
+            clipperEmail: clipper.email,
+            postUrl,
+            action,
+            campaignFundingStatus: campaign.fundingStatus,
+          },
+        });
+
+        res.json({
+          ok: true,
+          action,
+          submissionId,
+          campaignId: campaign.id,
+          clipperId: clipper.id,
+          clipperUsername: clipper.username,
+          postUrl,
+          warnings:
+            campaign.fundingStatus !== "funded"
+              ? [
+                  `Campaign is ${campaign.fundingStatus} — view polling will run but payout won't move until the campaign is funded (use Force fund).`,
+                ]
+              : [],
+        });
+      } catch (err: any) {
+        console.error("[campaign.force-assign-clipper] failed", err);
+        res
+          .status(500)
+          .json({ message: "Force-assign failed", error: err.message });
+      }
+    },
+  );
 
   // ── Slice H: read + write platform config ───────────────────────
   app.get("/api/admin/config", async (req: Request, res: Response) => {

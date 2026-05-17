@@ -37,6 +37,7 @@ export type AdminAction =
   | "campaign.cancel"
   | "campaign.refund_marked"
   | "campaign.force_fund"
+  | "campaign.force_assign_clipper"
   | "subscription.cancel"
   | "subscription.refund_marked"
   | "withdrawal.approve"

@@ -19,6 +19,7 @@ import {
   XCircle,
   Activity,
   RefreshCcw,
+  UserPlus,
 } from "lucide-react";
 
 interface AdminCampaign {
@@ -88,6 +89,40 @@ export default function AdminCampaignsPage() {
     },
   });
 
+  // Test fixture: drop a clipper_campaigns row in approved + postUrl set,
+  // so the view-polling sweep + /api/metrics/submissions both pick it up.
+  // Idempotent on (clipper, campaign) — re-runs update postUrl in place.
+  const forceAssignMutation = useMutation({
+    mutationFn: async (args: {
+      id: string;
+      clipperId: string;
+      postUrl: string;
+      reason: string;
+    }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/campaigns/${args.id}/force-assign-clipper`,
+        { clipperId: args.clipperId, postUrl: args.postUrl, reason: args.reason },
+      );
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      const warn = (data?.warnings ?? []).join(" ");
+      toast({
+        title: data?.action === "created" ? "Clipper assigned" : "Submission updated",
+        description: `@${data?.clipperUsername} → ${data?.postUrl}${warn ? " · " + warn : ""}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/campaigns"] });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Force-assign failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const pollViewsMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/poll-views", {});
@@ -141,13 +176,13 @@ export default function AdminCampaignsPage() {
           </CardHeader>
           <CardContent className="text-xs text-blue-900 space-y-1 pt-0">
             <p>
-              1. Create a campaign as a creator with primaryGoal=views.
-              2. Click <strong>Force fund</strong> here to skip USDC payment.
-              3. Sign in as a clipper (incognito tab), apply, submit a real post URL on
-              TikTok/YouTube/Instagram.
-              4. Approve the application as the creator.
-              5. Click <strong>Run view-poll now</strong> above. Check the campaign's
-              progress to verify views/clicks/signups credit.
+              <strong>Long path:</strong> Create campaign · Force fund · Sign in as clipper
+              (incognito) · Apply · Submit post URL · Approve · Run view-poll.
+            </p>
+            <p>
+              <strong>Short path (this admin tool):</strong> Create campaign · Force fund ·{" "}
+              <strong>Force-assign clipper</strong> on the row (clipper email + post URL) ·{" "}
+              Run view-poll. Then check the clipper's /metrics → Social Media tab.
             </p>
           </CardContent>
         </Card>
@@ -225,6 +260,37 @@ export default function AdminCampaignsPage() {
                     >
                       <Zap className="h-4 w-4 mr-1.5" />
                       Force fund
+                    </Button>
+                  )}
+                  {c.status !== "cancelled" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                      onClick={() => {
+                        const clipper = window.prompt(
+                          "Clipper (UUID, username, or email)?",
+                        );
+                        if (!clipper || !clipper.trim()) return;
+                        const postUrl = window.prompt(
+                          "Post URL? (must start with https://, e.g. https://www.youtube.com/watch?v=...)",
+                        );
+                        if (!postUrl || !/^https?:\/\//i.test(postUrl.trim())) return;
+                        const reason = window.prompt(
+                          "Reason for force-assigning? (test only, min 5 chars)",
+                        );
+                        if (!reason || reason.trim().length < 5) return;
+                        forceAssignMutation.mutate({
+                          id: c.id,
+                          clipperId: clipper.trim(),
+                          postUrl: postUrl.trim(),
+                          reason: reason.trim(),
+                        });
+                      }}
+                      data-testid={`button-force-assign-${c.id}`}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1.5" />
+                      Force-assign clipper
                     </Button>
                   )}
                   {c.status !== "cancelled" && (
