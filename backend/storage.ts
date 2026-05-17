@@ -195,9 +195,18 @@ export class DatabaseStorage implements IStorage {
     // of whether the daily expiry sweep is behind). ORDER BY
     // (isFeatured DESC, created_at DESC) so featured rows lead while
     // each section is still time-ordered.
+    //
+    // Also INNER JOIN users so each row carries the creator's
+    // username + accountType. The marketplace UI reads
+    // `campaign.creator.accountType` on every card render and on every
+    // filter pass — until this JOIN was added the field was undefined
+    // and the whole page crashed the first time a funded+active
+    // campaign was loaded by a clipper.
     const rows = await db
       .select({
         campaign: campaigns,
+        creatorUsername: users.username,
+        creatorAccountType: users.accountType,
         isFeatured: sql<boolean>`
           (${subscriptions.tier} = 'premium'
             AND ${subscriptions.status} = 'active'
@@ -205,6 +214,7 @@ export class DatabaseStorage implements IStorage {
         `,
       })
       .from(campaigns)
+      .innerJoin(users, eq(users.id, campaigns.creatorId))
       .leftJoin(subscriptions, eq(campaigns.creatorId, subscriptions.userId))
       .where(eq(campaigns.status, "active"))
       .orderBy(
@@ -215,11 +225,15 @@ export class DatabaseStorage implements IStorage {
       );
 
     // Flatten — the API contract on /api/campaigns/available is a flat
-    // Campaign[] today. We attach the boolean as a non-schema field
-    // that the client TypeScript widens; cleaner than a new endpoint.
+    // Campaign[] today (plus the embedded creator object the UI needs).
+    // The client TypeScript widens both extras as non-schema fields.
     return rows.map((r) => ({
       ...r.campaign,
       isFeatured: Boolean(r.isFeatured),
+      creator: {
+        username: r.creatorUsername,
+        accountType: r.creatorAccountType,
+      },
     })) as unknown as Campaign[];
   }
 

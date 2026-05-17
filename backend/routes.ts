@@ -379,7 +379,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
+  // Stub for the clipper marketplace's "cold outreach" section.
+  // The frontend has long included this query in the parallel fetch
+  // bundle on /marketplace; the endpoint was never implemented, so
+  // every page load logged a 404 in the console. Returning an empty
+  // array keeps the call benign until a real cold-outreach matching
+  // model is built (which can replace this stub in place).
+  app.get("/api/campaigns/cold-outreach", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json([]);
+  });
 
   app.get("/api/campaigns/with-clippers", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
